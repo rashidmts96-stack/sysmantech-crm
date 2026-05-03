@@ -829,6 +829,10 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 	border-color: rgba(255, 232, 232, 0.44);
 	box-shadow: 0 12px 24px rgba(239, 68, 68, 0.28);
 	color: #ffffff;
+	justify-content: center;
+	white-space: normal;
+	line-height: 1.2;
+	text-align: center;
 	animation: dashboardMobileUrgentPulse 1.2s ease-in-out infinite;
 }
 
@@ -1958,7 +1962,7 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 			{% if onsite_alert_count %}
 			<div class="dashboard-mobile-meta">
 				<a href="{{ onsite_dashboard_url or '/onsite-calls' }}" class="dashboard-mobile-pill is-alert">
-					<i class="fas fa-bell"></i> {{ onsite_alert_badge }} urgent
+					<i class="fas fa-bell"></i> {{ onsite_alert_badge }} {{ onsite_alert_label|title }}
 				</a>
 			</div>
 			{% endif %}
