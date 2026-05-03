@@ -1,8 +1,18 @@
 const STATIC_CACHE = "sysmantech-static-v1";
 const STATIC_ASSETS = [
     "/manifest.webmanifest",
+    "/static/css/pwa-ios.css",
+    "/static/icons/icon-180.png",
     "/static/icons/icon-192.png",
     "/static/icons/icon-512.png",
+    "/static/splash/iphone-se.png",
+    "/static/splash/iphone-8.png",
+    "/static/splash/iphone-x.png",
+    "/static/splash/iphone-xr.png",
+    "/static/splash/iphone-max.png",
+    "/static/splash/iphone-12.png",
+    "/static/splash/iphone-15-pro.png",
+    "/static/splash/iphone-15-pro-max.png",
     "/static/css/dashboard-theme.css",
     "/static/css/login.css",
     "/static/css/onsite-calls.css",

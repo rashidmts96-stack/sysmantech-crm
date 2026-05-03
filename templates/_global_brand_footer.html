@@ -115,6 +115,20 @@
 </script>
 <script>
 (function () {
+    var userAgent = window.navigator.userAgent || "";
+    var isAppleMobile = /iPad|iPhone|iPod/.test(userAgent);
+    var isStandalone = !!(window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || !!window.navigator.standalone;
+
+    if (isAppleMobile) {
+        document.documentElement.classList.add("is-ios");
+        document.body.classList.add("is-ios");
+    }
+
+    if (isStandalone) {
+        document.documentElement.classList.add("pwa-standalone");
+        document.body.classList.add("pwa-standalone");
+    }
+
     if (!("serviceWorker" in navigator) || window.__crmPwaInit) {
         return;
     }

@@ -1,0 +1,61 @@
+html {
+    background: #f5f7fb;
+}
+
+body {
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+body.pwa-standalone {
+    overscroll-behavior-y: contain;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+body.pwa-standalone input,
+body.pwa-standalone textarea,
+body.pwa-standalone select {
+    -webkit-user-select: auto;
+    -webkit-touch-callout: default;
+}
+
+@supports (padding: max(0px)) {
+    body.login-page,
+    body.crm-theme,
+    body.onsite-page {
+        padding-left: max(0px, env(safe-area-inset-left));
+        padding-right: max(0px, env(safe-area-inset-right));
+    }
+
+    body.login-page {
+        padding-top: max(0px, env(safe-area-inset-top));
+        padding-bottom: max(44px, calc(44px + env(safe-area-inset-bottom)));
+    }
+
+    body.crm-theme {
+        padding-bottom: max(44px, calc(44px + env(safe-area-inset-bottom)));
+    }
+
+    body.onsite-page {
+        padding-bottom: max(24px, env(safe-area-inset-bottom));
+    }
+
+    body.pwa-standalone .crm-global-footer {
+        bottom: max(12px, calc(12px + env(safe-area-inset-bottom)));
+    }
+
+    body.pwa-standalone .navbar-custom,
+    body.pwa-standalone .onsite-topbar,
+    body.pwa-standalone .onsite-shell {
+        margin-top: max(0px, env(safe-area-inset-top));
+    }
+
+    @media (max-width: 768px) {
+        body.pwa-standalone .dashboard-mobile-dock {
+            left: max(12px, env(safe-area-inset-left));
+            right: max(12px, env(safe-area-inset-right));
+            bottom: max(10px, calc(10px + env(safe-area-inset-bottom)));
+        }
+    }
+}
