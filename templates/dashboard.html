@@ -825,8 +825,23 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 }
 
 .dashboard-mobile-pill.is-alert {
-	background: rgba(255, 244, 244, 0.14);
-	border-color: rgba(255, 229, 229, 0.26);
+	background: linear-gradient(135deg, rgba(185, 28, 28, 0.95) 0%, rgba(239, 68, 68, 0.98) 55%, rgba(249, 115, 22, 0.96) 100%);
+	border-color: rgba(255, 232, 232, 0.44);
+	box-shadow: 0 12px 24px rgba(239, 68, 68, 0.28);
+	color: #ffffff;
+	animation: dashboardMobileUrgentPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes dashboardMobileUrgentPulse {
+	0%,
+	100% {
+		transform: scale(1);
+		box-shadow: 0 12px 24px rgba(239, 68, 68, 0.24);
+	}
+	50% {
+		transform: scale(1.06);
+		box-shadow: 0 18px 32px rgba(239, 68, 68, 0.4);
+	}
 }
 
 .dashboard-mobile-shortcuts {
@@ -1822,7 +1837,8 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 	.toolbar-actions-menu.show,
 	.toolbar-actions-menu.show .dropdown-header,
 	.toolbar-actions-menu.show .dropdown-divider,
-	.toolbar-actions-menu.show .dropdown-item {
+	.toolbar-actions-menu.show .dropdown-item,
+	.dashboard-mobile-pill.is-alert {
 		animation: none;
 	}
 }
