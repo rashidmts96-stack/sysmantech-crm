@@ -4,6 +4,7 @@
 <title>New SYSCARE Certificate</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+{% include "_pwa_head.html" %}
 </head>
 <body class="crm-theme">
 
@@ -226,3 +227,4 @@ bindTypeSuggestions('inchargeInput', 'inchargeSuggestions', INCHARGE_NAMES);
 </script>
 </body>
 </html>
+

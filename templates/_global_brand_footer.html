@@ -113,3 +113,16 @@
     }
 })();
 </script>
+<script>
+(function () {
+    if (!("serviceWorker" in navigator) || window.__crmPwaInit) {
+        return;
+    }
+    window.__crmPwaInit = true;
+
+    window.addEventListener("load", function () {
+        navigator.serviceWorker.register("/service-worker.js").catch(function () {
+        });
+    });
+})();
+</script>

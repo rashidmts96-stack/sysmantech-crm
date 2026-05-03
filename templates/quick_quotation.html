@@ -6,6 +6,7 @@
 	<title>{% if mode == 'edit' %}Edit{% else %}New{% endif %} Quotation - Service CRM</title>
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 	<link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+{% include "_pwa_head.html" %}
 	<style>
 		.number-col { width: 60px; }
 		.qty-col, .amount-col, .final-col { width: 140px; }
@@ -219,3 +220,4 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+

@@ -118,6 +118,29 @@ for _upload_dir in [app.config["JOB_PHOTO_FOLDER"], app.config["PROFILE_PICTURE_
 
 ## (Removed duplicate Flask app initialization)
 
+
+@app.route("/manifest.webmanifest")
+def manifest_webmanifest():
+    return send_from_directory(
+        app.static_folder,
+        "manifest.webmanifest",
+        mimetype="application/manifest+json",
+        max_age=300,
+    )
+
+
+@app.route("/service-worker.js")
+def service_worker():
+    response = send_from_directory(
+        app.static_folder,
+        "service-worker.js",
+        mimetype="application/javascript",
+        max_age=0,
+    )
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Service-Worker-Allowed"] = "/"
+    return response
+
 DB_NAME = os.getenv("DB_NAME", "crm_system")
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_USER = os.getenv("DB_USER", "root")
