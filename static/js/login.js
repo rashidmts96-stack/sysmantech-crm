@@ -1,4 +1,26 @@
 document.addEventListener("DOMContentLoaded", function () {
+    initPasswordToggle();
+    initBranchAutocomplete();
+});
+
+function initPasswordToggle() {
+    const passwordInput = document.getElementById("password");
+    const passwordToggle = document.getElementById("passwordToggle");
+
+    if (!passwordInput || !passwordToggle) {
+        return;
+    }
+
+    passwordToggle.addEventListener("click", function () {
+        const isVisible = passwordInput.type === "text";
+        passwordInput.type = isVisible ? "password" : "text";
+        passwordToggle.textContent = isVisible ? "Show" : "Hide";
+        passwordToggle.setAttribute("aria-label", isVisible ? "Show password" : "Hide password");
+        passwordToggle.setAttribute("aria-pressed", String(!isVisible));
+    });
+}
+
+function initBranchAutocomplete() {
     const wrapper = document.querySelector(".branch-autocomplete");
     const input = document.getElementById("branchInput");
     const list = document.getElementById("branchSuggestions");
@@ -129,4 +151,4 @@ document.addEventListener("DOMContentLoaded", function () {
             hideSuggestions();
         }
     });
-});
+}

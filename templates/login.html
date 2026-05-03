@@ -50,7 +50,10 @@
 
 						<div class="mb-3">
 							<label for="password" class="form-label">Password</label>
-							<input type="password" id="password" name="password" class="form-control" placeholder="Enter password" autocomplete="current-password" required>
+							<div class="login-password-field">
+								<input type="password" id="password" name="password" class="form-control login-password-input" placeholder="Enter password" autocomplete="current-password" required>
+								<button type="button" class="login-password-toggle" id="passwordToggle" aria-controls="password" aria-label="Show password" aria-pressed="false">Show</button>
+							</div>
 						</div>
 
 						<div class="mb-4">
