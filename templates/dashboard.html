@@ -1958,7 +1958,7 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 			{% if onsite_alert_count %}
 			<div class="dashboard-mobile-meta">
 				<a href="{{ onsite_dashboard_url or '/onsite-calls' }}" class="dashboard-mobile-pill is-alert">
-					<i class="fas fa-bell"></i> {{ onsite_alert_badge }} urgent
+					<i class="fas fa-bell"></i> {{ onsite_alert_badge }} {{ onsite_alert_label }}
 				</a>
 			</div>
 			{% endif %}

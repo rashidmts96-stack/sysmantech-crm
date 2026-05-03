@@ -57,7 +57,7 @@ def register_dashboard_settings_routes(app, deps):
     def _build_onsite_dashboard_alert_payload():
         onsite_dashboard_alert_count = 0
         onsite_dashboard_alert_status = ""
-        onsite_dashboard_alert_label = "onsite call"
+        onsite_dashboard_alert_label = "Onsite Call"
         onsite_service = app.extensions.get("onsite_calls_service")
         if onsite_service is not None:
             try:
@@ -65,10 +65,10 @@ def register_dashboard_settings_routes(app, deps):
                 onsite_counts = onsite_service.dashboard_counts(onsite_actor, {}, use_cache=False)
                 if onsite_actor.get("has_global_scope"):
                     onsite_dashboard_alert_status = "New Lead"
-                    onsite_dashboard_alert_label = "new onsite lead"
+                    onsite_dashboard_alert_label = "Onsite Call"
                 else:
                     onsite_dashboard_alert_status = "Assigned"
-                    onsite_dashboard_alert_label = "assigned onsite call"
+                    onsite_dashboard_alert_label = "Lead Assigned"
                 onsite_dashboard_alert_count = int(onsite_counts.get(onsite_dashboard_alert_status) or 0)
             except Exception:
                 app.logger.exception("Failed to load onsite dashboard alert count")
