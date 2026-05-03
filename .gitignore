@@ -2,3 +2,6 @@
 __pycache__/
 instance/
 service-crm/deploy/instance/
+stderr.log
+/tmp
+/database/*.sql
