@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/eaglcqjv/public_html/syscare
+    - /bin/cp -R * $DEPLOYPATH
