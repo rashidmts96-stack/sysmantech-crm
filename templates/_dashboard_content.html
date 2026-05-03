@@ -21,15 +21,13 @@
 				<i class="fas fa-plus"></i> New Job
 			</a>
 		</div>
+		{% if onsite_alert_count %}
 		<div class="dashboard-mobile-meta">
-			<span class="dashboard-mobile-pill"><i class="fas fa-building"></i> {% if can_switch_dashboard_branch and selected_dashboard_branch != 'ALL' %}{{ selected_dashboard_branch }}{% else %}{{ scope_label or branch }}{% endif %}</span>
-			<span class="dashboard-mobile-pill"><i class="fas fa-calendar-days"></i> {{ from_label }} &rarr; {{ to_label }}</span>
-			{% if onsite_alert_count %}
 			<a href="{{ onsite_dashboard_url or '/onsite-calls' }}" class="dashboard-mobile-pill is-alert">
 				<i class="fas fa-bell"></i> {{ onsite_alert_badge }} urgent
 			</a>
-			{% endif %}
 		</div>
+		{% endif %}
 	</div>
 	<div class="dashboard-mobile-shortcuts">
 		<a href="/jobs" class="dashboard-mobile-shortcut">
