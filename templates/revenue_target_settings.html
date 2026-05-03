@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revenue Target Settings</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+<style>
+body { background: #f6f8fb; }
+.top-nav { border-bottom: 1px solid #1f2937; }
+.table-wrap { max-height: 520px; overflow: auto; }
+.table-wrap thead th { position: sticky; top: 0; z-index: 2; }
+</style>
+</head>
+<body class="crm-theme">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark top-nav">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-semibold" href="/revenue-dashboard">Revenue Management</a>
+    <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#revNav"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="revNav">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item"><a class="nav-link" href="/revenue-dashboard">Dashboard</a></li>
+        {% if can_manage_revenue %}
+        <li class="nav-item"><a class="nav-link" href="/revenue-entry">Revenue Entry</a></li>
+        <li class="nav-item"><a class="nav-link" href="/revenue-upload">Bulk Upload</a></li>
+        <li class="nav-item"><a class="nav-link" href="/revenue-reports">Reports</a></li>
+        <li class="nav-item"><a class="nav-link" href="/revenue-locks">Lock System</a></li>
+        <li class="nav-item"><a class="nav-link active" href="/revenue-target-settings">Target Settings</a></li>
+        {% endif %}
+      </ul>
+      <div class="d-flex align-items-center gap-2 flex-wrap ms-lg-auto">
+        <a href="/dashboard" class="btn btn-outline-light btn-sm">Dashboard</a>
+        {% include "_global_user_menu.html" %}
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid py-3">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  {% for category, message in messages %}
+  <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+  {% endwith %}
+
+  <div class="card" id="revenue-target-settings">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span class="fw-semibold">Revenue Target Settings | Count: {{ (revenue_targets|length) if revenue_targets else 0 }}</span>
+      <span class="badge text-bg-dark">Rows</span>
+    </div>
+    <div class="card-body border-bottom">
+      <form method="POST" action="/save-revenue-target" id="revenue-target-form">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-4">
+            <label class="form-label mb-1">Branch</label>
+            <input type="text" name="target_branch_name" id="rt_branch_name" class="form-control form-control-sm" list="revenue-target-branch-list" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label mb-1">Total Revenue Target</label>
+            <input type="number" step="0.01" min="0" name="total_target" id="rt_total_target" class="form-control form-control-sm" value="0" placeholder="Example: 100000">
+          </div>
+          <div class="col-md-2 d-grid">
+            <button type="submit" class="btn btn-success btn-sm">Save</button>
+          </div>
+          <div class="col-md-2 d-grid">
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetRevenueTargetForm()">Clear</button>
+          </div>
+        </div>
+      </form>
+      <hr class="my-3">
+      <form method="POST" action="/bulk-upload-revenue-targets" enctype="multipart/form-data">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-9">
+            <label class="form-label mb-1">Bulk Upload Revenue Targets</label>
+            <input type="file" name="revenue_targets_file" class="form-control form-control-sm" accept=".xlsx,.csv" required>
+            <div class="form-text text-muted mt-1">Required: Branch, Target (amount). Existing branches will be updated.</div>
+          </div>
+          <div class="col-md-3 d-grid">
+            <button type="submit" class="btn btn-outline-success btn-sm">Upload</button>
+          </div>
+        </div>
+      </form>
+      <datalist id="revenue-target-branch-list">
+        {% for b in branch_options %}
+        <option value="{{ b }}"></option>
+        {% endfor %}
+      </datalist>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table table-sm table-bordered table-hover mb-0">
+        <thead class="table-dark">
+          <tr><th>Branch</th><th>Total Target</th><th style="width:180px">Actions</th></tr>
+        </thead>
+        <tbody>
+          {% if revenue_targets %}
+            {% for t in revenue_targets %}
+            <tr>
+              <td>{{ t.branch_name }}</td>
+              <td>{{ '%.2f'|format(t.effective_target or 0) }}</td>
+              <td>
+                <button type="button" class="btn btn-primary btn-sm"
+                        data-branch-name="{{ t.branch_name | e }}"
+                        data-total-target="{{ t.effective_target or 0 }}"
+                        onclick="editRevenueTargetFromButton(this)">Edit</button>
+                <form method="POST" action="/delete-revenue-target/{{ t.id }}" class="d-inline">
+                  <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete revenue target for {{ t.branch_name | e }}?');">Delete</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr><td colspan="3" class="text-center text-muted">No revenue targets configured</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function editRevenueTarget(branch, totalTarget) {
+  document.getElementById('rt_branch_name').value = branch || '';
+  document.getElementById('rt_total_target').value = totalTarget || 0;
+  document.getElementById('revenue-target-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function editRevenueTargetFromButton(button) {
+  const branch = button.dataset.branchName || '';
+  const total = parseFloat(button.dataset.totalTarget || '0') || 0;
+  editRevenueTarget(branch, total);
+}
+
+function resetRevenueTargetForm() {
+  document.getElementById('rt_branch_name').value = '';
+  document.getElementById('rt_total_target').value = 0;
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

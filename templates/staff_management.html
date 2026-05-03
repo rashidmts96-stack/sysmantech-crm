@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Staff Management</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+<style>
+body { background: #f6f8fb; }
+.top-nav { border-bottom: 1px solid #1f2937; }
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+.summary-card {
+    background: #fff;
+    border: 1px solid #dbe3ea;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+.summary-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+}
+.summary-value {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+.table-wrap { max-height: 68vh; overflow: auto; }
+</style>
+</head>
+<body class="crm-theme">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark top-nav">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-semibold" href="/staff-management">Staff Management</a>
+    <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#staffNav"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="staffNav">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item"><a class="nav-link active" href="/staff-management">Staff Management</a></li>
+        <li class="nav-item"><a class="nav-link" href="/admin-reports">Reports</a></li>
+        <li class="nav-item"><a class="nav-link" href="/settings">Settings</a></li>
+        <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
+      </ul>
+      <div class="d-flex align-items-center gap-2 flex-wrap ms-lg-auto">
+        {% include "_global_user_menu.html" %}
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid py-3">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  {% for category, message in messages %}
+  <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+  {% endwith %}
+
+  <form method="GET" action="/staff-management" class="card card-body shadow-sm mb-3">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label mb-1">Search</label>
+        <input type="text" name="q" class="form-control form-control-sm" value="{{ search_q }}" placeholder="Name, contact, branch">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label mb-1">Branch</label>
+        <select name="filter_branch" class="form-select form-select-sm">
+          <option value="">All Branches</option>
+          {% for branch_name in branch_options %}
+          <option value="{{ branch_name }}" {% if filter_branch == branch_name %}selected{% endif %}>{{ branch_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4 d-flex gap-2">
+        <button class="btn btn-primary btn-sm" type="submit">Apply</button>
+        <a class="btn btn-outline-secondary btn-sm" href="/staff-management">Clear</a>
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap mt-2">
+      <a class="btn btn-outline-success btn-sm" href="/staff-management/export/active?q={{ search_q|urlencode }}&filter_branch={{ filter_branch|urlencode }}">Export Active CSV</a>
+      <a class="btn btn-outline-success btn-sm" href="/staff-management/export/resigned?q={{ search_q|urlencode }}&filter_branch={{ filter_branch|urlencode }}">Export Resigned CSV</a>
+      <a class="btn btn-outline-success btn-sm" href="/staff-management/export/all?q={{ search_q|urlencode }}&filter_branch={{ filter_branch|urlencode }}">Export All CSV</a>
+    </div>
+    <div class="small text-muted mt-2">Exports use the current search and branch filters.</div>
+  </form>
+
+  <div class="summary-grid mb-3">
+    <div class="summary-card">
+      <div class="summary-label">Active Staff Count</div>
+      <div class="summary-value">{{ staff_count }}</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">Salary Total</div>
+      <div class="summary-value">{{ '%.2f'|format(salary_total|float) }}</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">Other Components</div>
+      <div class="summary-value">{{ '%.2f'|format(deduction_total|float) }}</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">Total Payable</div>
+      <div class="summary-value">{{ '%.2f'|format(payable_total|float) }}</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">Resigned Staff</div>
+      <div class="summary-value">{{ resigned_count }}</div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-3">
+    <div class="card-header fw-semibold">Add Staff Member</div>
+    <div class="card-body">
+      <form method="POST" action="/staff-management/add">
+        <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label mb-1">Name</label>
+            <input type="text" name="staff_name" class="form-control form-control-sm" required>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label mb-1">Contact Number</label>
+            <input type="text" name="contact_number" class="form-control form-control-sm" required>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label mb-1">Branch</label>
+            <select name="branch_name" class="form-select form-select-sm" required>
+              <option value="">Select Branch</option>
+              {% for branch_name in branch_options %}
+              <option value="{{ branch_name }}">{{ branch_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label mb-1">Joined Date</label>
+            <input type="date" name="joined_date" class="form-control form-control-sm" required>
+          </div>
+          <div class="col-md-1">
+            <label class="form-label mb-1">Salary</label>
+            <input type="number" step="0.01" min="0" name="salary" class="form-control form-control-sm" value="0">
+          </div>
+          <div class="col-md-1">
+            <label class="form-label mb-1">ESI</label>
+            <input type="number" step="0.01" min="0" name="esi" class="form-control form-control-sm" value="0">
+          </div>
+          <div class="col-md-1">
+            <label class="form-label mb-1">PF</label>
+            <input type="number" step="0.01" min="0" name="pf" class="form-control form-control-sm" value="0">
+          </div>
+          <div class="col-md-1">
+            <label class="form-label mb-1">Room</label>
+            <input type="number" step="0.01" min="0" name="room" class="form-control form-control-sm" value="0">
+          </div>
+          <div class="col-md-1">
+            <label class="form-label mb-1">Rent</label>
+            <input type="number" step="0.01" min="0" name="rent" class="form-control form-control-sm" value="0">
+          </div>
+          <div class="col-md-2">
+            <button type="submit" class="btn btn-success btn-sm w-100">Add Staff</button>
+          </div>
+        </div>
+      </form>
+      <div class="small text-muted mt-2">Total payable is calculated as Salary + ESI + PF + Room + Rent.</div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-header fw-semibold">Active Staff List</div>
+    <div class="card-body p-0">
+      <div class="table-wrap">
+        <table class="table table-sm table-bordered table-hover mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th>No</th>
+              <th>Name</th>
+              <th>Contact</th>
+              <th>Branch</th>
+              <th>Salary</th>
+              <th>ESI</th>
+              <th>PF</th>
+              <th>Room</th>
+              <th>Rent</th>
+              <th>Joined Date</th>
+              <th>Total Payable</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if staff_rows %}
+              {% for row in staff_rows %}
+              <tr>
+                <td>{{ row.id }}</td>
+                <td>{{ row.staff_name }}</td>
+                <td>{{ row.contact_number }}</td>
+                <td>{{ row.branch_name }}</td>
+                <td>{{ '%.2f'|format((row.salary or 0)|float) }}</td>
+                <td>{{ '%.2f'|format((row.esi or 0)|float) }}</td>
+                <td>{{ '%.2f'|format((row.pf or 0)|float) }}</td>
+                <td>{{ '%.2f'|format((row.room or 0)|float) }}</td>
+                <td>{{ '%.2f'|format((row.rent or 0)|float) }}</td>
+                <td>{{ row.joined_date.strftime('%Y-%m-%d') if row.joined_date else '' }}</td>
+                <td>{{ '%.2f'|format(row.total_payable|float) }}</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <button class="btn btn-warning btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#edit-staff-{{ row.id }}" aria-expanded="false" aria-controls="edit-staff-{{ row.id }}">Edit</button>
+                    <form method="POST" action="/staff-management/delete/{{ row.id }}" class="d-inline">
+                      <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete staff member {{ row.staff_name|e }}?');">Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              <tr class="collapse" id="edit-staff-{{ row.id }}">
+                <td colspan="12" class="bg-light">
+                  <form method="POST" action="/staff-management/edit/{{ row.id }}" class="row g-2 align-items-end">
+                    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+                    <div class="col-md-3">
+                      <label class="form-label mb-1">Name</label>
+                      <input type="text" name="staff_name" class="form-control form-control-sm" value="{{ row.staff_name }}" required>
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label mb-1">Contact Number</label>
+                      <input type="text" name="contact_number" class="form-control form-control-sm" value="{{ row.contact_number }}" required>
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label mb-1">Branch</label>
+                      <select name="branch_name" class="form-select form-select-sm" required>
+                        {% for branch_name in branch_options %}
+                        <option value="{{ branch_name }}" {% if row.branch_name == branch_name %}selected{% endif %}>{{ branch_name }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label mb-1">Joined Date</label>
+                      <input type="date" name="joined_date" class="form-control form-control-sm" value="{{ row.joined_date.strftime('%Y-%m-%d') if row.joined_date else '' }}" required>
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label mb-1">Resigned Date</label>
+                      <input type="date" name="resigned_date" class="form-control form-control-sm" value="{{ row.resigned_date.strftime('%Y-%m-%d') if row.resigned_date else '' }}">
+                    </div>
+                    <div class="col-md-1">
+                      <label class="form-label mb-1">Salary</label>
+                      <input type="number" step="0.01" min="0" name="salary" class="form-control form-control-sm" value="{{ '%.2f'|format((row.salary or 0)|float) }}">
+                    </div>
+                    <div class="col-md-1">
+                      <label class="form-label mb-1">ESI</label>
+                      <input type="number" step="0.01" min="0" name="esi" class="form-control form-control-sm" value="{{ '%.2f'|format((row.esi or 0)|float) }}">
+                    </div>
+                    <div class="col-md-1">
+                      <label class="form-label mb-1">PF</label>
+                      <input type="number" step="0.01" min="0" name="pf" class="form-control form-control-sm" value="{{ '%.2f'|format((row.pf or 0)|float) }}">
+                    </div>
+                    <div class="col-md-1">
+                      <label class="form-label mb-1">Room</label>
+                      <input type="number" step="0.01" min="0" name="room" class="form-control form-control-sm" value="{{ '%.2f'|format((row.room or 0)|float) }}">
+                    </div>
+                    <div class="col-md-1">
+                      <label class="form-label mb-1">Rent</label>
+                      <input type="number" step="0.01" min="0" name="rent" class="form-control form-control-sm" value="{{ '%.2f'|format((row.rent or 0)|float) }}">
+                    </div>
+                    <div class="col-md-2">
+                      <button type="submit" class="btn btn-success btn-sm w-100">Save</button>
+                    </div>
+                    <div class="col-12">
+                      <small class="text-muted">Set resigned date and save to move this staff member to the resigned list.</small>
+                    </div>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="12" class="text-center text-muted py-4">No staff records found</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mt-3">
+    <div class="card-header fw-semibold">Resigned Staff List</div>
+    <div class="card-body p-0">
+      <div class="table-wrap">
+        <table class="table table-sm table-bordered table-hover mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th>No</th>
+              <th>Name</th>
+              <th>Contact</th>
+              <th>Branch</th>
+              <th>Salary</th>
+              <th>ESI</th>
+              <th>PF</th>
+              <th>Room</th>
+              <th>Rent</th>
+              <th>Joined Date</th>
+              <th>Resigned Date</th>
+              <th>Total Payable</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if resigned_staff_rows %}
+              {% for row in resigned_staff_rows %}
+              <tr>
+                <td>{{ row.id }}</td>
+                <td>{{ row.staff_name }}</td>
+                <td>{{ row.contact_number }}</td>
+                <td>{{ row.branch_name }}</td>
+                <td>{{ '%.2f'|format((row.salary or 0)|float) }}</td>
+                <td>{{ '%.2f'|format((row.esi or 0)|float) }}</td>
+                <td>{{ '%.2f'|format((row.pf or 0)|float) }}</td>
+                <td>{{ '%.2f'|format((row.room or 0)|float) }}</td>
+                <td>{{ '%.2f'|format((row.rent or 0)|float) }}</td>
+                <td>{{ row.joined_date.strftime('%Y-%m-%d') if row.joined_date else '' }}</td>
+                <td>{{ row.resigned_date.strftime('%Y-%m-%d') if row.resigned_date else '' }}</td>
+                <td>{{ '%.2f'|format(row.total_payable|float) }}</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <button class="btn btn-warning btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#edit-resigned-staff-{{ row.id }}" aria-expanded="false" aria-controls="edit-resigned-staff-{{ row.id }}">Edit</button>
+                    <form method="POST" action="/staff-management/delete/{{ row.id }}" class="d-inline">
+                      <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete staff member {{ row.staff_name|e }}?');">Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              <tr class="collapse" id="edit-resigned-staff-{{ row.id }}">
+                <td colspan="13" class="bg-light">
+                  <form method="POST" action="/staff-management/edit/{{ row.id }}" class="row g-2 align-items-end">
+                    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+                    <div class="col-md-3">
+                      <label class="form-label mb-1">Name</label>
+                      <input type="text" name="staff_name" class="form-control form-control-sm" value="{{ row.staff_name }}" required>
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label mb-1">Contact Number</label>
+                      <input type="text" name="contact_number" class="form-control form-control-sm" value="{{ row.contact_number }}" required>
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label mb-1">Branch</label>
+                      <select name="branch_name" class="form-select form-select-sm" required>
+                        {% for branch_name in branch_options %}
+                        <option value="{{ branch_name }}" {% if row.branch_name == branch_name %}selected{% endif %}>{{ branch_name }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label mb-1">Joined Date</label>
+                      <input type="date" name="joined_date" class="form-control form-control-sm" value="{{ row.joined_date.strftime('%Y-%m-%d') if row.joined_date else '' }}" required>
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label mb-1">Resigned Date</label>
+                      <input type="date" name="resigned_date" class="form-control form-control-sm" value="{{ row.resigned_date.strftime('%Y-%m-%d') if row.resigned_date else '' }}">
+                    </div>
+                    <div class="col-md-1">
+                      <label class="form-label mb-1">Salary</label>
+                      <input type="number" step="0.01" min="0" name="salary" class="form-control form-control-sm" value="{{ '%.2f'|format((row.salary or 0)|float) }}">
+                    </div>
+                    <div class="col-md-1">
+                      <label class="form-label mb-1">ESI</label>
+                      <input type="number" step="0.01" min="0" name="esi" class="form-control form-control-sm" value="{{ '%.2f'|format((row.esi or 0)|float) }}">
+                    </div>
+                    <div class="col-md-1">
+                      <label class="form-label mb-1">PF</label>
+                      <input type="number" step="0.01" min="0" name="pf" class="form-control form-control-sm" value="{{ '%.2f'|format((row.pf or 0)|float) }}">
+                    </div>
+                    <div class="col-md-1">
+                      <label class="form-label mb-1">Room</label>
+                      <input type="number" step="0.01" min="0" name="room" class="form-control form-control-sm" value="{{ '%.2f'|format((row.room or 0)|float) }}">
+                    </div>
+                    <div class="col-md-1">
+                      <label class="form-label mb-1">Rent</label>
+                      <input type="number" step="0.01" min="0" name="rent" class="form-control form-control-sm" value="{{ '%.2f'|format((row.rent or 0)|float) }}">
+                    </div>
+                    <div class="col-md-2">
+                      <button type="submit" class="btn btn-success btn-sm w-100">Save</button>
+                    </div>
+                    <div class="col-12">
+                      <small class="text-muted">Clear resigned date and save if this staff member should move back to the active list.</small>
+                    </div>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="13" class="text-center text-muted py-4">No resigned staff records found</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

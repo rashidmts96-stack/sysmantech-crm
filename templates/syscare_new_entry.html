@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>New SYSCARE Certificate</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+</head>
+<body class="crm-theme">
+
+<nav class="navbar navbar-dark bg-dark">
+<div class="container-fluid">
+<span class="navbar-brand">New SYSCARE Certificate</span>
+<div class="d-flex align-items-center gap-2 ms-auto">
+<a href="/syscare" class="btn btn-secondary btn-sm">Back to SYSCARE</a>
+{% include "_global_user_menu.html" %}
+</div>
+</div>
+</nav>
+
+<div class="container py-4" style="max-width:800px;">
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ category }} alert-dismissible fade show">
+{{ message }}
+<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<div class="card shadow-sm">
+<div class="card-header bg-primary text-white">
+<strong>{% if is_edit %}Edit SYSCARE Entry{% else %}Create New SYSCARE Entry{% endif %}</strong>
+<small class="ms-2 opacity-75">{% if is_edit %}Update details and save{% else %}Certificate will be auto-generated after saving{% endif %}</small>
+</div>
+<div class="card-body">
+<form method="POST" action="{{ route_action or '/syscare-new' }}">
+
+<h6 class="text-muted mb-3 border-bottom pb-2">Certificate Details</h6>
+<div class="row g-3 mb-3">
+  <div class="col-md-4">
+    <label class="form-label fw-semibold">SYSCARE ID <span class="text-danger">*</span></label>
+    {% if user_role in ['admin', 'super_admin'] %}
+      <input type="text" name="syscare_id" class="form-control" value="{{ entry.syscare_id if entry else '' }}" {% if not is_edit %}placeholder="Leave blank for auto-generation"{% endif %} {% if is_edit %}readonly{% endif %}>
+      <div class="form-text">Auto-generated if left blank. Admins can set manually.</div>
+    {% else %}
+      <input type="text" class="form-control" value="Will be auto-generated after saving" disabled>
+      <div class="form-text">You cannot set SYSCARE ID. It will be auto-generated.</div>
+    {% endif %}
+  </div>
+  <div class="col-md-4">
+    <label class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
+    <input type="date" name="record_date" id="recordDate" class="form-control" value="{{ today }}" required>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label fw-semibold">Expiry Date</label>
+    <input type="date" name="expiry_date" id="expiryDate" class="form-control" value="{{ expiry }}" required>
+    <div class="form-text">Default: Date + 364 days</div>
+  </div>
+</div>
+
+<h6 class="text-muted mb-3 border-bottom pb-2">Customer Details</h6>
+{% set model_raw = (entry.model_serial if entry and entry.model_serial else '') %}
+{% set product_model_value = (entry.product_model if entry and entry.product_model else '') %}
+{% set serial_number_value = (entry.serial_number if entry and entry.serial_number else '') %}
+{% if model_raw and (not product_model_value or not serial_number_value) %}
+  {% if ' / ' in model_raw %}
+    {% set ms_parts = model_raw.split(' / ', 1) %}
+    {% if not product_model_value %}{% set product_model_value = ms_parts[0]|trim %}{% endif %}
+    {% if not serial_number_value and (ms_parts|length) > 1 %}{% set serial_number_value = ms_parts[1]|trim %}{% endif %}
+  {% elif 'SN:' in model_raw %}
+    {% set ms_parts = model_raw.split('SN:', 1) %}
+    {% if not product_model_value %}{% set product_model_value = ms_parts[0]|replace('/', ' ')|trim %}{% endif %}
+    {% if not serial_number_value and (ms_parts|length) > 1 %}{% set serial_number_value = ms_parts[1]|trim %}{% endif %}
+  {% elif ',' in model_raw %}
+    {% set ms_parts = model_raw.split(',', 1) %}
+    {% if not product_model_value %}{% set product_model_value = ms_parts[0]|trim %}{% endif %}
+    {% if not serial_number_value and (ms_parts|length) > 1 %}{% set serial_number_value = ms_parts[1]|trim %}{% endif %}
+  {% endif %}
+{% endif %}
+<div class="row g-3 mb-3">
+  <div class="col-md-8">
+    <label class="form-label fw-semibold">Customer Name <span class="text-danger">*</span></label>
+    <input type="text" name="customer_name" class="form-control" placeholder="Full name" value="{{ entry.customer_name if entry else '' }}" required>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label fw-semibold">Mobile Number <span class="text-danger">*</span></label>
+    <input type="text" name="contact_number" class="form-control" placeholder="Mobile number" value="{{ entry.contact_number if entry else '' }}" required>
+  </div>
+  <div class="col-12">
+    <label class="form-label fw-semibold">Address</label>
+    <textarea name="address" class="form-control" rows="2" placeholder="Full address">{{ entry.address if entry else '' }}</textarea>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label fw-semibold">Email ID</label>
+    <input type="email" name="mail_id" class="form-control" placeholder="email@example.com" value="{{ entry.mail_id if entry else '' }}">
+  </div>
+  <div class="col-md-6">
+    <label class="form-label fw-semibold">Product Model <span class="text-danger">*</span></label>
+    <input type="text" name="product_model" class="form-control" placeholder="e.g. HP 15-FC0500au" value="{{ product_model_value }}" required>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label fw-semibold">Serial Number <span class="text-danger">*</span></label>
+    <input type="text" name="serial_number" class="form-control" placeholder="e.g. 5CD53402DR" value="{{ serial_number_value }}" required>
+  </div>
+</div>
+
+<h6 class="text-muted mb-3 border-bottom pb-2">Branch &amp; Staff</h6>
+<div class="row g-3 mb-3">
+  <div class="col-md-4">
+    <label class="form-label fw-semibold">Branch <span class="text-danger">*</span></label>
+    <input
+      type="text"
+      id="branchInput"
+      name="branch_name"
+      class="form-control"
+      list="branchSuggestions"
+      placeholder="Type branch name"
+      autocomplete="off"
+      value="{{ (entry.branch_name if entry else (default_branch or '')) }}"
+      required
+      {% if user_role == 'branch' and default_branch %}readonly{% endif %}
+    >
+    <datalist id="branchSuggestions"></datalist>
+    <div class="form-text">
+      {% if user_role == 'branch' and default_branch %}
+      Branch locked to your login branch.
+      {% else %}
+      Start typing to see branch suggestions.
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label fw-semibold">Incharge <span class="text-danger">*</span></label>
+    <input
+      type="text"
+      id="inchargeInput"
+      name="incharge"
+      class="form-control"
+      list="inchargeSuggestions"
+      placeholder="Type incharge name"
+      autocomplete="off"
+      value="{{ entry.incharge if entry else '' }}"
+      required
+    >
+    <datalist id="inchargeSuggestions"></datalist>
+    <div class="form-text">Start typing to see engineer/incharge suggestions.</div>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label fw-semibold">Amount (₹) <span class="text-danger">*</span></label>
+    <input type="number" name="amount" class="form-control" value="{{ entry.amount if entry and entry.amount is not none else 0 }}" step="0.01" min="0" required>
+  </div>
+</div>
+
+<hr>
+<button type="submit" class="btn btn-success btn-lg px-5">
+  {% if is_edit %}Update Certificate{% else %}Save &amp; Generate Certificate{% endif %}
+</button>
+<a href="{% if is_edit and entry %}/syscare-certificate/{{ entry.id }}{% else %}/syscare{% endif %}" class="btn btn-outline-secondary btn-lg ms-2">Cancel</a>
+
+</form>
+</div>
+</div>
+
+</div>
+
+<div id="suggestionData" data-branches='{{ branches|tojson }}' data-incharges='{{ incharges|tojson }}' hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Auto-update expiry date when record date changes (date + 364 days)
+document.getElementById('recordDate').addEventListener('change', function () {
+  const d = new Date(this.value);
+  if (!isNaN(d)) {
+    d.setDate(d.getDate() + 364);
+    document.getElementById('expiryDate').value = d.toISOString().slice(0, 10);
+  }
+});
+
+const suggestionDataEl = document.getElementById('suggestionData');
+const BRANCH_NAMES = JSON.parse(suggestionDataEl?.dataset?.branches || '[]');
+const INCHARGE_NAMES = JSON.parse(suggestionDataEl?.dataset?.incharges || '[]');
+
+function bindTypeSuggestions(inputId, datalistId, values) {
+  const input = document.getElementById(inputId);
+  const datalist = document.getElementById(datalistId);
+  if (!input || !datalist || input.readOnly) {
+    return;
+  }
+
+  const uniqueValues = [...new Set((values || []).map(v => String(v || '').trim()).filter(Boolean))];
+
+  const render = (query) => {
+    const q = String(query || '').trim().toLowerCase();
+    datalist.innerHTML = '';
+    if (!q) {
+      return;
+    }
+    const matches = uniqueValues
+      .filter(v => v.toLowerCase().includes(q))
+      .slice(0, 12);
+    for (const name of matches) {
+      const opt = document.createElement('option');
+      opt.value = name;
+      datalist.appendChild(opt);
+    }
+  };
+
+  input.addEventListener('input', (e) => render(e.target.value));
+  input.addEventListener('focus', () => {
+    if (!input.value.trim()) {
+      datalist.innerHTML = '';
+    }
+  });
+  input.addEventListener('click', () => {
+    if (!input.value.trim()) {
+      datalist.innerHTML = '';
+    }
+  });
+}
+
+bindTypeSuggestions('branchInput', 'branchSuggestions', BRANCH_NAMES);
+bindTypeSuggestions('inchargeInput', 'inchargeSuggestions', INCHARGE_NAMES);
+</script>
+</body>
+</html>

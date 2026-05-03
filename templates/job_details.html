@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Job Details - {{ job.job_number }}</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+<style>
+.job-transfer-card {
+	border: 1px solid rgba(15, 23, 42, 0.08);
+	border-radius: 14px;
+	background: #f8fbff;
+}
+
+.job-transfer-note {
+	font-size: 0.85rem;
+	color: #475569;
+}
+
+.job-transfer-table td,
+.job-transfer-table th {
+	vertical-align: middle;
+}
+</style>
+</head>
+
+<body
+class="crm-theme"
+data-open-close-case="{{ 'true' if open_close_case else 'false' }}"
+data-open-spare-billing="{{ 'true' if open_spare_billing else 'false' }}"
+data-continue-close-case="{{ 'true' if continue_close_case else 'false' }}">
+
+<nav class="navbar navbar-dark bg-dark">
+<div class="container-fluid">
+<span class="navbar-brand">Service CRM - Job {{ job.job_number }}</span>
+<div class="d-flex align-items-center gap-2 ms-auto">
+<a href="/jobs" class="btn btn-secondary btn-sm">Back to Jobs</a>
+{% include "_global_user_menu.html" %}
+</div>
+</div>
+</nav>
+
+<div class="container mt-4">
+
+{% set close_requires_transfer_return = transfer_summary.has_active_transfer %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<div class="row">
+<div class="col-md-8">
+
+<div class="card">
+<div class="card-header">
+<h5>Job Summary</h5>
+</div>
+<div class="card-body">
+
+{% if transfer_summary.has_active_transfer and not job_permissions.can_manage_core %}
+<div class="alert alert-info py-2">
+This case is visible to your branch because it is currently in specialist service at {{ transfer_summary.active_transfer.to_branch_name }}. Customer-facing edits and closure remain with {{ job.branch_name }}.
+</div>
+{% endif %}
+
+<div class="row">
+<div class="col-sm-6">
+<p><strong>Job Number:</strong> {{ job.job_number }}</p>
+<p><strong>Customer:</strong> {{ job.customer_name }}</p>
+<p><strong>Mobile:</strong> <a href="tel:{{ (job.mobile or '')|replace(' ', '')|replace('-', '') }}">{{ job.mobile }}</a></p>
+{% if job.alt_no %}
+<p><strong>Alt Mobile:</strong> <a href="tel:{{ job.alt_no|replace(' ', '')|replace('-', '') }}">{{ job.alt_no }}</a></p>
+{% endif %}
+<p><strong>Email:</strong> {{ job.email or 'N/A' }}</p>
+</div>
+<div class="col-sm-6">
+<p><strong>Device:</strong> {{ job.device }}</p>
+<p><strong>Model:</strong> {{ job.model }}</p>
+<p><strong>Serial:</strong> {{ job.serial_number }}</p>
+<p><strong>Status:</strong> {{ job.status }}</p>
+<p><strong>Age:</strong> {{ job.age_days }} days ({{ job.age_group }})</p>
+<p><strong>Created:</strong> {{ job.created_on }}</p>
+{% if job.closed_on %}
+<p><strong>Closed On:</strong> {{ job.closed_on }}</p>
+{% endif %}
+{% if job.get('closure_service_type') %}
+<p><strong>Service Type:</strong> {{ job.closure_service_type }}</p>
+{% endif %}
+</div>
+</div>
+
+<hr>
+
+<div class="row">
+<div class="col-sm-6">
+<p><strong>Complaint:</strong> {{ job.complaint }}</p>
+<p><strong>Complaint Type:</strong> {{ job.complaint_type or 'N/A' }}</p>
+<p><strong>Warranty:</strong> {{ job.warranty_status or 'N/A' }}</p>
+</div>
+<div class="col-sm-6">
+<p><strong>Backup Required:</strong> {{ job.backup_required or 'N/A' }}</p>
+<p><strong>Priority:</strong> {{ job.priority or 'N/A' }}</p>
+<p><strong>Call Type:</strong> {{ job.call_type or 'N/A' }}</p>
+</div>
+</div>
+
+<hr>
+
+<div class="row">
+<div class="col-sm-6">
+<p><strong>Received By:</strong> {{ job.received_by or 'N/A' }}</p>
+<p><strong>Assigned Engineer:</strong> {{ job.assigned_engineer or 'N/A' }}</p>
+</div>
+<div class="col-sm-6">
+<p><strong>Estimate Amount:</strong> {{ job.estimate_amount or 'N/A' }}</p>
+<p><strong>Service Charges:</strong> {{ '%.2f'|format(service_charges|float) }}</p>
+<p><strong>Branch:</strong> {{ job.branch_name }}</p>
+</div>
+</div>
+
+{% if job.accessories_received %}
+<hr>
+<p><strong>Accessories Received:</strong> {{ job.accessories_received }}</p>
+{% endif %}
+
+{% if job.engineer_remarks %}
+<hr>
+<p><strong>Engineer Remarks:</strong> {{ job.engineer_remarks }}</p>
+{% endif %}
+
+{% if used_spares %}
+<hr>
+<p><strong>Used Spares:</strong></p>
+<div class="table-responsive">
+<table class="table table-bordered table-sm mb-0">
+<thead class="table-light">
+<tr>
+<th>Spare Name</th>
+<th>Amount</th>
+</tr>
+</thead>
+<tbody>
+{% for s in used_spares %}
+<tr>
+<td>{{ s.spare_name }}</td>
+<td>{{ s.amount }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% endif %}
+
+{% set close_requires_spare_billing = spare_billing.has_used_spares and spare_billing.status != 'Billed' %}
+
+<hr>
+<p><strong>Billing Summary:</strong></p>
+<div class="table-responsive">
+<table class="table table-bordered table-sm mb-0">
+<tbody>
+<tr>
+<td>Used Spares Total</td>
+<td class="text-end">{{ '%.2f'|format(total_spares_amount|float) }}</td>
+</tr>
+<tr>
+<td>Service Charges</td>
+<td class="text-end">{{ '%.2f'|format(service_charges|float) }}</td>
+</tr>
+<tr class="table-light fw-bold">
+<td>Total Bill Amount</td>
+<td class="text-end">{{ '%.2f'|format(bill_total_amount|float) }}</td>
+</tr>
+{% if job.get('closure_status') and bill_total_amount > 0 %}
+<tr>
+<td>Cash</td>
+<td class="text-end">{{ '%.2f'|format((job.payment_cash or 0)|float) }}</td>
+</tr>
+<tr>
+<td>UPI</td>
+<td class="text-end">{{ '%.2f'|format((job.payment_upi or 0)|float) }}</td>
+</tr>
+<tr>
+<td>Card</td>
+<td class="text-end">{{ '%.2f'|format((job.payment_card or 0)|float) }}</td>
+</tr>
+{% endif %}
+{% if transfer_rows %}
+<tr>
+<td>Specialist Share</td>
+<td class="text-end">{{ '%.2f'|format(transfer_summary.specialist_service_total|float) }}</td>
+</tr>
+<tr>
+<td>{{ job.branch_name }} Service Margin</td>
+<td class="text-end">{{ '%.2f'|format(transfer_summary.closing_branch_service_margin|float) }}</td>
+</tr>
+{% endif %}
+</tbody>
+</table>
+</div>
+
+{% if transfer_rows %}
+<hr>
+<div class="row g-3">
+<div class="col-lg-5">
+<div class="job-transfer-card p-3 h-100">
+<div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+<div>
+<div class="fw-semibold">Specialist Service Split</div>
+<div class="job-transfer-note">Internal service charge is credited to the specialist branch. The balance stays with {{ job.branch_name }}.</div>
+</div>
+{% if transfer_summary.has_active_transfer %}
+<span class="badge text-bg-info">{{ transfer_summary.active_transfer.status }}</span>
+{% endif %}
+</div>
+<p class="mb-1"><strong>Specialist Share:</strong> {{ '%.2f'|format(transfer_summary.specialist_service_total|float) }}</p>
+<p class="mb-1"><strong>{{ job.branch_name }} Margin:</strong> {{ '%.2f'|format(transfer_summary.closing_branch_service_margin|float) }}</p>
+{% if transfer_summary.active_transfer %}
+<hr>
+<p class="mb-1"><strong>Current Specialist Branch:</strong> {{ transfer_summary.active_transfer.to_branch_name }}</p>
+<p class="mb-1"><strong>Current Specialist Engineer:</strong> {{ transfer_summary.active_transfer.specialist_engineer or 'Pending assignment' }}</p>
+<p class="mb-0"><strong>Service Type:</strong> {{ transfer_summary.active_transfer.service_type or 'Not specified' }}</p>
+{% elif transfer_summary.latest_completed_transfer %}
+<hr>
+<p class="mb-1"><strong>Last Specialist Branch:</strong> {{ transfer_summary.latest_completed_transfer.to_branch_name }}</p>
+<p class="mb-1"><strong>Last Specialist Engineer:</strong> {{ transfer_summary.latest_completed_transfer.specialist_engineer or 'Not specified' }}</p>
+<p class="mb-0"><strong>Last Specialist Status:</strong> {{ transfer_summary.latest_completed_transfer.status }}</p>
+{% endif %}
+</div>
+</div>
+<div class="col-lg-7">
+<div class="table-responsive">
+<table class="table table-bordered table-sm mb-0 job-transfer-table">
+<thead class="table-light">
+<tr>
+<th>From</th>
+<th>Specialist Branch</th>
+<th>Engineer</th>
+<th>Service Type</th>
+<th>Status</th>
+<th>Internal Charge</th>
+<th>Updated</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+{% for transfer in transfer_rows %}
+<tr>
+<td>{{ transfer.from_branch_name }}</td>
+<td>{{ transfer.to_branch_name }}</td>
+<td>{{ transfer.specialist_engineer or '-' }}</td>
+<td>{{ transfer.service_type or '-' }}</td>
+<td>
+<span class="badge {% if transfer.status in ['Sent', 'In Service', 'Completed'] %}text-bg-info{% elif transfer.status == 'Returned' %}text-bg-success{% else %}text-bg-secondary{% endif %}">
+{{ transfer.status }}
+</span>
+</td>
+<td class="text-end">{{ '%.2f'|format(transfer.internal_service_charge|float) }}</td>
+<td>
+<div>{{ transfer.updated_on or transfer.created_on or '-' }}</div>
+<div class="small text-muted">{{ transfer.updated_by or transfer.sent_by or '-' }}</div>
+</td>
+<td>
+<div>{{ transfer.request_notes or '-' }}</div>
+{% if transfer.status_notes %}
+<div class="small text-muted mt-1">{{ transfer.status_notes }}</div>
+{% endif %}
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+</div>
+{% endif %}
+
+{% set spare_billing_badge_class = 'text-bg-success' if spare_billing.status == 'Billed' else ('text-bg-warning' if spare_billing.status == 'Pending' else 'text-bg-secondary') %}
+<hr>
+<p><strong>Spare Billing:</strong></p>
+<div class="row g-3 align-items-start">
+<div class="col-md-6">
+<p class="mb-2"><span class="badge {{ spare_billing_badge_class }}">{{ spare_billing.status }}</span></p>
+<p class="mb-1"><strong>Invoice No:</strong> {{ spare_billing.invoice_no or '-' }}</p>
+<p class="mb-1"><strong>Invoice Date:</strong> {{ spare_billing.invoice_date_display or '-' }}</p>
+<p class="mb-0"><strong>Billed By:</strong> {{ spare_billing.billed_by or '-' }}</p>
+</div>
+<div class="col-md-6">
+<p class="mb-1"><strong>Notes:</strong></p>
+<div class="border rounded p-2 bg-light small">{{ spare_billing.notes or 'No billing notes added.' }}</div>
+</div>
+</div>
+{% if spare_billing.pending and spare_billing.has_used_spares %}
+<div class="alert alert-warning py-2 mt-3 mb-0">Used spare items are pending billing. Invoice details must be entered before this case can be closed.</div>
+{% endif %}
+
+{% if attachments %}
+<hr>
+<p><strong>Attachments:</strong> {{ attachments|length }}</p>
+<p class="text-muted small mb-3">Attachments are auto-removed {{ job_attachment_retention_days }} days after case closure.</p>
+<div class="row g-3">
+{% for attachment in attachments %}
+<div class="col-sm-6 col-lg-4">
+<div class="border rounded p-2 bg-light h-100">
+<a href="{{ url_for('job_attachment', job_id=job.id, filename=attachment.filename) }}" target="_blank" rel="noopener">
+<img src="{{ url_for('job_attachment', job_id=job.id, filename=attachment.filename) }}" alt="Attachment {{ loop.index }} for job {{ job.job_number }}" class="img-fluid rounded border w-100" style="height: 220px; object-fit: cover;">
+</a>
+<div class="mt-2">
+<a href="{{ url_for('job_attachment', job_id=job.id, filename=attachment.filename) }}" target="_blank" rel="noopener">Open Full Image</a>
+</div>
+{% if session.role in ['super_admin', 'admin', 'coordinator'] and (not job.get('closure_status') or session.role in ['super_admin', 'admin']) %}
+<form method="POST" action="{{ url_for('delete_job_attachment', job_id=job.id, filename=attachment.filename) }}" class="mt-2">
+<input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+<button type="submit" class="btn btn-outline-danger btn-sm">Delete Attachment</button>
+</form>
+{% endif %}
+</div>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+
+</div>
+</div>
+
+
+<!-- Status Log Section -->
+{% if status_logs %}
+<hr>
+<h5>Status Change Log</h5>
+<div class="table-responsive mb-3">
+	<table class="table table-bordered table-sm mb-0">
+		<thead class="table-light">
+			<tr>
+				<th>Status</th>
+				<th>Notes</th>
+				<th>Date</th>
+				<th>Edited By</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for log in status_logs %}
+			<tr>
+				<td>{{ log.status }}</td>
+				<td>{{ log.notes }}</td>
+				<td>{{ format_datetime_display(log.updated_at) }}</td>
+				<td>{{ log.updated_by }}</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+{% endif %}
+
+</div>
+
+<div class="col-md-4">
+
+<div class="card">
+<div class="card-header">
+<h6>Actions</h6>
+</div>
+<div class="card-body">
+
+{% if not job.get('closure_status') %}
+  <!-- Open Case Actions -->
+  {% if job_permissions.can_manage_core %}
+		<a href="/job-print/{{ job.id }}/create" class="btn btn-outline-dark w-100 mb-2" target="_blank" rel="noopener">Print</a>
+		<a href="{{ build_whatsapp_chat_url(job.mobile or job.alt_no, 'Document: Customer Job Copy\nJob No: ' ~ (job.job_number or job.id) ~ '\nCustomer: ' ~ (job.customer_name or 'Customer') ~ '\nMobile: ' ~ (job.mobile or job.alt_no or '-')) }}" class="btn btn-success w-100 mb-2" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+    <a href="/edit-job/{{ job.id }}" class="btn btn-primary w-100 mb-2">Edit Job</a>
+		{% if job_permissions.can_send_transfer %}
+		<button class="btn btn-outline-dark w-100 mb-2" data-bs-toggle="modal" data-bs-target="#sendTransferModal">Send to Specialist Branch</button>
+		{% endif %}
+		{% if job_permissions.can_update_transfer %}
+		<button class="btn btn-outline-info w-100 mb-2" data-bs-toggle="modal" data-bs-target="#updateTransferModal">Update Specialist Transfer</button>
+		{% endif %}
+		{% if spare_billing.has_used_spares and not close_requires_spare_billing %}
+		<button class="btn btn-outline-primary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#spareBillingModal">{% if spare_billing.status == 'Billed' %}Update Spare Billing{% else %}Mark Spare Billed{% endif %}</button>
+		{% endif %}
+		{% if close_requires_transfer_return %}
+		<button type="button" class="btn btn-warning w-100 mb-1" disabled>Close Case</button>
+		<div class="small text-muted mb-2">Return the active specialist transfer before closing this case.</div>
+		{% elif close_requires_spare_billing %}
+		<button type="button" id="closeCaseActionButton" class="btn btn-warning w-100 mb-1">Close Case</button>
+		<div class="small text-muted mb-2">Complete spare billing first to continue closing this case.</div>
+		{% else %}
+		<button class="btn btn-warning w-100 mb-2" data-bs-toggle="modal" data-bs-target="#closeCaseModal">Close Case</button>
+		{% endif %}
+  {% elif job_permissions.can_update_transfer %}
+		<button class="btn btn-outline-info w-100 mb-2" data-bs-toggle="modal" data-bs-target="#updateTransferModal">Update Specialist Transfer</button>
+		<div class="small text-muted mb-2">Core case edits remain with {{ job.branch_name }}.</div>
+  {% endif %}
+{% else %}
+  <!-- Closed Case Actions -->
+  {% if job_permissions.can_manage_core %}
+	<a href="/job-print/{{ job.id }}/close" class="btn btn-outline-dark w-100 mb-2" target="_blank" rel="noopener">Print</a>
+	<a href="{{ build_whatsapp_chat_url(job.mobile or job.alt_no, 'Document: Outward Challan\nJob No: ' ~ (job.job_number or job.id) ~ '\nCustomer: ' ~ (job.customer_name or 'Customer') ~ '\nMobile: ' ~ (job.mobile or job.alt_no or '-')) }}" class="btn btn-success w-100 mb-2" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+  {% if session.role in ['super_admin', 'admin'] %}
+    <a href="/edit-job/{{ job.id }}" class="btn btn-primary w-100 mb-2">Edit Job</a>
+		<form method="POST" action="{{ url_for('reopen_case', job_id=job.id) }}" class="mb-2" onsubmit="return confirm('Reopen this case?');">
+			<input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+			<button type="submit" class="btn btn-outline-warning w-100">Reopen Case</button>
+		</form>
+		{% if spare_billing.has_used_spares %}
+		<button class="btn btn-outline-primary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#spareBillingModal">Update Spare Billing</button>
+		{% endif %}
+  {% endif %}
+  {% endif %}
+{% endif %}
+
+<a href="/jobs" class="btn btn-secondary w-100 mb-2">Back to List</a>
+
+</div>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="modal fade" id="spareBillingModal" tabindex="-1" aria-labelledby="spareBillingModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="spareBillingModalLabel">Spare Billing - {{ job.job_number }}</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<form id="spareBillingForm" method="POST" action="/job-spare-billing/{{ job.id }}">
+				<div class="modal-body">
+					<input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+					<input type="hidden" id="spareBillingNextAction" name="next_action" value="{{ 'close_case' if continue_close_case else '' }}">
+					<div class="alert alert-info py-2">Used spare items: {{ spare_billing.used_spares_count }}</div>
+					<div id="spareBillingContinueHint" class="alert alert-warning py-2 {% if not continue_close_case %}d-none{% endif %}">Complete invoice details and save. Close Case will open next.</div>
+					<div class="mb-3">
+						<label for="sparesBillingStatus" class="form-label">Billing Status</label>
+						<select id="sparesBillingStatus" name="spares_billing_status" class="form-select" required>
+							<option value="Pending" {% if spare_billing.status == 'Pending' %}selected{% endif %}>Pending</option>
+							<option value="Billed" {% if spare_billing.status == 'Billed' %}selected{% endif %}>Billed</option>
+						</select>
+					</div>
+					<div id="sparesInvoiceFields" class="row g-2">
+						<div class="col-md-6">
+							<label for="sparesInvoiceNo" class="form-label">Invoice No</label>
+							<input id="sparesInvoiceNo" type="text" name="spares_invoice_no" class="form-control" value="{{ spare_billing.invoice_no or '' }}">
+						</div>
+						<div class="col-md-6">
+							<label for="sparesInvoiceDate" class="form-label">Invoice Date</label>
+							<input id="sparesInvoiceDate" type="date" name="spares_invoice_date" class="form-control" value="{{ spare_billing.invoice_date_value or '' }}">
+						</div>
+					</div>
+					<div class="mt-3">
+						<label for="sparesBillingNotes" class="form-label">Billing Notes</label>
+						<textarea id="sparesBillingNotes" name="spares_billing_notes" class="form-control" rows="3" placeholder="Invoice notes or billing comments">{{ spare_billing.notes or '' }}</textarea>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+					<button type="submit" id="spareBillingSubmitButton" class="btn btn-primary">{% if continue_close_case %}Save Billing & Continue{% else %}Save Spare Billing{% endif %}</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+	{% if job_permissions.can_send_transfer %}
+	<div class="modal fade" id="sendTransferModal" tabindex="-1" aria-labelledby="sendTransferModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="sendTransferModalLabel">Send to Specialist Branch - {{ job.job_number }}</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<form method="POST" action="/job-transfer/send/{{ job.id }}">
+					<div class="modal-body">
+						<input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+						<div class="mb-3">
+							<label for="transferBranch" class="form-label">Specialist Branch</label>
+							<select id="transferBranch" name="to_branch_name" class="form-select" required>
+								<option value="">Select specialist branch</option>
+								{% for branch_name in transfer_branch_options %}
+								<option value="{{ branch_name }}">{{ branch_name }}</option>
+								{% endfor %}
+							</select>
+						</div>
+						<div class="mb-3">
+							<label for="transferEngineer" class="form-label">Specialist Engineer</label>
+							<input id="transferEngineer" name="specialist_engineer" class="form-control" list="transferEngineerOptions" placeholder="Optional initial engineer">
+						</div>
+						<div class="mb-3">
+							<label for="transferServiceType" class="form-label">Service Type</label>
+							<input id="transferServiceType" name="service_type" class="form-control" placeholder="Example: Chip level service">
+						</div>
+						<div>
+							<label for="transferRequestNotes" class="form-label">Notes</label>
+							<textarea id="transferRequestNotes" name="request_notes" class="form-control" rows="3" placeholder="What the specialist branch needs to do"></textarea>
+						</div>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+						<button type="submit" class="btn btn-primary">Send Transfer</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+	{% endif %}
+
+	{% if job_permissions.can_update_transfer and transfer_summary.active_transfer %}
+	<div class="modal fade" id="updateTransferModal" tabindex="-1" aria-labelledby="updateTransferModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="updateTransferModalLabel">Update Specialist Transfer - {{ job.job_number }}</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<form method="POST" action="/job-transfer/update/{{ transfer_summary.active_transfer.id }}">
+					<div class="modal-body">
+						<input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+						<div class="alert alert-info py-2">
+							<strong>{{ transfer_summary.active_transfer.to_branch_name }}</strong>
+							{% if transfer_summary.active_transfer.specialist_engineer %}
+							| {{ transfer_summary.active_transfer.specialist_engineer }}
+							{% endif %}
+							| Current Status: {{ transfer_summary.active_transfer.status }}
+						</div>
+						<div class="mb-3">
+							<label for="transferStatus" class="form-label">Next Status</label>
+							<select id="transferStatus" name="status" class="form-select" required>
+								<option value="{{ transfer_summary.active_transfer.status }}">{{ transfer_summary.active_transfer.status }}</option>
+								{% for status_name in transfer_allowed_next_statuses %}
+								<option value="{{ status_name }}">{{ status_name }}</option>
+								{% endfor %}
+							</select>
+						</div>
+						<div class="mb-3">
+							<label for="updateTransferEngineer" class="form-label">Specialist Engineer</label>
+							<input id="updateTransferEngineer" name="specialist_engineer" class="form-control" list="transferEngineerOptions" value="{{ transfer_summary.active_transfer.specialist_engineer or '' }}" placeholder="Engineer who handled the service">
+						</div>
+						<div class="mb-3">
+							<label for="updateTransferServiceType" class="form-label">Service Type</label>
+							<input id="updateTransferServiceType" name="service_type" class="form-control" value="{{ transfer_summary.active_transfer.service_type or '' }}">
+						</div>
+						<div class="mb-3">
+							<label for="updateTransferCharge" class="form-label">Internal Service Charge</label>
+							<input id="updateTransferCharge" type="number" step="0.01" min="0" name="internal_service_charge" class="form-control" value="{{ '%.2f'|format(transfer_summary.active_transfer.internal_service_charge|float) }}">
+						</div>
+						<div>
+							<label for="updateTransferNotes" class="form-label">Status Notes</label>
+							<textarea id="updateTransferNotes" name="status_notes" class="form-control" rows="3" placeholder="Service completion / return notes">{{ transfer_summary.active_transfer.status_notes or '' }}</textarea>
+						</div>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+						<button type="submit" class="btn btn-primary">Update Transfer</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+	{% endif %}
+
+<div class="modal fade" id="closeCaseModal" tabindex="-1" aria-labelledby="closeCaseModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="closeCaseModalLabel">Close Case - {{ job.job_number }}</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<form id="closeCaseForm" method="POST" action="/close-case/{{ job.id }}">
+				<div class="modal-body">
+					<input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+					<div class="mb-3">
+						<label for="closureMain" class="form-label">Close Status</label>
+						<select id="closureMain" name="closure_main" class="form-select" required>
+							<option value="">Select status</option>
+							<option value="Closed Success">Closed Success</option>
+							<option value="Closed Failed">Closed Failed</option>
+						</select>
+					</div>
+
+					<div class="mb-3 d-none" id="failedReasonWrap">
+						<label for="closureSubReason" class="form-label">Failed Reason</label>
+						<select id="closureSubReason" name="closure_sub_reason" class="form-select">
+							<option value="">Select failed reason</option>
+							<option value="Non-repairable">Non-repairable</option>
+							<option value="Spare not available">Spare not available</option>
+							<option value="Customer not approved">Customer not approved</option>
+						</select>
+					</div>
+
+					<div class="mb-3 d-none" id="closureServiceTypeWrap">
+						<label for="closureServiceType" class="form-label">Service Type</label>
+						<select id="closureServiceType" name="closure_service_type" class="form-select">
+							<option value="">Select service type</option>
+							<option value="SYSCARE">SYSCARE</option>
+							<option value="REGULAR">REGULAR</option>
+							<option value="WARRANTY">WARRANTY</option>
+						</select>
+					</div>
+
+					<div class="mb-3">
+						<label for="closureNotes" class="form-label">Notes</label>
+						<textarea id="closureNotes" name="closure_notes" class="form-control" rows="4" required minlength="3" placeholder="Notes are required to close the case"></textarea>
+					</div>
+
+					<div class="alert alert-info py-2 mb-3">
+						<strong>Total Bill Amount:</strong> {{ '%.2f'|format(bill_total_amount|float) }}
+					</div>
+					{% if transfer_rows %}
+					<div class="alert alert-secondary py-2 mb-3">
+						<div><strong>Specialist Share:</strong> {{ '%.2f'|format(transfer_summary.specialist_service_total|float) }}</div>
+						<div><strong>{{ job.branch_name }} Service Margin:</strong> {{ '%.2f'|format(transfer_summary.closing_branch_service_margin|float) }}</div>
+					</div>
+					{% endif %}
+					{% if spare_billing.pending and spare_billing.has_used_spares %}
+					<div class="alert alert-warning py-2 mb-3">Used spare items are pending billing. Enter invoice details in Spare Billing before closing this case.</div>
+					{% endif %}
+
+					<div id="paymentWrap" class="border rounded p-3">
+						<div class="fw-semibold mb-2">Mode of Payment Split</div>
+						<div class="row g-2">
+							<div class="col-md-4">
+								<label for="paymentCash" class="form-label">Cash</label>
+								<input id="paymentCash" type="number" step="0.01" min="0" name="payment_cash" class="form-control" value="0">
+							</div>
+							<div class="col-md-4">
+								<label for="paymentUpi" class="form-label">UPI</label>
+								<input id="paymentUpi" type="number" step="0.01" min="0" name="payment_upi" class="form-control" value="0">
+							</div>
+							<div class="col-md-4">
+								<label for="paymentCard" class="form-label">Card</label>
+								<input id="paymentCard" type="number" step="0.01" min="0" name="payment_card" class="form-control" value="0">
+							</div>
+						</div>
+						<small class="text-muted d-block mt-2">Total bill amount > 0 ആണെങ്കിൽ payment split exact same total ആകണം.</small>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+					<button type="submit" class="btn btn-primary">Save Close</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+{% if transfer_user_options %}
+<datalist id="transferEngineerOptions">
+{% for username in transfer_user_options %}
+<option value="{{ username }}"></option>
+{% endfor %}
+</datalist>
+{% endif %}
+<script>
+const closureMain = document.getElementById("closureMain");
+const failedReasonWrap = document.getElementById("failedReasonWrap");
+const closureSubReason = document.getElementById("closureSubReason");
+const closureServiceTypeWrap = document.getElementById("closureServiceTypeWrap");
+const closureServiceType = document.getElementById("closureServiceType");
+const paymentWrap = document.getElementById("paymentWrap");
+const closeCaseForm = document.getElementById("closeCaseForm");
+const paymentCash = document.getElementById("paymentCash");
+const paymentUpi = document.getElementById("paymentUpi");
+const paymentCard = document.getElementById("paymentCard");
+const sparesBillingStatus = document.getElementById("sparesBillingStatus");
+const sparesInvoiceFields = document.getElementById("sparesInvoiceFields");
+const sparesInvoiceNo = document.getElementById("sparesInvoiceNo");
+const sparesInvoiceDate = document.getElementById("sparesInvoiceDate");
+const spareBillingModalElement = document.getElementById("spareBillingModal");
+const closeCaseModalElement = document.getElementById("closeCaseModal");
+const closeCaseActionButton = document.getElementById("closeCaseActionButton");
+const spareBillingNextAction = document.getElementById("spareBillingNextAction");
+const spareBillingContinueHint = document.getElementById("spareBillingContinueHint");
+const spareBillingSubmitButton = document.getElementById("spareBillingSubmitButton");
+const billTotalAmount = Number("{{ '%.2f'|format(bill_total_amount|float) }}");
+const pageFlags = document.body ? document.body.dataset : {};
+const autoOpenCloseCase = pageFlags.openCloseCase === "true";
+const autoOpenSpareBilling = pageFlags.openSpareBilling === "true";
+const continueCloseCase = pageFlags.continueCloseCase === "true";
+
+function toggleClosureFields() {
+	if (!closureMain || !failedReasonWrap || !closureSubReason) {
+		return;
+	}
+	const isFailed = closureMain.value === "Closed Failed";
+	const isSuccess = closureMain.value === "Closed Success";
+	failedReasonWrap.classList.toggle("d-none", !isFailed);
+	closureSubReason.required = isFailed;
+	if (!isFailed) {
+		closureSubReason.value = "";
+	}
+	if (closureServiceTypeWrap && closureServiceType) {
+		closureServiceTypeWrap.classList.toggle("d-none", !isSuccess);
+		closureServiceType.required = isSuccess;
+		if (!isSuccess) {
+			closureServiceType.value = "";
+		}
+	}
+}
+
+if (closureMain) {
+	closureMain.addEventListener("change", toggleClosureFields);
+	toggleClosureFields();
+}
+
+if (paymentWrap) {
+	paymentWrap.classList.toggle("d-none", billTotalAmount <= 0);
+}
+
+function toggleSpareBillingFields() {
+	if (!sparesBillingStatus || !sparesInvoiceFields || !sparesInvoiceNo || !sparesInvoiceDate) {
+		return;
+	}
+	var billedSelected = sparesBillingStatus.value === "Billed";
+	sparesInvoiceFields.classList.toggle("d-none", !billedSelected);
+	sparesInvoiceNo.required = billedSelected;
+	sparesInvoiceDate.required = billedSelected;
+	if (!billedSelected) {
+		sparesInvoiceNo.value = "";
+		sparesInvoiceDate.value = "";
+	}
+}
+
+function setSpareBillingContinueMode(enabled) {
+	if (spareBillingNextAction) {
+		spareBillingNextAction.value = enabled ? "close_case" : "";
+	}
+	if (spareBillingContinueHint) {
+		spareBillingContinueHint.classList.toggle("d-none", !enabled);
+	}
+	if (spareBillingSubmitButton) {
+		spareBillingSubmitButton.textContent = enabled ? "Save Billing & Continue" : "Save Spare Billing";
+	}
+	if (enabled && sparesBillingStatus && sparesBillingStatus.value !== "Billed") {
+		sparesBillingStatus.value = "Billed";
+		toggleSpareBillingFields();
+	}
+}
+
+if (sparesBillingStatus) {
+	sparesBillingStatus.addEventListener("change", toggleSpareBillingFields);
+	toggleSpareBillingFields();
+}
+
+if (closeCaseActionButton && spareBillingModalElement) {
+	closeCaseActionButton.addEventListener("click", function () {
+		setSpareBillingContinueMode(true);
+		bootstrap.Modal.getOrCreateInstance(spareBillingModalElement).show();
+		if (sparesInvoiceNo) {
+			sparesInvoiceNo.focus();
+		}
+	});
+}
+
+if (spareBillingModalElement) {
+	spareBillingModalElement.addEventListener("hidden.bs.modal", function () {
+		setSpareBillingContinueMode(false);
+	});
+}
+
+if (autoOpenSpareBilling && spareBillingModalElement) {
+	setSpareBillingContinueMode(continueCloseCase);
+	bootstrap.Modal.getOrCreateInstance(spareBillingModalElement).show();
+}
+
+if (autoOpenCloseCase && closeCaseModalElement) {
+	bootstrap.Modal.getOrCreateInstance(closeCaseModalElement).show();
+}
+
+if (closeCaseForm) {
+	closeCaseForm.addEventListener("submit", function (e) {
+		if (billTotalAmount <= 0) {
+			return;
+		}
+
+		const cash = Number((paymentCash && paymentCash.value) || 0);
+		const upi = Number((paymentUpi && paymentUpi.value) || 0);
+		const card = Number((paymentCard && paymentCard.value) || 0);
+		const splitTotal = cash + upi + card;
+
+		if (Math.abs(splitTotal - billTotalAmount) > 0.01) {
+			e.preventDefault();
+			alert("Payment split total must match bill total exactly.");
+		}
+	});
+}
+</script>
+
+</body>
+</html>

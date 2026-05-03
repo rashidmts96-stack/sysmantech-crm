@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SYSCARE Dashboard</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+<style>
+:root {
+    --bg: transparent;
+    --card: rgba(255, 255, 255, 0.94);
+    --line: rgba(157, 177, 205, 0.36);
+    --text: var(--crm-ink);
+    --muted: var(--crm-muted);
+    --primary-soft: rgba(43, 111, 255, 0.12);
+    --success-soft: rgba(90, 169, 255, 0.16);
+    --danger-soft: rgba(85, 104, 255, 0.12);
+    --warning-soft: rgba(39, 194, 217, 0.14);
+}
+
+body {
+    background: var(--crm-page-background);
+    color: var(--text);
+}
+
+.top-shell {
+    background: linear-gradient(160deg, rgba(15, 23, 42, 0.96) 0%, rgba(24, 54, 94, 0.92) 58%, rgba(43, 111, 255, 0.86) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 22px;
+    box-shadow: 0 20px 48px rgba(15, 23, 42, 0.18);
+    color: #ffffff;
+}
+
+.metric-card {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(247, 251, 255, 0.96) 100%);
+    padding: 10px 14px;
+}
+
+.metric-card .k-label {
+    font-size: 0.74rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+    font-weight: 700;
+}
+
+.metric-card .k-value {
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.metric-target { background: var(--primary-soft); }
+.metric-achieved { background: var(--success-soft); }
+.metric-balance { background: var(--danger-soft); }
+.metric-percent { background: var(--warning-soft); }
+
+.metric-target .k-label,
+.metric-target .k-value {
+    color: var(--crm-blue-deep);
+}
+
+.metric-achieved .k-label,
+.metric-achieved .k-value {
+    color: var(--crm-blue);
+}
+
+.metric-balance .k-label,
+.metric-balance .k-value {
+    color: var(--crm-chart-indigo);
+}
+
+.metric-percent .k-label,
+.metric-percent .k-value {
+    color: var(--crm-chart-cyan);
+}
+
+.pie-shell {
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    background: var(--card);
+    padding: 12px;
+}
+
+.pie-wrap {
+    width: 220px;
+    height: 220px;
+    margin: 0 auto;
+    border-radius: 50%;
+    background: conic-gradient(var(--crm-chart-sky) calc(var(--pct, 0) * 1%), var(--crm-chart-indigo) 0);
+    position: relative;
+    box-shadow: inset 0 0 0 10px rgba(255, 255, 255, 0.44);
+}
+
+.pie-wrap::after {
+    content: "";
+    position: absolute;
+    inset: 52px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.pie-center {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.05rem;
+    color: #0f172a;
+}
+
+.pie-legend {
+    font-weight: 700;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+}
+
+.syscare-tabs {
+    border-bottom: 1px solid var(--line);
+}
+
+.syscare-tabs .nav-link {
+    border: none;
+    border-radius: 10px 10px 0 0;
+    color: #334155;
+    font-weight: 600;
+    padding: 10px 16px;
+}
+
+.syscare-tabs .nav-link.active {
+    background: #ffffff;
+    color: #0f172a;
+    border: 1px solid var(--line);
+    border-bottom-color: #ffffff;
+}
+
+.tab-panel {
+    border: 1px solid var(--line);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    background: #ffffff;
+    padding: 12px;
+}
+
+.fixed-table-wrap {
+    max-height: 52vh;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+}
+
+.fixed-table-wrap table {
+    margin-bottom: 0;
+}
+
+.fixed-table-wrap thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.syscare-chart-card {
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.syscare-chart-card .card-header {
+    background: linear-gradient(180deg, rgba(239, 246, 255, 0.92), rgba(255, 255, 255, 0.98));
+    border-bottom: 1px solid var(--line);
+}
+
+.syscare-chart-note {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.syscare-chart-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.syscare-chart-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.82rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.syscare-chart-pill-months { color: #334155; background: #e2e8f0; }
+.syscare-chart-pill-achieved { color: var(--crm-blue-deep); background: rgba(43, 111, 255, 0.12); }
+.syscare-chart-pill-target { color: var(--crm-chart-indigo); background: rgba(85, 104, 255, 0.12); }
+
+.syscare-chart-wrap {
+    position: relative;
+    height: 320px;
+}
+
+.syscare-chart-empty {
+    min-height: 240px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #64748b;
+}
+
+.records-filter-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: rgba(247, 251, 255, 0.82);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.soft-empty {
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    padding: 18px;
+    text-align: center;
+    color: #64748b;
+    background: rgba(247, 251, 255, 0.82);
+}
+
+.top-shell .form-label,
+.top-shell .text-muted,
+.top-shell .small,
+.top-shell .form-text {
+    color: rgba(255, 255, 255, 0.74) !important;
+}
+
+.top-shell .form-control,
+.top-shell .form-select {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
+.tab-content > .tab-pane {
+    display: none;
+}
+
+.tab-content > .active {
+    display: block;
+}
+</style>
+</head>
+<body class="crm-theme">
+
+<nav class="navbar navbar-dark bg-dark">
+<div class="container-fluid">
+<span class="navbar-brand">SYSCARE Plan Dashboard</span>
+<div class="d-flex align-items-center gap-2 flex-wrap justify-content-end ms-auto">
+{% if can_create %}
+<a href="/syscare-new" class="btn btn-success btn-sm">+ New Certificate</a>
+{% endif %}
+<a href="/dashboard" class="btn btn-secondary btn-sm">Dashboard</a>
+{% include "_global_user_menu.html" %}
+</div>
+</div>
+</nav>
+
+<div class="container-fluid py-3">
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+{{ message }}
+<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<div class="top-shell p-3 mb-3">
+<div class="row g-3 align-items-stretch">
+<div class="col-xl-8">
+<form method="GET" action="/syscare" class="row g-2 align-items-end mb-3">
+<div class="col-md-4">
+<label class="form-label mb-1">Month</label>
+<input type="month" name="month" class="form-control" value="{{ selected_month }}">
+</div>
+<div class="col-md-2 d-grid">
+<button class="btn btn-primary" type="submit">Apply</button>
+</div>
+<div class="col-md-3 d-grid">
+<a class="btn btn-outline-secondary" href="/syscare">Current Month</a>
+</div>
+<div class="col-md-3 text-md-end text-muted small">Period: {{ month_start }} to {{ month_end }}</div>
+</form>
+
+<div class="row g-2">
+<div class="col-sm-6 col-lg-3">
+<div class="metric-card metric-target h-100">
+<div class="k-label">Target</div>
+<div class="k-value">{{ monthly_target }}</div>
+</div>
+</div>
+<div class="col-sm-6 col-lg-3">
+<div class="metric-card metric-achieved h-100">
+<div class="k-label">Achieved</div>
+<div class="k-value">{{ achieved_count }}</div>
+</div>
+</div>
+<div class="col-sm-6 col-lg-3">
+<div class="metric-card metric-balance h-100">
+<div class="k-label">Balance</div>
+<div class="k-value">{{ remaining_count }}</div>
+</div>
+</div>
+<div class="col-sm-6 col-lg-3">
+<div class="metric-card metric-percent h-100">
+<div class="k-label">Achieved %</div>
+<div class="k-value">{{ '%.2f'|format(achieved_percentage or 0) }}%</div>
+</div>
+</div>
+</div>
+
+<div class="alert alert-{{ advice_class }} py-2 mt-3 mb-0">{{ advice }}</div>
+</div>
+
+<div class="col-xl-4">
+<div class="pie-shell h-100 d-flex flex-column justify-content-center">
+<div class="pie-wrap" style="--pct: {{ [achieved_percentage or 0, 100]|min }};">
+<div class="pie-center">{{ '%.1f'|format(achieved_percentage or 0) }}%</div>
+</div>
+<div class="pie-legend d-flex justify-content-center gap-3 mt-3 small text-muted">
+<span><span class="dot" style="background:var(--crm-chart-sky)"></span>Achieved</span>
+<span><span class="dot" style="background:var(--crm-chart-indigo)"></span>Balance</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<ul class="nav nav-tabs syscare-tabs" id="syscareTabs" role="tablist">
+<li class="nav-item" role="presentation">
+<button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard-pane" type="button" role="tab" aria-controls="dashboard-pane" aria-selected="true">Dashboard</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" id="branch-targets-tab" data-bs-toggle="tab" data-bs-target="#branch-targets-pane" type="button" role="tab" aria-controls="branch-targets-pane" aria-selected="false">Branch Targets</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" id="records-tab" data-bs-toggle="tab" data-bs-target="#records-pane" type="button" role="tab" aria-controls="records-pane" aria-selected="false">Records</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload-pane" type="button" role="tab" aria-controls="upload-pane" aria-selected="false">Upload</button>
+</li>
+</ul>
+
+<div class="tab-content tab-panel" id="syscareTabsContent">
+<div class="tab-pane fade show active" id="dashboard-pane" role="tabpanel" aria-labelledby="dashboard-tab" tabindex="0">
+<div class="row g-3">
+<div class="col-12">
+<div class="card syscare-chart-card">
+<div class="card-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+<div>
+<div class="fw-semibold">Monthly Target vs Achieved</div>
+{% if (syscare_chart_labels|length) > 1 %}
+<div class="syscare-chart-note">Trend from {{ syscare_chart_start_label }} to {{ syscare_chart_anchor_label }}. Scope: {{ syscare_chart_scope_label }}.</div>
+{% else %}
+<div class="syscare-chart-note">Month {{ syscare_chart_anchor_label }}. Scope: {{ syscare_chart_scope_label }}.</div>
+{% endif %}
+</div>
+<div class="syscare-chart-summary">
+<span class="syscare-chart-pill syscare-chart-pill-months">Months {{ (syscare_chart_labels|length) if syscare_chart_labels else 0 }}</span>
+<span class="syscare-chart-pill syscare-chart-pill-achieved">Achieved Total {{ syscare_chart_total_achieved or 0 }}</span>
+<span class="syscare-chart-pill syscare-chart-pill-target">Monthly Target {{ syscare_chart_target_value or 0 }}</span>
+</div>
+</div>
+<div class="card-body">
+{% if syscare_chart_has_data %}
+<div class="syscare-chart-wrap">
+<canvas id="syscareTrendChart" aria-label="SYSCARE monthly target and achieved chart" data-labels='{{ syscare_chart_labels|tojson }}' data-full-labels='{{ syscare_chart_full_labels|tojson }}' data-achieved='{{ syscare_chart_achieved_series|tojson }}' data-target='{{ syscare_chart_target_series|tojson }}' data-balance='{{ syscare_chart_balance_series|tojson }}'></canvas>
+</div>
+{% else %}
+<div class="syscare-chart-empty">
+<div>
+<div class="fw-semibold mb-1">No SYSCARE chart data</div>
+<div>Set a branch target or upload SYSCARE records to see the monthly trend.</div>
+</div>
+</div>
+{% endif %}
+</div>
+</div>
+</div>
+<div class="col-12">
+<div class="card h-100">
+<div class="card-header fw-semibold">Branch Progress (Top)</div>
+<div class="card-body p-0">
+<div class="fixed-table-wrap" style="max-height: 34vh; border: 0; border-radius: 0;">
+<table class="table table-sm table-bordered mb-0">
+<thead class="table-dark">
+<tr>
+<th>Branch</th>
+<th style="width:110px">Target</th>
+<th style="width:90px">Achieved</th>
+<th style="width:90px">Balance</th>
+<th>Progress</th>
+</tr>
+</thead>
+<tbody>
+{% if branch_stats %}
+{% for bs in branch_stats %}
+<tr>
+<td>{{ bs.branch_name }}</td>
+<td>{{ bs.monthly_target }}</td>
+<td class="text-success fw-bold">{{ bs.achieved }}</td>
+<td class="text-danger fw-bold">{{ bs.remaining }}</td>
+<td>
+{% set progress_class = 'bg-success' if bs.percentage >= 100 else 'bg-primary' if bs.percentage >= 50 else 'bg-warning' %}
+{% set progress_width = [bs.percentage, 100]|min %}
+<div class="progress" style="height:18px;">
+<div class="progress-bar syscare-progress-bar {{ progress_class }}" role="progressbar" data-progress-width="{{ progress_width }}" aria-valuenow="{{ progress_width }}" aria-valuemin="0" aria-valuemax="100">{{ bs.percentage }}%</div>
+</div>
+</td>
+</tr>
+{% endfor %}
+{% else %}
+<tr><td colspan="5" class="text-center text-muted">No branch stats available</td></tr>
+{% endif %}
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="tab-pane fade" id="branch-targets-pane" role="tabpanel" aria-labelledby="branch-targets-tab" tabindex="0">
+{% if can_manage %}
+<form method="POST" action="/syscare-set-targets">
+<input type="hidden" name="month" value="{{ selected_month }}">
+<div class="fixed-table-wrap">
+<table class="table table-sm table-bordered mb-0">
+<thead class="table-dark">
+<tr>
+<th>Branch</th>
+<th style="width:110px">Target</th>
+<th style="width:90px">Achieved</th>
+<th style="width:90px">Balance</th>
+<th>Progress</th>
+<th style="width:90px">Action</th>
+</tr>
+</thead>
+<tbody>
+{% for bs in branch_stats %}
+<tr>
+<td>{{ bs.branch_name }}
+<input type="hidden" name="branch_name[]" value="{{ bs.branch_name }}">
+</td>
+<td><input type="number" name="target[]" class="form-control form-control-sm" value="{{ bs.monthly_target }}" min="0" style="width:90px"></td>
+<td class="text-success fw-bold">{{ bs.achieved }}</td>
+<td class="text-danger fw-bold">{{ bs.remaining }}</td>
+<td>
+{% set progress_class = 'bg-success' if bs.percentage >= 100 else 'bg-primary' if bs.percentage >= 50 else 'bg-warning' %}
+{% set progress_width = [bs.percentage, 100]|min %}
+<div class="progress" style="height:18px">
+<div class="progress-bar syscare-progress-bar {{ progress_class }}" role="progressbar" data-progress-width="{{ progress_width }}" aria-valuenow="{{ progress_width }}" aria-valuemin="0" aria-valuemax="100">{{ bs.percentage }}%</div>
+</div>
+</td>
+<td>
+<button type="submit" name="delete_branch_name" value="{{ bs.branch_name }}" class="btn btn-outline-danger btn-sm py-0" onclick="return confirm('Delete branch target for {{ bs.branch_name }}?')">Delete</button>
+</td>
+</tr>
+{% endfor %}
+<tr class="table-light">
+<td><input type="text" name="new_branch_name" class="form-control form-control-sm" placeholder="New branch name"></td>
+<td><input type="number" name="new_branch_target" class="form-control form-control-sm" value="0" min="0" style="width:90px"></td>
+<td colspan="4" class="text-muted small align-middle">Leave branch name empty to skip</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="mt-2">
+<button class="btn btn-primary btn-sm" type="submit">Save Branch Targets</button>
+</div>
+</form>
+{% else %}
+<div class="soft-empty">Branch target management is available only for Admin / Super Admin.</div>
+{% endif %}
+</div>
+
+<div class="tab-pane fade" id="records-pane" role="tabpanel" aria-labelledby="records-tab" tabindex="0">
+<div class="records-filter-sticky">
+<form method="GET" action="/syscare" class="row g-2 align-items-end">
+<input type="hidden" name="month" value="{{ selected_month }}">
+<div class="col-12 col-md-4">
+<label class="form-label form-label-sm mb-1">Search</label>
+<input type="text" name="q" class="form-control form-control-sm" placeholder="Customer, Syscare ID, Contact, Model, Serial" value="{{ search_q }}">
+</div>
+<div class="col-6 col-md-3">
+<label class="form-label form-label-sm mb-1">Branch</label>
+<select name="branch" class="form-select form-select-sm">
+<option value="">All Branches</option>
+{% for b in distinct_branches %}
+<option value="{{ b }}" {% if b == filter_branch_rec %}selected{% endif %}>{{ b }}</option>
+{% endfor %}
+</select>
+</div>
+<div class="col-6 col-md-3">
+<label class="form-label form-label-sm mb-1">Incharge</label>
+<select name="incharge" class="form-select form-select-sm">
+<option value="">All Incharge</option>
+{% for i in distinct_incharges %}
+<option value="{{ i }}" {% if i == filter_incharge_rec %}selected{% endif %}>{{ i }}</option>
+{% endfor %}
+</select>
+</div>
+<div class="col-12 col-md-2 d-flex gap-2">
+<button type="submit" class="btn btn-primary btn-sm">Filter</button>
+<a href="/syscare?month={{ selected_month }}" class="btn btn-outline-secondary btn-sm">Clear</a>
+</div>
+</form>
+<form method="GET" action="/syscare-export" class="mt-2">
+    <input type="hidden" name="month" value="{{ selected_month }}">
+    <input type="hidden" name="q" value="{{ search_q }}">
+    <input type="hidden" name="branch" value="{{ filter_branch_rec }}">
+    <input type="hidden" name="incharge" value="{{ filter_incharge_rec }}">
+    <button type="submit" class="btn btn-success btn-sm">Export</button>
+</form>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-2 small text-muted">
+<span>{{ total_records }} rows</span>
+<span>Page {{ current_page }} / {{ total_pages }}</span>
+</div>
+
+<div class="fixed-table-wrap">
+<table class="table table-sm table-bordered table-hover mb-0">
+<thead class="table-dark">
+<tr>
+<th>Date</th>
+<th>Syscare ID</th>
+<th>Customer</th>
+<th>Contact</th>
+<th>Product Model</th>
+<th>Serial Number</th>
+<th>Branch</th>
+<th>Incharge</th>
+<th>Amount</th>
+<th>Expiry Date</th>
+<th>Expire within</th>
+<th>Certificate</th>
+</tr>
+</thead>
+<tbody>
+{% if records %}
+{% for r in records %}
+{% set row_model = (r.product_model or '')|trim %}
+{% set row_serial = (r.serial_number or '')|trim %}
+{% set row_combined = (r.model_serial or '')|trim %}
+{% if row_combined and (not row_model or not row_serial) %}
+    {% if ' / ' in row_combined %}
+        {% set row_parts = row_combined.split(' / ', 1) %}
+        {% if not row_model %}{% set row_model = row_parts[0]|trim %}{% endif %}
+        {% if not row_serial and (row_parts|length) > 1 %}{% set row_serial = row_parts[1]|trim %}{% endif %}
+    {% elif 'SN:' in row_combined %}
+        {% set row_parts = row_combined.split('SN:', 1) %}
+        {% if not row_model %}{% set row_model = row_parts[0]|replace('/', ' ')|trim %}{% endif %}
+        {% if not row_serial and (row_parts|length) > 1 %}{% set row_serial = row_parts[1]|trim %}{% endif %}
+    {% elif ',' in row_combined %}
+        {% set row_parts = row_combined.split(',', 1) %}
+        {% if not row_model %}{% set row_model = row_parts[0]|trim %}{% endif %}
+        {% if not row_serial and (row_parts|length) > 1 %}{% set row_serial = row_parts[1]|trim %}{% endif %}
+    {% endif %}
+{% endif %}
+<tr>
+<td>{{ r.record_date }}</td>
+<td><a href="/syscare-certificate/{{ r.id }}" target="_blank">{{ r.syscare_id }}</a></td>
+<td>{{ r.customer_name or '-' }}</td>
+<td>{{ r.contact_number or '-' }}</td>
+<td>{{ row_model or '-' }}</td>
+<td>{{ row_serial or '-' }}</td>
+<td>{{ r.branch_name or '-' }}</td>
+<td>{{ r.incharge or '-' }}</td>
+<td>{{ '%.2f'|format(r.amount or 0) }}</td>
+<td>{{ r.expiry_date or '-' }}</td>
+<td>{{ r.expire_within_days if r.expire_within_days is not none else '-' }}</td>
+<td>
+<a href="/syscare-certificate/{{ r.id }}" class="btn btn-outline-primary btn-sm py-0" target="_blank">View Certificate</a>
+<a href="{{ build_whatsapp_chat_url(r.contact_number, 'Document: SYSCARE Certificate\nSYSCARE ID: ' ~ (r.syscare_id or r.id) ~ '\nCustomer: ' ~ (r.customer_name or 'Customer') ~ '\nMobile: ' ~ (r.contact_number or '-')) }}" class="btn btn-success btn-sm py-0 ms-1" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+{% if can_manage %}
+<form method="POST" action="/syscare-delete/{{ r.id }}" style="display:inline" onsubmit="return confirm('Delete SYSCARE ID {{ r.syscare_id }} for {{ r.customer_name }}?\nThis cannot be undone.')">
+<input type="hidden" name="month" value="{{ selected_month }}">
+<button type="submit" class="btn btn-outline-danger btn-sm py-0 ms-1">Delete</button>
+</form>
+{% endif %}
+</td>
+</tr>
+{% endfor %}
+{% else %}
+<tr><td colspan="13" class="text-center text-muted">No records for selected month</td></tr>
+{% endif %}
+</tbody>
+</table>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mt-2">
+<small class="text-muted">Showing {{ ((current_page - 1) * 25) + 1 if total_records > 0 else 0 }}-{{ [current_page * 25, total_records]|min }} of {{ total_records }}</small>
+<nav aria-label="Records pagination">
+<ul class="pagination pagination-sm mb-0">
+{% if current_page > 1 %}
+<li class="page-item"><a class="page-link" href="/syscare?month={{ selected_month }}&page={{ current_page - 1 }}&q={{ search_q }}&branch={{ filter_branch_rec }}&incharge={{ filter_incharge_rec }}">Prev</a></li>
+{% else %}
+<li class="page-item disabled"><span class="page-link">Prev</span></li>
+{% endif %}
+<li class="page-item disabled"><span class="page-link">{{ current_page }} / {{ total_pages }}</span></li>
+{% if current_page < total_pages %}
+<li class="page-item"><a class="page-link" href="/syscare?month={{ selected_month }}&page={{ current_page + 1 }}&q={{ search_q }}&branch={{ filter_branch_rec }}&incharge={{ filter_incharge_rec }}">Next</a></li>
+{% else %}
+<li class="page-item disabled"><span class="page-link">Next</span></li>
+{% endif %}
+</ul>
+</nav>
+</div>
+</div>
+
+<div class="tab-pane fade" id="upload-pane" role="tabpanel" aria-labelledby="upload-tab" tabindex="0">
+{% if can_manage %}
+<div class="card">
+<div class="card-header fw-semibold">Upload SYSCARE Sheet</div>
+<div class="card-body">
+<form method="POST" action="/syscare-upload" enctype="multipart/form-data">
+<input type="hidden" name="month" value="{{ selected_month }}">
+<div class="mb-3">
+<label class="form-label">Excel / CSV File</label>
+<input type="file" name="syscare_file" class="form-control" accept=".xlsx,.csv" required>
+</div>
+<div class="small text-muted mb-3">Expected columns: Date, Syscare ID, Cus Name, Contact Number, Branch, Incharge, Amount, Expiry Date, Expire within</div>
+<button class="btn btn-success" type="submit">Upload Data</button>
+</form>
+</div>
+</div>
+{% else %}
+<div class="soft-empty">Upload is available only for Admin / Super Admin.</div>
+{% endif %}
+</div>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const tabButtons = Array.from(document.querySelectorAll("#syscareTabs .nav-link"));
+    const tabPanes = Array.from(document.querySelectorAll("#syscareTabsContent .tab-pane"));
+    const syscareTrendCanvas = document.getElementById("syscareTrendChart");
+
+    document.querySelectorAll(".syscare-progress-bar[data-progress-width]").forEach((bar) => {
+        const width = Number(bar.dataset.progressWidth || 0);
+        bar.style.width = `${width}%`;
+    });
+
+    function showPane(targetSelector) {
+        tabButtons.forEach((button) => {
+            const isActive = button.getAttribute("data-bs-target") === targetSelector;
+            button.classList.toggle("active", isActive);
+            button.setAttribute("aria-selected", isActive ? "true" : "false");
+        });
+
+        tabPanes.forEach((pane) => {
+            const isActive = `#${pane.id}` === targetSelector;
+            pane.classList.toggle("show", isActive);
+            pane.classList.toggle("active", isActive);
+            pane.style.display = isActive ? "block" : "none";
+        });
+    }
+
+    const initialButton = tabButtons.find((button) => button.classList.contains("active")) || tabButtons[0];
+    if (initialButton) {
+        showPane(initialButton.getAttribute("data-bs-target"));
+    }
+
+    tabButtons.forEach((button) => {
+        button.addEventListener("click", function () {
+            showPane(button.getAttribute("data-bs-target"));
+        });
+    });
+
+    if (syscareTrendCanvas && window.Chart) {
+        const labels = JSON.parse(syscareTrendCanvas.dataset.labels || "[]");
+        const fullLabels = JSON.parse(syscareTrendCanvas.dataset.fullLabels || "[]");
+        const achievedSeries = JSON.parse(syscareTrendCanvas.dataset.achieved || "[]");
+        const targetSeries = JSON.parse(syscareTrendCanvas.dataset.target || "[]");
+        const balanceSeries = JSON.parse(syscareTrendCanvas.dataset.balance || "[]");
+        const countFormatter = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });
+
+        if (labels.length) {
+            new Chart(syscareTrendCanvas, {
+                type: "bar",
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: "Achieved",
+                            data: achievedSeries,
+                            backgroundColor: "rgba(43, 111, 255, 0.9)",
+                            borderColor: "rgba(24, 54, 94, 1)",
+                            borderWidth: 0,
+                            borderRadius: 8,
+                            maxBarThickness: 42,
+                            categoryPercentage: 0.62,
+                            barPercentage: 0.88,
+                        },
+                        {
+                            type: "line",
+                            label: "Target",
+                            data: targetSeries,
+                            borderColor: "rgba(85, 104, 255, 0.95)",
+                            backgroundColor: "rgba(85, 104, 255, 0.2)",
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            pointBackgroundColor: "rgba(85, 104, 255, 0.95)",
+                            pointBorderWidth: 0,
+                            tension: 0,
+                            borderDash: [6, 6],
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: "index",
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: "top",
+                            align: "end",
+                            labels: {
+                                color: "#334155",
+                                usePointStyle: true,
+                                pointStyle: "rectRounded",
+                                boxWidth: 10,
+                                boxHeight: 10,
+                                padding: 18,
+                            },
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title(items) {
+                                    if (!items.length) {
+                                        return "";
+                                    }
+                                    return fullLabels[items[0].dataIndex] || items[0].label;
+                                },
+                                label(context) {
+                                    return `${context.dataset.label}: ${countFormatter.format(context.parsed.y || 0)}`;
+                                },
+                                afterBody(items) {
+                                    if (!items.length) {
+                                        return "";
+                                    }
+                                    const balanceValue = balanceSeries[items[0].dataIndex] || 0;
+                                    return `Balance: ${countFormatter.format(balanceValue)}`;
+                                },
+                            },
+                        },
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false,
+                            },
+                            ticks: {
+                                color: "#64748b",
+                                font: {
+                                    size: 12,
+                                    weight: "600",
+                                },
+                            },
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: "#64748b",
+                                callback(value) {
+                                    return countFormatter.format(value);
+                                },
+                            },
+                            grid: {
+                                color: "rgba(148, 163, 184, 0.24)",
+                            },
+                        },
+                    },
+                },
+            });
+        }
+    }
+});
+</script>
+</body>
+</html>

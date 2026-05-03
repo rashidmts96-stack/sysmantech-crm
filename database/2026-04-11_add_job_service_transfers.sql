@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS job_service_transfers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    job_id INT NOT NULL,
+    from_branch_name VARCHAR(255) NOT NULL,
+    to_branch_name VARCHAR(255) NOT NULL,
+    specialist_engineer VARCHAR(255) NULL,
+    service_type VARCHAR(255) NULL,
+    request_notes TEXT NULL,
+    status_notes TEXT NULL,
+    internal_service_charge DECIMAL(12,2) NOT NULL DEFAULT 0,
+    status VARCHAR(50) NOT NULL DEFAULT 'Sent',
+    sent_by VARCHAR(255) NULL,
+    updated_by VARCHAR(255) NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    accepted_at DATETIME NULL,
+    completed_at DATETIME NULL,
+    returned_at DATETIME NULL,
+    INDEX idx_job_service_transfers_job (job_id),
+    INDEX idx_job_service_transfers_target_status (to_branch_name, status),
+    INDEX idx_job_service_transfers_engineer_status (specialist_engineer, status),
+    CONSTRAINT fk_job_service_transfers_job FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+);

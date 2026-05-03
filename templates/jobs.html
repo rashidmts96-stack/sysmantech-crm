@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Service Jobs</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+<style>
+.jobs-table th,
+.jobs-table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.jobs-table form {
+    margin-bottom: 0;
+}
+
+.jobs-table .form-select {
+    text-align: center;
+    text-align-last: center;
+}
+
+.jobs-filter-card {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 14px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.jobs-action-cell {
+    min-width: 120px;
+}
+
+.jobs-specialist-note {
+    margin-top: 0.3rem;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    color: #475569;
+}
+
+.jobs-specialist-note-active {
+    color: #0c4a6e;
+    font-weight: 600;
+}
+</style>
+
+</head>
+
+<body class="crm-theme">
+
+<nav class="navbar navbar-dark bg-dark">
+
+<div class="container-fluid">
+
+<span class="navbar-brand">Service CRM</span>
+
+<form class="d-flex" method="GET" action="/jobs">
+
+<input class="form-control me-2" type="search" name="search" value="{{ search_query or '' }}"
+placeholder="Search Name / Mobile / Alt No / Job No / Serial / Model">
+<input type="hidden" name="view" value="{{ current_view or 'active' }}">
+<input type="hidden" name="status" value="{{ status_filter or '' }}">
+<input type="hidden" name="branch_name" value="{{ branch_filter or '' }}">
+<input type="hidden" name="transfer_filter" value="{{ transfer_filter or '' }}">
+<input type="hidden" name="age_bucket" value="{{ age_bucket_filter or '' }}">
+<input type="hidden" name="call_type_filter" value="{{ call_type_filter or '' }}">
+<input type="hidden" name="device_filter" value="{{ device_filter or '' }}">
+<input type="hidden" name="closure_result" value="{{ closure_result or '' }}">
+<input type="hidden" name="chart_from_date" value="{{ chart_from_date or '' }}">
+<input type="hidden" name="chart_to_date" value="{{ chart_to_date or '' }}">
+<input type="hidden" name="chart_mode" value="{{ chart_mode or 'created' }}">
+
+<button class="btn btn-success">Search</button>
+
+</form>
+
+<div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+
+<span class="text-white me-1">Branch : {{ branch }}</span>
+
+<a href="/dashboard" class="btn btn-info btn-sm">Dashboard</a>
+<a href="/new-job" class="btn btn-primary btn-sm">New Job</a>
+{% include "_global_user_menu.html" %}
+
+</div>
+
+</div>
+
+</nav>
+
+
+<div class="container-fluid mt-4">
+
+<h5 class="mb-3">{{ view_title or 'Cases' }}</h5>
+
+<div class="card jobs-filter-card mb-3">
+    <div class="card-body">
+        <form method="GET" action="/jobs" class="row g-2 align-items-end">
+            <input type="hidden" name="view" value="{{ current_view or 'active' }}">
+            <input type="hidden" name="search" value="{{ search_query or '' }}">
+            <input type="hidden" name="status" value="{{ status_filter or '' }}">
+            <input type="hidden" name="branch_name" value="{{ branch_filter or '' }}">
+            <input type="hidden" name="transfer_filter" value="{{ transfer_filter or '' }}">
+            <input type="hidden" name="age_bucket" value="{{ age_bucket_filter or '' }}">
+            <input type="hidden" name="call_type_filter" value="{{ call_type_filter or '' }}">
+            <input type="hidden" name="device_filter" value="{{ device_filter or '' }}">
+            <input type="hidden" name="closure_result" value="{{ closure_result or '' }}">
+            <div class="col-md-3 col-lg-2">
+                <label class="form-label mb-1">From Date</label>
+                <input type="date" name="chart_from_date" class="form-control form-control-sm" value="{{ chart_from_date or '' }}">
+            </div>
+            <div class="col-md-3 col-lg-2">
+                <label class="form-label mb-1">To Date</label>
+                <input type="date" name="chart_to_date" class="form-control form-control-sm" value="{{ chart_to_date or '' }}">
+            </div>
+            <div class="col-md-3 col-lg-2">
+                <label class="form-label mb-1">Date Type</label>
+                <select name="chart_mode" class="form-select form-select-sm">
+                    <option value="created" {% if (chart_mode or 'created') == 'created' %}selected{% endif %}>Created Date</option>
+                    <option value="closed" {% if chart_mode == 'closed' %}selected{% endif %}>Closed Date</option>
+                </select>
+            </div>
+            <div class="col-md-3 col-lg-6 d-flex gap-2 flex-wrap justify-content-lg-end">
+                <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                <a class="btn btn-outline-success btn-sm" href="{{ url_for('export_jobs', view=current_view or 'active', search=search_query or '', status=status_filter or '', branch_name=branch_filter or '', transfer_filter=transfer_filter or '', age_bucket=age_bucket_filter or '', call_type_filter=call_type_filter or '', device_filter=device_filter or '', closure_result=closure_result or '', chart_from_date=chart_from_date or '', chart_to_date=chart_to_date or '', chart_mode=chart_mode or 'created') }}">Export CSV</a>
+                <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('jobs', view=current_view or 'active') }}">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-bordered table-striped table-sm jobs-table">
+
+<thead class="table-dark">
+
+<tr>
+
+<th>#</th>
+<th>Job No</th>
+<th>Status</th>
+<th>Customer</th>
+<th>Mobile</th>
+<th class="d-none d-lg-table-cell">Model</th>
+<th class="d-none d-lg-table-cell">Serial</th>
+{% if (current_view or 'active') in ['all', 'closed'] %}
+<th>Closure Result</th>
+{% if (current_view or 'active') == 'all' %}
+<th>Outcome</th>
+{% endif %}
+{% endif %}
+{% if session.role == 'super_admin' and (current_view or 'active') == 'all' %}
+<th class="jobs-action-cell">Action</th>
+{% endif %}
+<th>Age</th>
+<th class="d-none">Age Group</th>
+<th>Created On</th>
+<th class="d-none d-md-table-cell">Branch</th>
+<th class="d-none">Device</th>
+<th class="d-none">Complaint Type</th>
+<th class="d-none">Warranty</th>
+<th class="d-none">Backup</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for job in jobs %}
+{% if job.status == 'Observation' %}{% set row_class = 'table-warning' %}
+{% elif job.status == 'Waiting For Customer Approval' %}{% set row_class = 'table-info' %}
+{% elif job.status == 'Spare Waiting' %}{% set row_class = 'table-primary' %}
+{% elif job.status == 'Outside Service' %}{% set row_class = 'table-secondary' %}
+{% elif job.status == 'Ready-Waiting for Customer' %}{% set row_class = 'table-success' %}
+{% elif job.status == 'Non-Repairable Waiting for Customer' %}{% set row_class = 'table-danger' %}
+{% elif job.status == 'Inspire' %}{% set row_class = 'table-light' %}
+{% else %}{% set row_class = '' %}{% endif %}
+{% set can_manage_job_row = ((session.role in ['super_admin', 'admin']) and branch == 'ALL') or branch == job.branch_name %}
+<tr class="{{ row_class }}">
+<td>{{ (page - 1) * 20 + loop.index }}</td>
+<td>
+<a href="/job-details/{{ job.id }}" class="text-decoration-none fw-semibold">{{ job.job_number }}</a>
+{% if job.specialist_transfer_branch_name %}
+<div class="jobs-specialist-note {% if job.specialist_transfer_is_active %}jobs-specialist-note-active{% endif %}">
+Specialist: {{ job.specialist_transfer_branch_name }}{% if job.specialist_transfer_engineer %} | {{ job.specialist_transfer_engineer }}{% endif %}
+</div>
+<div class="jobs-specialist-note">
+{{ job.specialist_transfer_status or 'Transferred' }}
+{% if not job.specialist_transfer_is_active and job.specialist_service_total %}
+| Share: {{ '%.2f'|format(job.specialist_service_total|float) }}
+{% endif %}
+</div>
+{% endif %}
+</td>
+<td>
+{% if session.role in ["super_admin", "admin", "coordinator"] and can_manage_job_row and (job.closure_status is not defined or not job.closure_status) and job.status != 'Closed' %}
+<form method="POST" action="/update-status">
+
+<input type="hidden" name="job_id" value="{{ job.id }}">
+<input type="hidden" name="status_note" value="">
+<input type="hidden" name="return_to" value="{{ request.full_path }}">
+
+<select name="status" class="form-select" data-current-status="{{ job.status }}" onchange="submitStatusUpdate(this)">
+
+<option {% if job.status=='Open' %}selected{% endif %}>Open</option>
+<option {% if job.status=='Observation' %}selected{% endif %}>Observation</option>
+<option {% if job.status=='Waiting For Customer Approval' %}selected{% endif %}>Waiting For Customer Approval</option>
+<option {% if job.status=='Spare Waiting' %}selected{% endif %}>Spare Waiting</option>
+<option {% if job.status=='Outside Service' %}selected{% endif %}>Outside Service</option>
+<option {% if job.status=='Inspire' %}selected{% endif %}>Inspire</option>
+<option {% if job.status=='Ready-Waiting for Customer' %}selected{% endif %}>Ready-Waiting for Customer</option>
+<option {% if job.status=='Non-Repairable Waiting for Customer' %}selected{% endif %}>Non-Repairable Waiting for Customer</option>
+
+</select>
+
+</form>
+{% else %}
+<span class="badge bg-secondary">{{ job.status }}</span>
+{% endif %}
+
+</td>
+<td>{{ job.customer_name }}</td>
+<td>{{ job.mobile }}</td>
+<td class="d-none d-lg-table-cell">{{ job.model }}</td>
+<td class="d-none d-lg-table-cell">{{ job.serial_number }}</td>
+{% if (current_view or 'active') in ['all', 'closed'] %}
+<td>
+    {% set closure_text = (job.closure_status or '')|trim %}
+    {% set closure_lower = closure_text|lower %}
+    {% if 'closed success' in closure_lower %}
+    <span class="badge bg-success">Closed Success</span>
+    {% elif 'closed failed' in closure_lower %}
+    <span class="badge bg-danger">Closed Failed</span>
+    {% else %}
+    <span class="badge bg-secondary">Open</span>
+    {% endif %}
+</td>
+{% if (current_view or 'active') == 'all' %}
+<td>
+    {% if 'closed success' in closure_lower %}
+    <span class="badge bg-success">Won</span>
+    {% elif 'closed failed' in closure_lower %}
+    {{ closure_text.split(' - ', 1)[1] if ' - ' in closure_text else 'Closed Failed' }}
+    {% else %}
+    -
+    {% endif %}
+</td>
+{% endif %}
+{% endif %}
+{% if session.role == 'super_admin' and can_manage_job_row and (current_view or 'active') == 'all' %}
+<td class="jobs-action-cell">
+    <form method="POST" action="/delete-job/{{ job.id }}" onsubmit="return confirmDeleteJob('{{ job.job_number }}');">
+        <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_to" value="{{ request.full_path }}">
+        <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
+    </form>
+</td>
+{% endif %}
+<td>{{ job.age_days if job.age_days is not none else '-' }}</td>
+<td class="d-none">{{ job.age_group or '-' }}</td>
+<td>{{ job.created_on or '-' }}</td>
+<td class="d-none d-md-table-cell">{{ job.branch_name }}</td>
+<td class="d-none">{{ job.device }}</td>
+<td class="d-none">{{ job.complaint_type }}</td>
+<td class="d-none">{{ job.warranty_status }}</td>
+<td class="d-none">{{ job.backup_required }}</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+</div>
+
+{% if total_pages > 1 %}
+<div class="d-flex align-items-center justify-content-between mt-2 px-1 flex-wrap gap-2">
+    <small class="text-muted">Page {{ page }} of {{ total_pages }} &mdash; {{ total_count }} total record(s)</small>
+    <nav>
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('jobs', view=current_view, page=page - 1, search=search_query or '', status=status_filter or '', branch_name=branch_filter or '', transfer_filter=transfer_filter or '', age_bucket=age_bucket_filter or '', call_type_filter=call_type_filter or '', device_filter=device_filter or '', closure_result=closure_result or '', chart_from_date=chart_from_date or '', chart_to_date=chart_to_date or '', chart_mode=chart_mode or 'created') }}">&#8249; Prev</a>
+            </li>
+            {% set start_p = [1, page - 2] | max %}
+            {% set end_p = [total_pages, page + 2] | min %}
+            {% if start_p > 1 %}
+                <li class="page-item"><a class="page-link" href="{{ url_for('jobs', view=current_view, page=1, search=search_query or '', status=status_filter or '', branch_name=branch_filter or '', transfer_filter=transfer_filter or '', age_bucket=age_bucket_filter or '', call_type_filter=call_type_filter or '', device_filter=device_filter or '', closure_result=closure_result or '', chart_from_date=chart_from_date or '', chart_to_date=chart_to_date or '', chart_mode=chart_mode or 'created') }}">1</a></li>
+                {% if start_p > 2 %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+            {% endif %}
+            {% for p in range(start_p, end_p + 1) %}
+            <li class="page-item {% if p == page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('jobs', view=current_view, page=p, search=search_query or '', status=status_filter or '', branch_name=branch_filter or '', transfer_filter=transfer_filter or '', age_bucket=age_bucket_filter or '', call_type_filter=call_type_filter or '', device_filter=device_filter or '', closure_result=closure_result or '', chart_from_date=chart_from_date or '', chart_to_date=chart_to_date or '', chart_mode=chart_mode or 'created') }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+            {% if end_p < total_pages %}
+                {% if end_p < total_pages - 1 %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+                <li class="page-item"><a class="page-link" href="{{ url_for('jobs', view=current_view, page=total_pages, search=search_query or '', status=status_filter or '', branch_name=branch_filter or '', transfer_filter=transfer_filter or '', age_bucket=age_bucket_filter or '', call_type_filter=call_type_filter or '', device_filter=device_filter or '', closure_result=closure_result or '', chart_from_date=chart_from_date or '', chart_to_date=chart_to_date or '', chart_mode=chart_mode or 'created') }}">{{ total_pages }}</a></li>
+            {% endif %}
+            <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('jobs', view=current_view, page=page + 1, search=search_query or '', status=status_filter or '', branch_name=branch_filter or '', transfer_filter=transfer_filter or '', age_bucket=age_bucket_filter or '', call_type_filter=call_type_filter or '', device_filter=device_filter or '', closure_result=closure_result or '', chart_from_date=chart_from_date or '', chart_to_date=chart_to_date or '', chart_mode=chart_mode or 'created') }}">Next &#8250;</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+<script>
+function confirmDeleteJob(jobNumber) {
+    return window.confirm("Delete case " + jobNumber + " permanently? This cannot be undone.");
+}
+
+function submitStatusUpdate(selectEl) {
+    var form = selectEl.form;
+    var currentStatus = selectEl.getAttribute("data-current-status") || "";
+    var newStatus = selectEl.value;
+
+    if (newStatus === currentStatus) {
+        return;
+    }
+
+    var note = window.prompt("Status update note is mandatory. Enter note:", "");
+    if (note === null) {
+        selectEl.value = currentStatus;
+        return;
+    }
+
+    note = note.trim();
+    if (note.length < 3) {
+        alert("Please enter a valid note (minimum 3 characters).");
+        selectEl.value = currentStatus;
+        return;
+    }
+
+    form.querySelector('input[name="status_note"]').value = note;
+    form.submit();
+}
+</script>
+
+</body>
+</html>

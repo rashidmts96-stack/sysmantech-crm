@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Dashboard - Service CRM</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+.report-table {
+	table-layout: fixed;
+	width: 100%;
+}
+
+.report-table th,
+.report-table td {
+	vertical-align: middle;
+	line-height: 1.25;
+	padding: 10px 8px;
+}
+
+.report-table th {
+	white-space: normal;
+	word-break: break-word;
+	font-weight: 700;
+}
+
+.report-table td:first-child,
+.report-table th:first-child {
+	position: sticky;
+	left: 0;
+	z-index: 2;
+	background: #ffffff;
+	text-align: left;
+	min-width: 180px;
+}
+
+#ageingReport .report-table td:first-child,
+#ageingReport .report-table th:first-child,
+#ageingReport .report-table tbody tr:last-child td:first-child {
+	text-align: center;
+}
+
+.report-table thead th:first-child {
+	background: #212529;
+	z-index: 3;
+}
+
+.report-table tbody tr:last-child td:first-child {
+	background: #e9ecef;
+}
+
+.report-table td:not(:first-child),
+.report-table th:not(:first-child) {
+	text-align: center;
+	min-width: 92px;
+}
+
+.report-table tbody tr:last-child td {
+	font-weight: 700;
+}
+
+.report-table a {
+	font-weight: 600;
+	text-decoration: underline;
+}
+
+.chart-grid .chart-col {
+	display: flex;
+}
+
+.chart-tile {
+	width: 100%;
+}
+
+.chart-canvas-wrap {
+	position: relative;
+	height: 210px;
+}
+
+.dashboard-wrap {
+	width: 100%;
+	max-width: 100%;
+	padding-left: 14px;
+	padding-right: 14px;
+}
+
+.revenue-summary {
+	display: flex;
+	flex-wrap: nowrap;
+	gap: 8px;
+	margin-bottom: 10px;
+}
+
+.revenue-pill {
+	flex: 1 1 0;
+	min-width: 0;
+	padding: 7px 10px;
+	border-radius: 999px;
+	font-size: 0.84rem;
+	font-weight: 700;
+	line-height: 1.2;
+	border: 1px solid #dbe3ea;
+	background: #f8fafc;
+	color: #1f2937;
+}
+
+.revenue-pill strong {
+	display: block;
+	font-size: 0.7rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	margin-bottom: 2px;
+	color: #5b6773;
+}
+
+.revenue-pill.target {
+	background: #eef6ff;
+	border-color: #bfdbfe;
+	color: #0f3d91;
+}
+
+.revenue-pill.achieved {
+	background: #ecfdf3;
+	border-color: #bbf7d0;
+	color: #166534;
+}
+
+.revenue-pill.balance {
+	background: #fff7ed;
+	border-color: #fed7aa;
+	color: #9a3412;
+}
+
+.revenue-pill.percent {
+	background: #f5f3ff;
+	border-color: #ddd6fe;
+	color: #5b21b6;
+}
+
+.revenue-advice {
+	font-size: 0.92rem;
+	font-weight: 600;
+	border-radius: 10px;
+	padding: 8px 12px;
+	margin-bottom: 8px;
+}
+
+@media (min-width: 1200px) {
+	.dashboard-wrap {
+		padding-left: 18px;
+		padding-right: 18px;
+	}
+
+	.chart-canvas-wrap {
+		height: 220px;
+	}
+}
+</style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-dark bg-dark">
+<div class="container-fluid">
+<span class="navbar-brand">Service CRM Dashboard</span>
+<div>
+<span class="text-white me-3">Branch : {{ branch }}</span>
+<a href="/new-job" class="btn btn-success btn-sm">New Job</a>
+<a href="/quotations" class="btn btn-light btn-sm">Quotations</a>
+{% if session.role in ["super_admin", "admin"] %}
+<a href="/revenue-dashboard" class="btn btn-info btn-sm">Revenue Management</a>
+<a href="/syscare" class="btn btn-primary btn-sm">SYSCARE</a>
+{% endif %}
+{% if session.role == "super_admin" %}
+<a href="/settings" class="btn btn-warning btn-sm">Settings</a>
+{% endif %}
+</div>
+</div>
+</nav>
+
+<div class="container-fluid dashboard-wrap mt-2">
+
+<div class="d-flex align-items-center gap-2 mb-3">
+<a href="{{ url_for('dashboard_filters', from_date=from_date, to_date=to_date, date_field=date_field_filter, filter_branch=filter_branch, filter_status=filter_status, filter_closure=filter_closure, filter_engineer=filter_engineer) }}" class="btn btn-outline-primary btn-sm">
+&#9776; Filter
+{% if from_date or to_date or filter_branch or filter_status or filter_closure or filter_engineer %}
+<span class="badge bg-primary ms-1">Active</span>
+{% endif %}
+</a>
+{% if from_date or to_date or filter_branch or filter_status or filter_closure or filter_engineer %}
+<a href="/dashboard" class="btn btn-outline-secondary btn-sm">&#x2715; Clear Filters</a>
+{% endif %}
+</div>
+
+<div class="row g-3 mb-3">
+<div class="col-sm-6 col-lg-3">
+<div class="card border-primary h-100">
+<div class="card-body text-center">
+<a href="/jobs?view=all" class="text-decoration-none text-dark d-block">
+<h6 class="text-muted">Total Cases</h6>
+<h3 class="mb-0">{{ total_cases }}</h3>
+</a>
+<a href="{{ url_for('export_cases', view_name='total', from_date=from_date, to_date=to_date, date_field=date_field_filter, filter_branch=filter_branch, filter_status=filter_status, filter_closure=filter_closure, filter_engineer=filter_engineer) }}" class="btn btn-outline-success btn-sm mt-2">Export</a>
+</div>
+</div>
+</div>
+
+<div class="col-sm-6 col-lg-3">
+<div class="card border-success h-100">
+<div class="card-body text-center">
+<a href="/jobs?view=active" class="text-decoration-none text-dark d-block">
+<h6 class="text-muted">Active Cases</h6>
+<h3 class="mb-0">{{ active_cases }}</h3>
+</a>
+<a href="{{ url_for('export_cases', view_name='active', from_date=from_date, to_date=to_date, date_field=date_field_filter, filter_branch=filter_branch, filter_status=filter_status, filter_closure=filter_closure, filter_engineer=filter_engineer) }}" class="btn btn-outline-success btn-sm mt-2">Export</a>
+</div>
+</div>
+</div>
+
+<div class="col-sm-6 col-lg-3">
+<div class="card border-warning h-100">
+<div class="card-body text-center">
+<a href="/jobs?view=open" class="text-decoration-none text-dark d-block">
+<h6 class="text-muted">Open Cases</h6>
+<h3 class="mb-0">{{ open_cases }}</h3>
+</a>
+<a href="{{ url_for('export_cases', view_name='open', from_date=from_date, to_date=to_date, date_field=date_field_filter, filter_branch=filter_branch, filter_status=filter_status, filter_closure=filter_closure, filter_engineer=filter_engineer) }}" class="btn btn-outline-success btn-sm mt-2">Export</a>
+</div>
+</div>
+</div>
+
+<div class="col-sm-6 col-lg-3">
+<div class="card border-dark h-100">
+<div class="card-body text-center">
+<a href="/jobs?view=closed" class="text-decoration-none text-dark d-block">
+<h6 class="text-muted">Closed Cases</h6>
+<h3 class="mb-0">{{ closed_cases }}</h3>
+</a>
+<a href="{{ url_for('export_cases', view_name='closed', from_date=from_date, to_date=to_date, date_field=date_field_filter, filter_branch=filter_branch, filter_status=filter_status, filter_closure=filter_closure, filter_engineer=filter_engineer) }}" class="btn btn-outline-success btn-sm mt-2">Export</a>
+</div>
+</div>
+</div>
+</div>
+
+<div class="card mb-3">
+<div class="card-header"><strong>Monthly Pie Reports</strong></div>
+<div class="card-body">
+<form method="GET" action="/dashboard" class="row g-2 align-items-end mb-3">
+<input type="hidden" name="from_date" value="{{ from_date or '' }}">
+<input type="hidden" name="to_date" value="{{ to_date or '' }}">
+<input type="hidden" name="date_field" value="{{ date_field_filter or '' }}">
+<input type="hidden" name="filter_branch" value="{{ filter_branch or '' }}">
+<input type="hidden" name="filter_status" value="{{ filter_status or '' }}">
+<input type="hidden" name="filter_closure" value="{{ filter_closure or '' }}">
+<input type="hidden" name="filter_engineer" value="{{ filter_engineer or '' }}">
+
+<div class="col-md-3">
+<label class="form-label">Chart From Date</label>
+<input type="date" name="chart_from_date" class="form-control" value="{{ chart_from_date }}">
+</div>
+<div class="col-md-3">
+<label class="form-label">Chart To Date</label>
+<input type="date" name="chart_to_date" class="form-control" value="{{ chart_to_date }}">
+</div>
+<div class="col-md-2 d-grid">
+<button class="btn btn-primary" type="submit">Apply Charts</button>
+</div>
+<div class="col-md-2 d-grid">
+<a class="btn btn-outline-secondary" href="/dashboard?from_date={{ from_date or '' }}&to_date={{ to_date or '' }}&date_field={{ date_field_filter or '' }}&filter_branch={{ filter_branch or '' }}&filter_status={{ filter_status or '' }}&filter_closure={{ filter_closure or '' }}&filter_engineer={{ filter_engineer or '' }}">Clear Charts</a>
+</div>
+</form>
+
+<div class="row g-2 mb-2 chart-grid">
+<div class="col-xl-3 col-lg-6 col-md-6 chart-col">
+<div class="border rounded p-2 h-100 chart-tile">
+<div class="d-flex justify-content-between align-items-center mb-2">
+<h6 class="mb-0">Closed Success vs Closed Failed</h6>
+<div>
+<a href="{{ url_for('jobs', view='closed', closure_result='success', chart_mode='closed', chart_from_date=chart_from_date, chart_to_date=chart_to_date) }}" class="badge text-bg-success text-decoration-none me-1">Success: {{ closed_success_count }}</a>
+<a href="{{ url_for('jobs', view='closed', closure_result='failed', chart_mode='closed', chart_from_date=chart_from_date, chart_to_date=chart_to_date) }}" class="badge text-bg-danger text-decoration-none">Failed: {{ closed_failed_count }}</a>
+</div>
+</div>
+<div class="chart-canvas-wrap"><canvas id="closedResultChart"></canvas></div>
+</div>
+</div>
+
+<div class="col-xl-3 col-lg-6 col-md-6 chart-col">
+<div class="border rounded p-2 h-100 chart-tile">
+<h6 class="mb-2">Current Month New Calls Report (Device)</h6>
+<div class="chart-canvas-wrap"><canvas id="newCallsChart"></canvas></div>
+</div>
+</div>
+
+<div class="col-xl-3 col-lg-6 col-md-6 chart-col">
+<div class="border rounded p-2 h-100 chart-tile">
+<h6 class="mb-2">Current Month Call Type Report</h6>
+<div class="chart-canvas-wrap"><canvas id="callTypeChart"></canvas></div>
+</div>
+</div>
+
+<div class="col-xl-3 col-lg-6 col-md-6 chart-col">
+<div class="border rounded p-2 h-100 chart-tile">
+<div class="d-flex justify-content-between align-items-start mb-2">
+<h6 class="mb-0">SYSCARE Target Progress</h6>
+<span class="badge text-bg-secondary">TARGET: {{ syscare_target }}</span>
+</div>
+<div class="chart-canvas-wrap"><canvas id="syscarePlanChart"></canvas></div>
+<div class="revenue-summary">
+<div class="revenue-pill target">
+<strong>Target</strong>
+{{ syscare_target }}
+</div>
+<div class="revenue-pill achieved">
+<strong>Achieved</strong>
+{{ syscare_achieved }}
+</div>
+<div class="revenue-pill balance">
+<strong>Balance</strong>
+{{ syscare_remaining }}
+</div>
+<div class="revenue-pill percent">
+<strong>Achieved %</strong>
+{{ '%.2f'|format(syscare_percentage or 0) }}%
+</div>
+</div>
+<div class="alert alert-{{ syscare_advice_class }} revenue-advice" role="alert">
+{{ syscare_advice }}
+</div>
+</div>
+</div>
+
+<div class="col-xl-3 col-lg-6 col-md-6 chart-col">
+<div class="border rounded p-2 h-100 chart-tile">
+<div class="d-flex justify-content-between align-items-start mb-2">
+<h6 class="mb-0">Revenue Split (Service vs Sales)</h6>
+<span class="badge text-bg-secondary">{{ revenue_target_branch }}</span>
+</div>
+<div class="chart-canvas-wrap"><canvas id="revenueSplitChart"></canvas></div>
+<div class="revenue-summary">
+<div class="revenue-pill target">
+<strong>Target</strong>
+{{ '%.2f'|format(total_target or 0) }}
+</div>
+<div class="revenue-pill achieved">
+<strong>Achieved</strong>
+{{ '%.2f'|format(achieved_total or 0) }}
+</div>
+<div class="revenue-pill balance">
+<strong>Balance</strong>
+{{ '%.2f'|format(total_target_remaining or 0) }}
+</div>
+<div class="revenue-pill percent">
+<strong>Achieved %</strong>
+{{ '%.2f'|format(achieved_percentage or 0) }}%
+</div>
+</div>
+<div class="alert alert-{{ revenue_advice_class }} revenue-advice" role="alert">
+{{ revenue_advice }}
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="row g-3 mb-3">
+{% if session.role in ['super_admin', 'admin'] %}
+<div class="col-md-4">
+<button type="button" class="card border-info h-100 w-100 report-option" data-target="branchWiseReport" style="background: white;">
+<div class="card-body text-center text-dark">
+<h5 class="mb-0">Branch-Wise Report</h5>
+</div>
+</button>
+</div>
+<div class="col-md-4">
+<button type="button" class="card border-info h-100 w-100 report-option" data-target="ageingReport" style="background: white;">
+<div class="card-body text-center text-dark">
+<h5 class="mb-0">Ageing</h5>
+</div>
+</button>
+</div>
+<div class="col-md-4">
+<a href="/used-spares" class="card border-info h-100 w-100 text-decoration-none" style="background: white;">
+<div class="card-body text-center text-dark">
+<h5 class="mb-0">Used Spare</h5>
+</div>
+</a>
+</div>
+{% elif session.role in ['coordinator', 'engineer'] %}
+<div class="col-md-4">
+<button type="button" class="card border-info h-100 w-100 report-option" data-target="branchReport" style="background: white;">
+<div class="card-body text-center text-dark">
+<h5 class="mb-0">Branch Report</h5>
+</div>
+</button>
+</div>
+
+<div class="col-md-4">
+<button type="button" class="card border-info h-100 w-100 report-option" data-target="ageingReport" style="background: white;">
+<div class="card-body text-center text-dark">
+<h5 class="mb-0">Ageing</h5>
+</div>
+</button>
+</div>
+<div class="col-md-4">
+<a href="/used-spares" class="card border-info h-100 w-100 text-decoration-none" style="background: white;">
+<div class="card-body text-center text-dark">
+<h5 class="mb-0">Used Spare</h5>
+</div>
+</a>
+</div>
+{% endif %}
+</div>
+
+{% if session.role in ['super_admin', 'admin'] %}
+<div class="card mb-4 report-section d-none" id="branchWiseReport">
+<div class="card-header"><strong>Branch-Wise Report</strong> (Admin Monitoring)</div>
+<div class="card-body p-0">
+<div class="table-responsive">
+<table class="table table-bordered table-sm mb-0 report-table">
+<thead class="table-dark">
+<tr>
+<th>Service Location</th>
+{% for status_name in status_columns %}
+<th>{{ status_name }}</th>
+{% endfor %}
+<th>Total</th>
+</tr>
+</thead>
+<tbody>
+{% for row in branch_wise_rows %}
+<tr>
+<td>{{ row.branch_name }}</td>
+{% for status_name in status_columns %}
+{% set value = row.counts[status_name] %}
+<td>
+{% if value > 0 %}
+<a href="{{ url_for('jobs', view='active', branch_name=row.branch_name, status=status_name) }}">{{ value }}</a>
+{% else %}
+0
+{% endif %}
+</td>
+{% endfor %}
+<td>
+{% if row.total > 0 %}
+<a href="{{ url_for('jobs', view='active', branch_name=row.branch_name) }}">{{ row.total }}</a>
+{% else %}
+0
+{% endif %}
+</td>
+</tr>
+{% endfor %}
+<tr class="table-secondary fw-bold">
+<td>Total</td>
+{% for status_name in status_columns %}
+{% set t = branch_wise_totals[status_name] %}
+<td>
+{% if t > 0 %}
+<a href="{{ url_for('jobs', view='active', status=status_name) }}">{{ t }}</a>
+{% else %}
+0
+{% endif %}
+</td>
+{% endfor %}
+<td><a href="{{ url_for('jobs', view='active') }}">{{ branch_wise_grand_total }}</a></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+{% endif %}
+
+{% if session.role in ['coordinator', 'engineer'] %}
+<div class="card mb-4 report-section d-none" id="branchReport">
+<div class="card-header"><strong>Branch Report</strong> ({{ scope_label }})</div>
+<div class="card-body p-0">
+<div class="table-responsive">
+<table class="table table-bordered table-sm mb-0 report-table">
+<thead class="table-dark">
+<tr>
+{% for status_name in status_columns %}
+<th>{{ status_name }}</th>
+{% endfor %}
+<th>Total</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+{% for status_name in status_columns %}
+{% set value = branch_report_counts[status_name] %}
+<td>
+{% if value > 0 %}
+<a href="{{ url_for('jobs', view='active', status=status_name) }}">{{ value }}</a>
+{% else %}
+0
+{% endif %}
+</td>
+{% endfor %}
+<td><a href="{{ url_for('jobs', view='active') }}">{{ branch_report_total }}</a></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+{% endif %}
+
+{% if session.role in ['super_admin', 'admin', 'coordinator', 'engineer'] %}
+<div class="card mb-4 report-section d-none" id="ageingReport">
+<div class="card-header"><strong>Ageing</strong> (Admin and Branch)</div>
+<div class="card-body p-0">
+<div class="table-responsive">
+<table class="table table-bordered table-sm mb-0 report-table">
+<thead class="table-dark">
+<tr>
+<th style="text-align: center !important;">Job Card Status</th>
+{% for bucket in age_buckets %}
+<th>{{ bucket }} Days</th>
+{% endfor %}
+<th>Total</th>
+</tr>
+</thead>
+<tbody>
+{% for row in ageing_rows %}
+<tr>
+<td style="text-align: center !important;">{{ row.status }}</td>
+{% for bucket in age_buckets %}
+{% set value = row.counts[bucket] %}
+<td>
+{% if value > 0 %}
+<a href="{{ url_for('jobs', view='active', status=row.status, age_bucket=bucket) }}">{{ value }}</a>
+{% else %}
+0
+{% endif %}
+</td>
+{% endfor %}
+<td>
+{% if row.total > 0 %}
+<a href="{{ url_for('jobs', view='active', status=row.status) }}">{{ row.total }}</a>
+{% else %}
+0
+{% endif %}
+</td>
+</tr>
+{% endfor %}
+<tr class="table-secondary fw-bold">
+<td style="text-align: center !important;">Total</td>
+{% for bucket in age_buckets %}
+{% set t = ageing_totals_by_bucket[bucket] %}
+<td>
+{% if t > 0 %}
+<a href="{{ url_for('jobs', view='active', age_bucket=bucket) }}">{{ t }}</a>
+{% else %}
+0
+{% endif %}
+</td>
+{% endfor %}
+<td><a href="{{ url_for('jobs', view='active') }}">{{ ageing_grand_total }}</a></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+{% endif %}
+
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+	if (window.Chart && window.ChartDataLabels) {
+		Chart.register(ChartDataLabels);
+	}
+
+	var optionButtons = document.querySelectorAll(".report-option");
+	var sections = document.querySelectorAll(".report-section");
+
+	function makePieChart(canvasId, labels, counts, colors, links) {
+		var canvas = document.getElementById(canvasId);
+		if (!canvas) {
+			return;
+		}
+		new Chart(canvas, {
+			type: "pie",
+			data: {
+				labels: labels,
+				datasets: [{
+					data: counts,
+					backgroundColor: colors,
+					borderColor: "#ffffff",
+					borderWidth: 1
+				}]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				layout: {
+					padding: {
+						top: 6,
+						bottom: 6,
+						left: 6,
+						right: 6
+					}
+				},
+				onClick: function (evt, elements) {
+					if (!elements || !elements.length) {
+						return;
+					}
+					var idx = elements[0].index;
+					if (links[idx]) {
+						window.location.href = links[idx];
+					}
+				},
+				plugins: {
+					legend: {
+						position: "bottom",
+						align: "center",
+						labels: {
+							usePointStyle: true,
+							boxWidth: 10,
+							padding: 10,
+							font: { size: 11 }
+						}
+					},
+					tooltip: {
+						callbacks: {
+							label: function (ctx) {
+								var value = ctx.parsed || 0;
+								var total = ctx.dataset.data.reduce(function (a, b) { return a + b; }, 0) || 1;
+								var pct = ((value * 100) / total).toFixed(1);
+								return ctx.label + ": " + value + " (" + pct + "%)";
+							}
+						}
+					},
+					datalabels: {
+						color: "#fff",
+						font: { weight: "bold", size: 10 },
+						textAlign: "center",
+						anchor: "center",
+						align: "center",
+						clamp: true,
+						display: false,
+						formatter: function (value, context) {
+							var total = context.chart.data.datasets[0].data.reduce(function (a, b) { return a + b; }, 0) || 1;
+							var pct = ((value * 100) / total).toFixed(1);
+							return pct + "%";
+						}
+					}
+				}
+			}
+		});
+	}
+
+	function showSection(sectionId) {
+		sections.forEach(function (sec) {
+			sec.classList.add("d-none");
+		});
+		optionButtons.forEach(function (btn) {
+			btn.classList.remove("border-primary");
+			btn.classList.add("border-info");
+		});
+
+		var activeSection = document.getElementById(sectionId);
+		if (activeSection) {
+			activeSection.classList.remove("d-none");
+			activeSection.scrollIntoView({ behavior: "smooth", block: "start" });
+		}
+
+		optionButtons.forEach(function (btn) {
+			if (btn.getAttribute("data-target") === sectionId) {
+				btn.classList.remove("border-info");
+				btn.classList.add("border-primary");
+			}
+		});
+	}
+
+	optionButtons.forEach(function (btn) {
+		btn.addEventListener("click", function () {
+			showSection(btn.getAttribute("data-target"));
+		});
+	});
+
+	var chartFrom = {{ chart_from_date|tojson }};
+	var chartTo = {{ chart_to_date|tojson }};
+
+	makePieChart(
+		"closedResultChart",
+		["Closed Success", "Closed Failed"],
+		[{{ closed_success_count }}, {{ closed_failed_count }}],
+		["#198754", "#dc3545"],
+		[
+			"/jobs?view=closed&closure_result=success&chart_mode=closed&chart_from_date=" + chartFrom + "&chart_to_date=" + chartTo,
+			"/jobs?view=closed&closure_result=failed&chart_mode=closed&chart_from_date=" + chartFrom + "&chart_to_date=" + chartTo
+		]
+	);
+
+	var newCallLabels = {{ new_calls_labels|tojson }};
+	var newCallCounts = {{ new_calls_counts|tojson }};
+	var newCallLinks = newCallLabels.map(function (label) {
+		return "/jobs?view=all&device_filter=" + encodeURIComponent(label) + "&chart_mode=created&chart_from_date=" + chartFrom + "&chart_to_date=" + chartTo;
+	});
+	makePieChart(
+		"newCallsChart",
+		newCallLabels,
+		newCallCounts,
+		["#0d6efd", "#20c997", "#6f42c1", "#fd7e14", "#198754", "#d63384", "#6c757d", "#6610f2", "#17a2b8", "#ffc107"],
+		newCallLinks
+	);
+
+	var callTypeLabels = {{ call_type_labels|tojson }};
+	var callTypeCounts = {{ call_type_counts|tojson }};
+	var callTypeLinks = callTypeLabels.map(function (label) {
+		return "/jobs?view=all&call_type_filter=" + encodeURIComponent(label) + "&chart_mode=created&chart_from_date=" + chartFrom + "&chart_to_date=" + chartTo;
+	});
+	makePieChart(
+		"callTypeChart",
+		callTypeLabels,
+		callTypeCounts,
+		["#0d6efd", "#20c997", "#6f42c1", "#fd7e14", "#198754", "#d63384", "#6c757d", "#6610f2", "#17a2b8", "#ffc107"],
+		callTypeLinks
+	);
+
+	makePieChart(
+		"syscarePlanChart",
+		["Achieved", "Balance"],
+		[{{ syscare_achieved }}, {{ syscare_remaining }}],
+		["#16a34a", "#f59e0b"],
+		[
+			"/syscare?month=" + (chartFrom || "").slice(0, 7),
+			"/syscare?month=" + (chartFrom || "").slice(0, 7)
+		]
+	);
+
+	makePieChart(
+		"revenueSplitChart",
+		["Service Charges", "Sales Revenue"],
+		[{{ '%.2f'|format(service_revenue_total or 0) }}, {{ '%.2f'|format(sales_revenue_total or 0) }}],
+		["#0dcaf0", "#fd7e14"],
+		[
+			"/revenue-reports?from_date=" + chartFrom + "&to_date=" + chartTo,
+			"/revenue-reports?from_date=" + chartFrom + "&to_date=" + chartTo
+		]
+	);
+});
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

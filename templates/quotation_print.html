@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quotation - {{ quotation.quote_number }}</title>
+  <link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+  <style>
+    :root {
+      --brand: #2e5ca8;
+      --brand-dark: #244985;
+      --ink: #18324f;
+      --muted: #5b6f8e;
+      --line: #d7e1ef;
+      --paper: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #d9dde5;
+      color: var(--ink);
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 12px 18px;
+      background: #1f2937;
+    }
+
+    .toolbar a,
+    .toolbar button {
+      border: 1px solid #d6deec;
+      background: #ffffff;
+      color: #18283d;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .toolbar a.whatsapp-btn {
+      background: #25d366;
+      border-color: #25d366;
+      color: #ffffff;
+    }
+
+    .sheet {
+      width: 198mm;
+      min-height: 285mm;
+      margin: 10px auto;
+      background: var(--paper);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+      padding: 5mm 6mm 6mm;
+      overflow: hidden;
+    }
+
+    .sheet.dense {
+      font-size: 95%;
+    }
+
+    .sheet.ultra-dense {
+      font-size: 91%;
+    }
+
+    .top {
+      text-align: center;
+      padding-top: 4mm;
+    }
+
+    .brand-name {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--brand-dark);
+    }
+
+    .brand-lines {
+      margin-top: 6px;
+      font-size: 10px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+
+    .title {
+      margin: 8px 0 10px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--line);
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--brand-dark);
+      text-transform: uppercase;
+      text-align: center;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdff;
+      padding: 10px 12px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 74px 1fr;
+      gap: 8px;
+      margin: 3px 0;
+      align-items: start;
+    }
+
+    .label {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--brand-dark);
+    }
+
+    .value {
+      font-size: 11px;
+      line-height: 1.38;
+      color: #22344e;
+      word-break: break-word;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .item-table {
+      border: 1px solid var(--line);
+    }
+
+    .item-table th,
+    .item-table td {
+      border: 1px solid var(--line);
+      padding: 5px 6px;
+      font-size: 11px;
+      vertical-align: top;
+      word-break: break-word;
+    }
+
+    .item-table th {
+      background: var(--brand);
+      color: #ffffff;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+
+    .item-table td:nth-child(1),
+    .item-table td:nth-child(4),
+    .item-table td:nth-child(5),
+    .item-table td:nth-child(6) {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .item-table td:nth-child(2),
+    .item-table td:nth-child(3) {
+      text-align: left;
+    }
+
+    .total-bar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      margin-top: 4px;
+      padding: 6px 4px 0;
+      border-top: 3px solid var(--brand-dark);
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--brand-dark);
+    }
+
+    .terms {
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdff;
+      padding: 10px 12px;
+    }
+
+    .terms-title {
+      margin: 0 0 8px;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--brand-dark);
+    }
+
+    .terms-subtitle {
+      margin: 0 0 6px;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .terms p {
+      margin: 0 0 3px;
+      font-size: 10px;
+      line-height: 1.4;
+      color: #32445e;
+    }
+
+    .footer-note {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 10px;
+      line-height: 1.45;
+      color: #7c889b;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 6mm;
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+      }
+
+      .toolbar {
+        display: none;
+      }
+
+      .sheet {
+        width: 198mm;
+        min-height: 285mm;
+        margin: 0;
+        box-shadow: none;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .sheet {
+        width: auto;
+        min-height: auto;
+        margin: 0;
+      }
+
+      .meta-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <a href="/quotation/{{ quotation.id }}/edit">Back to Quotation</a>
+    <button type="button" onclick="window.print()">Print</button>
+    <a href="{{ build_whatsapp_chat_url(quotation.customer_mobile, 'Quotation No: ' ~ (quotation.quote_number or quotation.id) ~ '\nCustomer: ' ~ (quotation.customer_name or 'Customer') ~ '\nMobile: ' ~ (quotation.customer_mobile or '-')) }}" class="whatsapp-btn" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+    {% include "_global_user_menu.html" %}
+  </div>
+
+  <div class="sheet {% if items|length > 8 %}dense{% endif %} {% if items|length > 12 %}ultra-dense{% endif %}">
+    <div class="top">
+      <h1 class="brand-name">{{ profile.company_name or 'SYSMANTECH' }}</h1>
+      <div class="brand-lines">
+        {% if profile.address_line1 %}<div>{{ profile.address_line1 }}</div>{% endif %}
+        {% if profile.address_line2 %}<div>{{ profile.address_line2 }}</div>{% endif %}
+        <div>
+          {% if profile.gst_no %}GST: {{ profile.gst_no }}{% endif %}
+          {% if profile.mobile1 or profile.mobile2 or profile.mobile3 %}
+            {% if profile.gst_no %} | {% endif %}
+            Mob:
+            {% if profile.mobile1 %}{{ profile.mobile1 }}{% endif %}
+            {% if profile.mobile2 %}, {{ profile.mobile2 }}{% endif %}
+            {% if profile.mobile3 %}, {{ profile.mobile3 }}{% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="title">Quotation</div>
+
+    <div class="meta-grid">
+      <div class="card">
+        <div class="row"><div class="label">Customer:</div><div class="value">{{ quotation.customer_name or '-' }}</div></div>
+        <div class="row"><div class="label">Mobile:</div><div class="value">{{ quotation.customer_mobile or '-' }}</div></div>
+        <div class="row"><div class="label">Address:</div><div class="value">{{ quotation.customer_address or '-' }}</div></div>
+        <div class="row"><div class="label">GST No:</div><div class="value">{{ quotation.customer_gst_no or '-' }}</div></div>
+      </div>
+      <div class="card">
+        <div class="row"><div class="label">Quotation No:</div><div class="value">{{ quotation.quote_number }}</div></div>
+        <div class="row"><div class="label">Date:</div><div class="value">{{ quote_date_display }}</div></div>
+        <div class="row"><div class="label">Handled By:</div><div class="value">{{ quotation.engineer_name or quotation.created_by or '-' }}</div></div>
+        <div class="row"><div class="label">Contact No:</div><div class="value">{{ quotation.engineer_mobile or profile.mobile1 or quotation.customer_mobile or '-' }}</div></div>
+      </div>
+    </div>
+
+    <table class="item-table">
+      <thead>
+        <tr>
+          <th style="width: 34px;">No</th>
+          <th style="width: 29%;">Item</th>
+          <th>Narration</th>
+          <th style="width: 68px;">Amount</th>
+          <th style="width: 52px;">Qty</th>
+          <th style="width: 94px;">Final Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ item.item_name or '-' }}</td>
+          <td>{{ item.narration or '-' }}</td>
+          <td>{{ '%.2f'|format((item.amount or 0)|float) }}</td>
+          <td>{{ '%.2f'|format((item.qty or 0)|float) }}</td>
+          <td>{{ '%.2f'|format((item.final_amount or 0)|float) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="total-bar">
+      <div></div>
+      <div>Grand Total: {{ '%.2f'|format((quotation.grand_total or 0)|float) }}</div>
+    </div>
+
+    <div class="terms">
+      <div class="terms-title">Terms &amp; Conditions</div>
+      <div class="terms-subtitle">Terms &amp; Conditions (Quotation):</div>
+      {% for line in (terms_text or '').split('\n') %}
+        {% if line.strip() %}
+        <p>{{ line }}</p>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <div class="footer-note">
+      <div>Thank you for choosing {{ profile.company_name or 'SYSMANTECH' }}</div>
+      <div>This is a system-generated quotation.</div>
+    </div>
+  </div>
+</body>
+</html>

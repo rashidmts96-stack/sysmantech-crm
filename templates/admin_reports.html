@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Reports</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+<style>
+body { background: #f6f8fb; }
+.top-nav { border-bottom: 1px solid #1f2937; }
+.report-filter-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    background: #f8fafc;
+    border: 1px solid #dbe3ea;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 14px;
+}
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+.kpi-card {
+    background: #fff;
+    border: 1px solid #dbe3ea;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+.kpi-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+}
+.kpi-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.1;
+}
+.kpi-subvalue {
+    margin-top: 6px;
+    font-size: 0.95rem;
+    color: #334155;
+}
+.section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 10px;
+}
+.table-wrap { max-height: 70vh; overflow: auto; }
+.table-wrap thead th { position: sticky; top: 0; z-index: 2; }
+</style>
+</head>
+<body class="crm-theme">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark top-nav">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-semibold" href="/admin-reports">CRM Reports</a>
+    <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#reportNav"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="reportNav">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item"><a class="nav-link active" href="/admin-reports">Reports</a></li>
+        <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
+        {% if session.role == 'super_admin' %}
+        <li class="nav-item"><a class="nav-link" href="/staff-management">Staff Management</a></li>
+        <li class="nav-item"><a class="nav-link" href="/settings">Settings</a></li>
+        {% endif %}
+      </ul>
+      <div class="d-flex align-items-center gap-2 flex-wrap ms-lg-auto">
+        {% include "_global_user_menu.html" %}
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid py-3">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  {% for category, message in messages %}
+  <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+  {% endwith %}
+
+  <div class="report-filter-sticky">
+    <form method="GET" action="/admin-reports" class="row g-2 align-items-end">
+      <div class="col-md-2">
+        <label class="form-label mb-1">From Date</label>
+        <input type="date" name="from_date" class="form-control form-control-sm" value="{{ from_date }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label mb-1">To Date</label>
+        <input type="date" name="to_date" class="form-control form-control-sm" value="{{ to_date }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label mb-1">Branch</label>
+        <select name="filter_branch" class="form-select form-select-sm">
+          {% if has_global_scope %}<option value="">All Branches</option>{% endif %}
+          {% for branch_name in branch_options %}
+          <option value="{{ branch_name }}" {% if filter_branch == branch_name %}selected{% endif %}>{{ branch_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label mb-1">Engineer</label>
+        <select name="filter_engineer" class="form-select form-select-sm">
+          <option value="">All Engineers</option>
+          {% for engineer_name in engineer_options %}
+          <option value="{{ engineer_name }}" {% if filter_engineer == engineer_name %}selected{% endif %}>{{ engineer_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2 d-flex gap-2">
+        <button class="btn btn-primary btn-sm" type="submit">Apply</button>
+        <a class="btn btn-outline-secondary btn-sm" href="/admin-reports">Clear</a>
+      </div>
+    </form>
+    <div class="d-flex gap-2 flex-wrap mt-2">
+      <a class="btn btn-outline-success btn-sm" href="/admin-reports/export/snapshot?from_date={{ from_date|urlencode }}&to_date={{ to_date|urlencode }}&filter_branch={{ filter_branch|urlencode }}&filter_engineer={{ filter_engineer|urlencode }}">Export Snapshot CSV</a>
+      <a class="btn btn-outline-success btn-sm" href="/admin-reports/export/branch?from_date={{ from_date|urlencode }}&to_date={{ to_date|urlencode }}&filter_branch={{ filter_branch|urlencode }}&filter_engineer={{ filter_engineer|urlencode }}">Export Branch CSV</a>
+      <a class="btn btn-outline-success btn-sm" href="/admin-reports/export/engineer?from_date={{ from_date|urlencode }}&to_date={{ to_date|urlencode }}&filter_branch={{ filter_branch|urlencode }}&filter_engineer={{ filter_engineer|urlencode }}">Export Engineer CSV</a>
+    </div>
+    <div class="small text-muted mt-2">
+      Selected range: {{ from_date }} to {{ to_date }} | Branch: {{ filter_branch or ('All Branches' if has_global_scope else (branch_options[0] if branch_options else 'Current Branch')) }} | Engineer: {{ filter_engineer or 'All Engineers' }}
+    </div>
+    <div class="small text-muted">Closed after 7+ days means cases closed more than 7 days after the created date.</div>
+  </div>
+
+  <div class="section-title">Today</div>
+  <div class="kpi-grid mb-4">
+    <div class="kpi-card">
+      <div class="kpi-label">Today New Calls</div>
+      <div class="kpi-value">{{ today_jobs.new_calls }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Today Closed Calls</div>
+      <div class="kpi-value">{{ today_jobs.closed_calls }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Closed After 7+ Days</div>
+      <div class="kpi-value">{{ today_jobs.closed_after_7_days }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Today SYSCARE</div>
+      <div class="kpi-value">{{ today_syscare.syscare_count }}</div>
+      <div class="kpi-subvalue">Amount: {{ '%.2f'|format(today_syscare.syscare_amount|float) }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Today Service Charges</div>
+      <div class="kpi-value">{{ '%.2f'|format(today_jobs.service_charge_total|float) }}</div>
+      <div class="kpi-subvalue">Cases: {{ today_jobs.service_charge_count }}</div>
+    </div>
+  </div>
+
+  <div class="section-title">Current Month</div>
+  <div class="kpi-grid mb-4">
+    <div class="kpi-card">
+      <div class="kpi-label">Current Month New Calls</div>
+      <div class="kpi-value">{{ month_jobs.new_calls }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Current Month Closed Calls</div>
+      <div class="kpi-value">{{ month_jobs.closed_calls }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Current Month SYSCARE</div>
+      <div class="kpi-value">{{ month_syscare.syscare_count }}</div>
+      <div class="kpi-subvalue">Amount: {{ '%.2f'|format(month_syscare.syscare_amount|float) }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Current Month Service Charges</div>
+      <div class="kpi-value">{{ '%.2f'|format(month_jobs.service_charge_total|float) }}</div>
+      <div class="kpi-subvalue">Cases: {{ month_jobs.service_charge_count }}</div>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header fw-semibold">Selected Range Snapshot</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3"><strong>New Calls:</strong> {{ selected_jobs.new_calls }}</div>
+        <div class="col-md-3"><strong>Closed Calls:</strong> {{ selected_jobs.closed_calls }}</div>
+        <div class="col-md-3"><strong>SYSCARE:</strong> {{ selected_syscare.syscare_count }} | {{ '%.2f'|format(selected_syscare.syscare_amount|float) }}</div>
+        <div class="col-md-3"><strong>Service Charges:</strong> {{ '%.2f'|format(selected_jobs.service_charge_total|float) }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-xl-6">
+      <div class="card h-100">
+        <div class="card-header fw-semibold">Branch Summary</div>
+        <div class="card-body p-0">
+          <div class="table-wrap">
+            <table class="table table-sm table-bordered table-hover mb-0">
+              <thead class="table-dark">
+                <tr>
+                  <th>Branch</th>
+                  <th>New Calls</th>
+                  <th>Closed Calls</th>
+                  <th>Closed 7+ Days</th>
+                  <th>SYSCARE Count</th>
+                  <th>SYSCARE Amount</th>
+                  <th>Service Charges</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if branch_summary_rows %}
+                  {% for row in branch_summary_rows %}
+                  <tr>
+                    <td>{{ row.branch_name }}</td>
+                    <td>{{ row.new_calls }}</td>
+                    <td>{{ row.closed_calls }}</td>
+                    <td>{{ row.closed_after_7_days }}</td>
+                    <td>{{ row.syscare_count }}</td>
+                    <td>{{ '%.2f'|format(row.syscare_amount|float) }}</td>
+                    <td>{{ '%.2f'|format(row.service_charge_total|float) }}</td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr><td colspan="7" class="text-center text-muted">No branch data for the selected filters</td></tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-6">
+      <div class="card h-100">
+        <div class="card-header fw-semibold">Engineer Summary</div>
+        <div class="card-body p-0">
+          <div class="table-wrap">
+            <table class="table table-sm table-bordered table-hover mb-0">
+              <thead class="table-dark">
+                <tr>
+                  <th>Engineer</th>
+                  <th>New Calls</th>
+                  <th>Closed Calls</th>
+                  <th>Closed 7+ Days</th>
+                  <th>SYSCARE Count</th>
+                  <th>SYSCARE Amount</th>
+                  <th>Service Charges</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if engineer_summary_rows %}
+                  {% for row in engineer_summary_rows %}
+                  <tr>
+                    <td>{{ row.engineer_name }}</td>
+                    <td>{{ row.new_calls }}</td>
+                    <td>{{ row.closed_calls }}</td>
+                    <td>{{ row.closed_after_7_days }}</td>
+                    <td>{{ row.syscare_count }}</td>
+                    <td>{{ '%.2f'|format(row.syscare_amount|float) }}</td>
+                    <td>{{ '%.2f'|format(row.service_charge_total|float) }}</td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr><td colspan="7" class="text-center text-muted">No engineer data for the selected filters</td></tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

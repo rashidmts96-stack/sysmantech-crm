@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>{% if mode == 'edit' %}Edit{% else %}New{% endif %} Quotation - Service CRM</title>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+	<link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+	<style>
+		.number-col { width: 60px; }
+		.qty-col, .amount-col, .final-col { width: 140px; }
+	</style>
+</head>
+<body class="crm-theme">
+
+<nav class="navbar navbar-dark bg-dark">
+	<div class="container-fluid">
+		<span class="navbar-brand">{% if mode == 'edit' %}Edit{% else %}New{% endif %} Quotation</span>
+		<div class="d-flex align-items-center gap-2 flex-wrap justify-content-end ms-auto">
+			{% if mode == 'edit' and quotation.id %}
+			<a href="/quotation/{{ quotation.id }}/print" class="btn btn-outline-light btn-sm" target="_blank" rel="noopener">Print</a>
+			<a href="{{ build_whatsapp_chat_url(quotation.customer_mobile, 'Quotation No: ' ~ (quotation.quote_number or quotation.id) ~ '\nCustomer: ' ~ (quotation.customer_name or 'Customer') ~ '\nMobile: ' ~ (quotation.customer_mobile or '-')) }}" class="btn btn-success btn-sm" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+			{% endif %}
+			<a href="/quotations" class="btn btn-outline-light btn-sm">Back to Quotations</a>
+			<a href="/dashboard" class="btn btn-outline-light btn-sm">Dashboard</a>
+			{% include "_global_user_menu.html" %}
+		</div>
+	</div>
+</nav>
+
+<div class="container-fluid py-3">
+	{% with messages = get_flashed_messages(with_categories=true) %}
+		{% if messages %}
+			{% for category, message in messages %}
+				<div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+					{{ message }}
+					<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+				</div>
+			{% endfor %}
+		{% endif %}
+	{% endwith %}
+
+	<form method="POST" class="card shadow-sm">
+		<div class="card-body">
+			<div class="row g-3 mb-2">
+				<div class="col-md-3">
+					<label class="form-label">Quotation Number</label>
+					<input type="text" class="form-control" value="{{ quotation.quote_number }}" readonly>
+				</div>
+				<div class="col-md-3">
+					<label class="form-label">Quotation Date</label>
+					<input type="date" name="quote_date" class="form-control" value="{{ quotation.quote_date }}" required>
+				</div>
+				<div class="col-md-3">
+					<label class="form-label">Branch</label>
+					{% if branch_options|length == 1 %}
+					<input type="text" name="branch_name" class="form-control" value="{{ branch_options[0] }}" readonly>
+					{% else %}
+					<input type="text" name="branch_name" class="form-control" list="quotation-branch-list" value="{{ quotation.branch_name }}" required>
+					<datalist id="quotation-branch-list">
+						{% for b in branch_options %}
+						<option value="{{ b }}"></option>
+						{% endfor %}
+					</datalist>
+					{% endif %}
+				</div>
+			</div>
+
+			<div class="row g-3 mb-3">
+				<div class="col-md-4">
+					<label class="form-label">Customer Name</label>
+					<input type="text" name="customer_name" class="form-control" value="{{ quotation.customer_name }}" required>
+				</div>
+				<div class="col-md-3">
+					<label class="form-label">Customer Mobile</label>
+					<input type="text" name="customer_mobile" class="form-control" value="{{ quotation.customer_mobile }}">
+				</div>
+				<div class="col-md-3">
+					<label class="form-label">Customer GST No</label>
+					<input type="text" name="customer_gst_no" class="form-control" value="{{ quotation.customer_gst_no }}">
+				</div>
+				<div class="col-md-2">
+					<label class="form-label">Engineer Name</label>
+					<input type="text" name="engineer_name" class="form-control" value="{{ quotation.engineer_name }}">
+				</div>
+				<div class="col-md-3">
+					<label class="form-label">Engineer Mobile</label>
+					<input type="text" name="engineer_mobile" class="form-control" value="{{ quotation.engineer_mobile }}">
+				</div>
+				<div class="col-md-9">
+					<label class="form-label">Customer Address</label>
+					<textarea name="customer_address" class="form-control" rows="2">{{ quotation.customer_address }}</textarea>
+				</div>
+			</div>
+
+			<div class="table-responsive mb-2">
+				<table class="table table-bordered align-middle" id="itemsTable">
+					<thead class="table-light">
+						<tr>
+							<th class="number-col">No</th>
+							<th>Item</th>
+							<th>Narration</th>
+							<th class="qty-col">Qty</th>
+							<th class="amount-col">Amount</th>
+							<th class="final-col">Final Amount</th>
+							<th style="width: 100px;">Action</th>
+						</tr>
+					</thead>
+					<tbody id="itemsBody">
+						{% if items %}
+							{% for item in items %}
+							<tr>
+								<td class="row-no text-center">{{ loop.index }}</td>
+								<td><input type="text" name="item_name[]" class="form-control" value="{{ item.item_name }}" required></td>
+								<td><input type="text" name="narration[]" class="form-control" value="{{ item.narration }}"></td>
+								<td><input type="number" min="0" step="0.01" name="qty[]" class="form-control qty-input" value="{{ item.qty }}" required></td>
+								<td><input type="number" min="0" step="0.01" name="amount[]" class="form-control amount-input" value="{{ item.amount }}" required></td>
+								<td><input type="text" class="form-control final-amount" value="{{ '%.2f'|format(item.final_amount or 0) }}" readonly></td>
+								<td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeRow(this)">Delete</button></td>
+							</tr>
+							{% endfor %}
+						{% endif %}
+					</tbody>
+				</table>
+			</div>
+
+			<div class="d-flex justify-content-between align-items-center mb-3">
+				<button type="button" class="btn btn-outline-primary" onclick="addRow()">+ Add Row</button>
+				<div class="text-end">
+					<div class="fw-semibold">Grand Total: <span id="grandTotalLabel">0.00</span></div>
+					<input type="hidden" id="grandTotalHidden" name="grand_total" value="0">
+				</div>
+			</div>
+
+			<div class="mb-3">
+				<label class="form-label">Quotation Terms & Conditions</label>
+				<textarea name="terms_text" class="form-control" rows="4">{{ quotation.terms_text or profile.quotation_terms }}</textarea>
+			</div>
+
+			<div class="d-flex gap-2">
+				<button type="submit" class="btn btn-success">Save Quotation</button>
+				{% if mode == 'edit' and quotation.id %}
+				<a href="/quotation/{{ quotation.id }}/print" class="btn btn-outline-dark" target="_blank" rel="noopener">Print</a>
+				<a href="{{ build_whatsapp_chat_url(quotation.customer_mobile, 'Quotation No: ' ~ (quotation.quote_number or quotation.id) ~ '\nCustomer: ' ~ (quotation.customer_name or 'Customer') ~ '\nMobile: ' ~ (quotation.customer_mobile or '-')) }}" class="btn btn-success" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+				{% endif %}
+				<a href="/quotations" class="btn btn-secondary">Cancel</a>
+			</div>
+		</div>
+	</form>
+</div>
+
+<script>
+	function format2(value) {
+		return Number(value || 0).toFixed(2);
+	}
+
+	function recalcRows() {
+		const rows = document.querySelectorAll('#itemsBody tr');
+		let grandTotal = 0;
+
+		rows.forEach((row, index) => {
+			const rowNo = row.querySelector('.row-no');
+			const qtyInput = row.querySelector('.qty-input');
+			const amountInput = row.querySelector('.amount-input');
+			const finalInput = row.querySelector('.final-amount');
+
+			const qty = parseFloat(qtyInput.value || '0') || 0;
+			const amount = parseFloat(amountInput.value || '0') || 0;
+			const finalAmount = qty * amount;
+
+			rowNo.textContent = String(index + 1);
+			finalInput.value = format2(finalAmount);
+			grandTotal += finalAmount;
+		});
+
+		document.getElementById('grandTotalLabel').textContent = format2(grandTotal);
+		document.getElementById('grandTotalHidden').value = format2(grandTotal);
+	}
+
+	function bindRow(row) {
+		row.querySelector('.qty-input').addEventListener('input', recalcRows);
+		row.querySelector('.amount-input').addEventListener('input', recalcRows);
+	}
+
+	function addRow() {
+		const tbody = document.getElementById('itemsBody');
+		const tr = document.createElement('tr');
+		tr.innerHTML = `
+			<td class="row-no text-center"></td>
+			<td><input type="text" name="item_name[]" class="form-control" required></td>
+			<td><input type="text" name="narration[]" class="form-control"></td>
+			<td><input type="number" min="0" step="0.01" name="qty[]" class="form-control qty-input" value="1" required></td>
+			<td><input type="number" min="0" step="0.01" name="amount[]" class="form-control amount-input" value="0" required></td>
+			<td><input type="text" class="form-control final-amount" value="0.00" readonly></td>
+			<td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeRow(this)">Delete</button></td>
+		`;
+		tbody.appendChild(tr);
+		bindRow(tr);
+		recalcRows();
+	}
+
+	function removeRow(button) {
+		const tbody = document.getElementById('itemsBody');
+		if (tbody.querySelectorAll('tr').length <= 1) {
+			return;
+		}
+		button.closest('tr').remove();
+		recalcRows();
+	}
+
+	document.querySelectorAll('#itemsBody tr').forEach(bindRow);
+	if (document.querySelectorAll('#itemsBody tr').length === 0) {
+		addRow();
+	} else {
+		recalcRows();
+	}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

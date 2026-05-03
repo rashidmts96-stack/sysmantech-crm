@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Quotations - Service CRM</title>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+	<link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+	<style>
+		.quotation-actions {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 8px;
+			padding: 8px;
+			border-radius: 18px;
+			background: linear-gradient(180deg, #f7faff, #eef3fb);
+			border: 1px solid rgba(27, 66, 131, 0.10);
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+		}
+
+		.quotation-actions form {
+			margin: 0;
+			width: 100%;
+		}
+
+		.quotation-action-btn {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 100%;
+			min-height: 38px;
+			padding: 8px 10px;
+			border: 1px solid transparent;
+			border-radius: 12px;
+			font-size: 0.84rem;
+			font-weight: 700;
+			text-decoration: none;
+			transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+		}
+
+		.quotation-action-btn:hover {
+			transform: translateY(-1px);
+			text-decoration: none;
+		}
+
+		.quotation-action-btn-edit {
+			background: linear-gradient(135deg, #2d6ef2, #1f57d6);
+			box-shadow: 0 8px 18px rgba(45, 110, 242, 0.20);
+			color: #fff !important;
+		}
+
+		.quotation-action-btn-edit:hover {
+			color: #fff !important;
+			box-shadow: 0 10px 20px rgba(45, 110, 242, 0.24);
+		}
+
+		.quotation-action-btn-print {
+			background: #fff;
+			border-color: rgba(45, 110, 242, 0.22);
+			color: #1f57d6;
+			box-shadow: 0 6px 14px rgba(31, 87, 214, 0.08);
+		}
+
+		.quotation-action-btn-print:hover {
+			color: #1f57d6;
+			box-shadow: 0 8px 18px rgba(31, 87, 214, 0.12);
+		}
+
+		.quotation-action-btn-whatsapp {
+			background: linear-gradient(135deg, #1fa463, #128c7e);
+			box-shadow: 0 8px 18px rgba(24, 156, 96, 0.18);
+			color: #fff !important;
+		}
+
+		.quotation-action-btn-whatsapp:hover {
+			color: #fff !important;
+			box-shadow: 0 10px 20px rgba(24, 156, 96, 0.22);
+		}
+
+		.quotation-action-btn-delete {
+			background: linear-gradient(135deg, #ff7b6d, #f25555);
+			box-shadow: 0 8px 18px rgba(242, 85, 85, 0.18);
+			color: #fff;
+		}
+
+		.quotation-action-btn-delete:hover {
+			color: #fff;
+			box-shadow: 0 10px 20px rgba(242, 85, 85, 0.22);
+		}
+
+		@media (max-width: 768px) {
+			.quotation-actions {
+				padding: 6px;
+				gap: 6px;
+			}
+
+			.quotation-action-btn {
+				min-height: 36px;
+				padding-inline: 8px;
+			}
+		}
+
+		@media (max-width: 520px) {
+			.quotation-actions {
+				grid-template-columns: 1fr;
+			}
+		}
+	</style>
+</head>
+<body class="crm-theme">
+
+<nav class="navbar navbar-dark bg-dark">
+	<div class="container-fluid">
+		<span class="navbar-brand">Quotations</span>
+		<div class="d-flex align-items-center gap-2 flex-wrap justify-content-end ms-auto">
+			<a href="/dashboard" class="btn btn-outline-light btn-sm">Dashboard</a>
+			<a href="/quotation/new" class="btn btn-success btn-sm">New Quotation</a>
+			{% include "_global_user_menu.html" %}
+		</div>
+	</div>
+</nav>
+
+<div class="container-fluid py-3">
+	{% with messages = get_flashed_messages(with_categories=true) %}
+		{% if messages %}
+			{% for category, message in messages %}
+				<div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+					{{ message }}
+					<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+				</div>
+			{% endfor %}
+		{% endif %}
+	{% endwith %}
+
+	<div class="card shadow-sm mb-3">
+		<div class="card-body">
+			<form method="GET" action="/quotations" class="row g-2 align-items-end">
+				<div class="col-md-2">
+					<label class="form-label">From Date</label>
+					<input type="date" name="from_date" class="form-control" value="{{ from_date }}">
+				</div>
+				<div class="col-md-2">
+					<label class="form-label">To Date</label>
+					<input type="date" name="to_date" class="form-control" value="{{ to_date }}">
+				</div>
+				{% if role in ['super_admin', 'admin'] and session_branch == 'ALL' %}
+				<div class="col-md-2">
+					<label class="form-label">Branch</label>
+					<select name="filter_branch" class="form-select">
+						<option value="">ALL</option>
+						{% for b in branch_options %}
+						<option value="{{ b }}" {% if filter_branch == b %}selected{% endif %}>{{ b }}</option>
+						{% endfor %}
+					</select>
+				</div>
+				{% endif %}
+				<div class="col-md-3">
+					<label class="form-label">Search</label>
+					<input type="text" name="search" class="form-control" placeholder="Quote no / customer / mobile" value="{{ search }}">
+				</div>
+				<div class="col-md-1 d-grid">
+					<button type="submit" class="btn btn-primary">Filter</button>
+				</div>
+				<div class="col-md-1 d-grid">
+					<a href="/quotations" class="btn btn-outline-secondary">Clear</a>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<div class="card shadow-sm">
+		<div class="card-header bg-white">
+			<strong>Saved Quotations</strong>
+		</div>
+		<div class="table-responsive">
+			<table class="table table-hover table-bordered mb-0 align-middle">
+				<thead class="table-light">
+					<tr>
+						<th>Quote No</th>
+						<th>Date</th>
+						<th>Branch</th>
+						<th>Customer</th>
+						<th>Mobile</th>
+						<th>Engineer</th>
+						<th>Total</th>
+						<th>Last Modified</th>
+						<th style="width: 250px;">Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% if rows %}
+						{% for r in rows %}
+						<tr>
+							<td>{{ r.quote_number }}</td>
+							<td>{{ r.quote_date.strftime('%d/%m/%Y') if r.quote_date else '' }}</td>
+							<td>{{ r.branch_name }}</td>
+							<td>{{ r.customer_name }}</td>
+							<td>{{ r.customer_mobile or '-' }}</td>
+							<td>{{ r.engineer_name or '-' }}</td>
+							<td>{{ '%.2f'|format(r.grand_total or 0) }}</td>
+							<td>{{ r.updated_on }}</td>
+							<td>
+								<div class="quotation-actions">
+									<a href="/quotation/{{ r.id }}/edit" class="quotation-action-btn quotation-action-btn-edit">Edit</a>
+									<a href="/quotation/{{ r.id }}/print" class="quotation-action-btn quotation-action-btn-print" target="_blank" rel="noopener">Print</a>
+									<a href="{{ build_whatsapp_chat_url(r.customer_mobile, 'Quotation No: ' ~ (r.quote_number or r.id) ~ '\nCustomer: ' ~ (r.customer_name or 'Customer') ~ '\nMobile: ' ~ (r.customer_mobile or '-')) }}" class="quotation-action-btn quotation-action-btn-whatsapp" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+									<form method="post" action="/quotation/{{ r.id }}/delete" onsubmit="return confirmDeleteQuotation({{ (r.quote_number or r.id)|tojson }});">
+										<input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+										<input type="hidden" name="return_to" value="{{ request.full_path }}">
+										<button type="submit" class="quotation-action-btn quotation-action-btn-delete">Delete</button>
+									</form>
+								</div>
+							</td>
+						</tr>
+						{% endfor %}
+					{% else %}
+						<tr>
+							<td colspan="9" class="text-center text-muted py-4">No quotations found</td>
+						</tr>
+					{% endif %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function confirmDeleteQuotation(quoteNumber) {
+	return window.confirm("Delete quotation " + quoteNumber + " permanently?");
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revenue Entry</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+<style>
+body { background: #f6f8fb; }
+.top-nav { border-bottom: 1px solid #1f2937; }
+.table-wrap { max-height: 420px; overflow: auto; }
+.table-wrap thead th { position: sticky; top: 0; z-index: 2; }
+</style>
+</head>
+<body class="crm-theme">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark top-nav">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-semibold" href="/revenue-dashboard">Revenue Management</a>
+    <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#revNav"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="revNav">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item"><a class="nav-link" href="/revenue-dashboard">Dashboard</a></li>
+        {% if can_manage_revenue %}
+        <li class="nav-item"><a class="nav-link active" href="/revenue-entry">Revenue Entry</a></li>
+        <li class="nav-item"><a class="nav-link" href="/revenue-upload">Bulk Upload</a></li>
+        <li class="nav-item"><a class="nav-link" href="/revenue-reports">Reports</a></li>
+        <li class="nav-item"><a class="nav-link" href="/revenue-locks">Lock System</a></li>
+        {% if session.role == "super_admin" %}
+        <li class="nav-item"><a class="nav-link" href="/revenue-target-settings">Target Settings</a></li>
+        {% endif %}
+        {% endif %}
+      </ul>
+      <div class="d-flex align-items-center gap-2 flex-wrap ms-lg-auto">
+        <a href="/dashboard" class="btn btn-outline-light btn-sm">Dashboard</a>
+        {% include "_global_user_menu.html" %}
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid py-3">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  {% for category, message in messages %}
+  <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+  {% endwith %}
+
+  {% if can_manage_revenue %}
+  <div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <strong>Single Branch Entry</strong>
+      {% if edit_row and edit_row.branch_name %}
+      <a href="/revenue-entry?from_date={{ from_date }}&to_date={{ to_date }}&filter_branch={{ filter_branch }}" class="btn btn-outline-secondary btn-sm">Clear Edit</a>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      <form method="POST" action="/revenue-entry">
+        <input type="hidden" name="mode" value="single">
+        <div class="row g-2">
+          <div class="col-md-3">
+            <label class="form-label">Entry Date</label>
+            <input type="date" name="entry_date" class="form-control" value="{{ edit_row.entry_date or default_entry_date }}" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Branch</label>
+            <input type="text" name="branch_name" class="form-control" list="branch-list" value="{{ edit_row.branch_name or '' }}" required>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Sales Profit</label>
+            <input type="number" step="0.01" min="0" name="sales_profit" class="form-control" value="{{ edit_row.sales_profit or 0 }}">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Service Charges</label>
+            <input type="number" step="0.01" min="0" name="service_charges" class="form-control" value="{{ edit_row.service_charges or 0 }}">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Total Profit</label>
+            <input type="number" step="0.01" min="0" name="total_profit" class="form-control" value="{{ edit_row.total_profit or 0 }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Zone</label>
+            <input type="text" name="zone" class="form-control" placeholder="Optional" value="{{ edit_row.zone or '' }}">
+          </div>
+          <div class="col-md-3 d-grid">
+            <label class="form-label d-none d-md-block">&nbsp;</label>
+            <button type="submit" class="btn btn-success">{% if edit_row and edit_row.branch_name %}Update Row{% else %}Save Row{% endif %}</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-info">Read-only mode: only your branch data is visible.</div>
+  {% endif %}
+
+  <datalist id="branch-list">
+    {% for b in branch_options %}
+    <option value="{{ b }}"></option>
+    {% endfor %}
+  </datalist>
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span class="fw-semibold">Revenue Entries | Count: {{ (rows|length) if rows else 0 }}</span>
+      <span class="badge text-bg-dark">Rows</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-wrap">
+        <table class="table table-sm table-bordered table-hover mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th>Date</th>
+              <th>Branch</th>
+              <th>Sales Profit</th>
+              <th>Service Charges</th>
+              <th>Total Profit</th>
+              <th>Zone</th>
+              <th>Updated By</th>
+              <th>Last Modified</th>
+              {% if can_manage_revenue %}<th>Action</th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% if rows %}
+              {% for r in rows %}
+              <tr>
+                <td>{{ r.entry_date }}</td>
+                <td>{{ r.branch_name }}</td>
+                <td>{{ '%.2f'|format(r.sales_profit or 0) }}</td>
+                <td>{{ '%.2f'|format(r.service_charges or 0) }}</td>
+                <td>{{ '%.2f'|format(r.total_profit or 0) }}</td>
+                <td>{{ r.zone or '-' }}</td>
+                <td>{{ r.created_by or '-' }}</td>
+                <td>{{ r.updated_on or '-' }}</td>
+                {% if can_manage_revenue %}
+                <td>
+                  <a href="/revenue-entry?edit_id={{ r.id }}&from_date={{ from_date }}&to_date={{ to_date }}&filter_branch={{ filter_branch }}" class="btn btn-primary btn-sm">Edit</a>
+                  <form method="POST" action="/delete-revenue-entry/{{ r.id }}" class="d-inline">
+                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this revenue entry?');">Delete</button>
+                  </form>
+                </td>
+                {% endif %}
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="{% if can_manage_revenue %}9{% else %}8{% endif %}" class="text-center text-muted">No records available</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

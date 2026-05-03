@@ -1,0 +1,3177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales & Service Dashboard</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+<style>
+:root {
+	--primary-blue: var(--crm-blue-deep);
+	--secondary-blue: var(--crm-blue);
+	--accent-teal: var(--crm-chart-cyan);
+	--light-bg: #eef5ff;
+	--border-soft: rgba(157, 177, 205, 0.38);
+	--text-dark: var(--crm-ink);
+	--text-muted: var(--crm-muted);
+	--surface-white: rgba(255, 255, 255, 0.94);
+	--surface-soft: #f7fbff;
+}
+
+body {
+	font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Top Navigation Bar */
+.navbar-custom {
+	background: linear-gradient(160deg, var(--crm-navy) 0%, var(--crm-navy-soft) 56%, var(--crm-blue) 100%);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 24px;
+	padding: 0.95rem 1.4rem;
+	box-shadow: 0 20px 44px rgba(15, 23, 42, 0.18);
+	margin: 1rem 1rem 0;
+}
+
+body.crm-theme .navbar-custom .logo-text {
+	font-size: 1.15rem;
+	font-weight: 700;
+	color: #ffffff;
+	margin: 0;
+	text-decoration: none;
+	letter-spacing: 0.01em;
+}
+
+body.crm-theme .navbar-custom .logo-text:hover,
+body.crm-theme .navbar-custom .logo-text:focus {
+	color: rgba(255, 255, 255, 0.82);
+}
+
+.navbar-custom .nav-item {
+	margin-left: 2rem;
+}
+
+.navbar-custom .nav-link {
+	color: rgba(255, 255, 255, 0.72);
+	font-weight: 600;
+	font-size: 0.95rem;
+	padding: 0.5rem 0;
+	border-bottom: 2px solid transparent;
+	transition: all 0.3s ease;
+	text-decoration: none;
+}
+
+.branch-switch {
+	width: 200px;
+	border-color: rgba(43, 111, 255, 0.22);
+	font-size: 0.82rem;
+	font-weight: 700;
+	color: var(--primary-blue);
+	background-color: rgba(255, 255, 255, 0.96);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.branch-switch option {
+	color: var(--primary-blue);
+}
+
+.branch-switch:focus {
+	color: var(--primary-blue);
+	border-color: rgba(43, 111, 255, 0.4);
+	box-shadow: 0 0 0 0.2rem rgba(43, 111, 255, 0.12);
+}
+
+.branch-switch:disabled {
+	opacity: 0.72;
+	cursor: wait;
+}
+
+.branch-switch-wrap {
+	position: relative;
+	z-index: 1400;
+}
+
+.branch-switch-toggle {
+	min-width: 200px;
+	height: 38px;
+	padding: 0.45rem 0.95rem;
+	border-radius: 18px;
+	border: 1px solid rgba(43, 111, 255, 0.22);
+	background: rgba(255, 255, 255, 0.96);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+	color: var(--primary-blue);
+	font-size: 0.82rem;
+	font-weight: 700;
+	display: inline-flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.6rem;
+}
+
+.branch-switch-toggle:hover,
+.branch-switch-toggle:focus,
+.branch-switch-toggle:active,
+.branch-switch-toggle.show {
+	background: #ffffff;
+	color: var(--primary-blue);
+	border-color: rgba(43, 111, 255, 0.4);
+	box-shadow: 0 0 0 0.2rem rgba(43, 111, 255, 0.12);
+	outline: none;
+}
+
+.branch-switch-toggle:disabled {
+	opacity: 0.72;
+	cursor: wait;
+}
+
+.branch-switch-menu {
+	min-width: 100%;
+	max-height: min(60vh, 420px);
+	overflow-y: auto;
+	padding: 0.4rem;
+	border: 1px solid rgba(43, 111, 255, 0.22);
+	border-radius: 16px;
+	box-shadow: 0 18px 36px rgba(15, 23, 42, 0.18);
+	background: rgba(255, 255, 255, 0.98);
+	backdrop-filter: blur(12px);
+	z-index: 1450;
+}
+
+.branch-switch-menu .dropdown-item {
+	border-radius: 10px;
+	padding: 0.55rem 0.75rem;
+	font-size: 0.82rem;
+	font-weight: 700;
+	color: var(--primary-blue);
+	white-space: nowrap;
+}
+
+.branch-switch-menu .dropdown-item:hover,
+.branch-switch-menu .dropdown-item:focus {
+	background: rgba(43, 111, 255, 0.08);
+	color: var(--primary-blue);
+}
+
+.branch-switch-menu .dropdown-item.active,
+.branch-switch-menu .dropdown-item:active {
+	background: linear-gradient(135deg, var(--crm-blue-deep) 0%, var(--crm-blue) 100%);
+	color: #ffffff;
+}
+
+.branch-switch-label {
+	max-width: 180px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.branch-pill {
+	display: inline-flex;
+	align-items: center;
+	min-height: 38px;
+	padding: 0.45rem 0.95rem;
+	border-radius: 12px;
+	background: rgba(255, 255, 255, 0.96);
+	border: 1px solid rgba(43, 111, 255, 0.22);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+	font-size: 0.82rem;
+	font-weight: 700;
+	color: var(--primary-blue);
+	white-space: nowrap;
+}
+
+.navbar-custom .nav-link:hover {
+	color: #ffffff;
+	border-bottom-color: rgba(255, 255, 255, 0.8);
+}
+
+.navbar-brand-section {
+	display: flex;
+	align-items: center;
+	gap: 2rem;
+}
+
+.navbar-nav-section {
+	display: flex;
+	align-items: center;
+	margin-left: auto;
+	gap: 1rem;
+}
+
+.navbar-profile-stack {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.3rem;
+	text-decoration: none;
+	flex: 0 0 auto;
+	align-self: flex-start;
+}
+
+.navbar-profile-link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 46px;
+	height: 46px;
+	border-radius: 50%;
+	overflow: hidden;
+	background: rgba(255, 255, 255, 0.12);
+	border: 2px solid rgba(255, 255, 255, 0.28);
+	box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+	transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+	text-decoration: none;
+	flex: 0 0 auto;
+}
+
+body.crm-theme .navbar-custom .navbar-profile-stack {
+	text-decoration: none;
+}
+
+body.crm-theme .navbar-custom .navbar-profile-link {
+	text-decoration: none;
+}
+
+.navbar-profile-stack:hover .navbar-profile-link,
+.navbar-profile-stack:focus-visible .navbar-profile-link {
+	transform: translateY(-1px);
+	background: rgba(255, 255, 255, 0.18);
+	border-color: rgba(255, 255, 255, 0.42);
+	box-shadow: 0 14px 28px rgba(15, 23, 42, 0.22);
+}
+
+.navbar-profile-name {
+	max-width: 88px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	text-align: center;
+	font-size: 0.72rem;
+	font-weight: 700;
+	line-height: 1;
+	letter-spacing: 0.01em;
+	color: rgba(255, 255, 255, 0.92);
+}
+
+.navbar-profile-image,
+.navbar-profile-fallback {
+	width: 100%;
+	height: 100%;
+	border-radius: 50%;
+}
+
+.navbar-profile-image {
+	display: block;
+	object-fit: cover;
+	background: rgba(255, 255, 255, 0.94);
+}
+
+.navbar-profile-fallback {
+	display: grid;
+	place-items: center;
+	font-size: 1.02rem;
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	text-transform: uppercase;
+	color: #ffffff;
+	background: linear-gradient(135deg, rgba(37, 99, 235, 0.92) 0%, rgba(56, 189, 248, 0.88) 100%);
+}
+
+.navbar-profile-image.is-hidden,
+.navbar-profile-fallback.is-hidden {
+	display: none !important;
+}
+
+/* Dashboard Container */
+.dashboard-container {
+	max-width: none;
+	width: 100%;
+	margin: 0;
+	padding: 1.25rem clamp(0.8rem, 2vw, 1.8rem) 2rem;
+	overflow: visible;
+}
+
+.dashboard-container.is-loading {
+	opacity: 0.58;
+	pointer-events: none;
+	transition: opacity 0.18s ease;
+}
+
+/* Dashboard Toolbar */
+.dashboard-toolbar {
+	background: rgba(255, 255, 255, 0.84);
+	border: 1px solid rgba(217, 226, 236, 0.9);
+	border-radius: 22px;
+	box-shadow: var(--crm-shadow-soft);
+	backdrop-filter: blur(16px);
+	padding: 0.8rem 0.95rem;
+	margin-bottom: 1rem;
+	position: relative;
+	z-index: 1200;
+	overflow: visible;
+	isolation: isolate;
+}
+
+.dashboard-toolbar-form {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+	position: relative;
+	z-index: 1201;
+	overflow: visible;
+}
+
+.toolbar-left,
+.toolbar-right {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	flex-wrap: wrap;
+	position: relative;
+	z-index: 1202;
+}
+
+.toolbar-right {
+	justify-content: flex-end;
+}
+
+.toolbar-actions-wrap {
+	position: relative;
+	z-index: 1250;
+}
+
+.toolbar-actions-wrap.show {
+	z-index: 1325;
+}
+
+.toolbar-date-group {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	border: 1px solid var(--border-soft);
+	border-radius: 10px;
+	background: var(--surface-white);
+	padding: 0.25rem 0.4rem;
+	height: 38px;
+}
+
+.toolbar-date-group input[type="date"] {
+	border: none;
+	background: transparent;
+	padding: 0 0.35rem;
+	font-size: 0.84rem;
+	color: var(--text-dark);
+	min-width: 136px;
+	height: 30px;
+}
+
+.toolbar-date-group input[type="date"]:focus {
+	outline: none;
+	box-shadow: none;
+}
+
+.toolbar-date-separator {
+	font-size: 0.84rem;
+	font-weight: 700;
+	color: var(--text-muted);
+	line-height: 1;
+}
+
+.toolbar-date-preview {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.42rem 0.7rem;
+	border-radius: 999px;
+	background: rgba(237, 244, 255, 0.92);
+	color: #29476b;
+	font-size: 0.78rem;
+	font-weight: 600;
+	height: 38px;
+	white-space: nowrap;
+}
+
+.toolbar-btn {
+	border-radius: 8px;
+	font-weight: 600;
+	font-size: 0.84rem;
+	padding: 0.45rem 0.9rem;
+	height: 38px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.4rem;
+	text-decoration: none;
+}
+
+body.crm-theme .dashboard-toolbar a.toolbar-btn,
+body.crm-theme .dashboard-toolbar button.toolbar-btn {
+	text-decoration: none;
+}
+
+.toolbar-apply-wrap {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	flex-wrap: wrap;
+}
+
+.toolbar-btn-apply,
+.toolbar-btn-primary {
+	background: linear-gradient(135deg, var(--crm-blue-deep) 0%, var(--crm-blue) 100%);
+	color: white;
+	border: 1px solid transparent;
+	box-shadow: 0 14px 28px rgba(43, 111, 255, 0.18);
+}
+
+body.crm-theme .dashboard-toolbar a.toolbar-btn-apply,
+body.crm-theme .dashboard-toolbar a.toolbar-btn-primary,
+body.crm-theme .dashboard-toolbar button.toolbar-btn-apply,
+body.crm-theme .dashboard-toolbar button.toolbar-btn-primary {
+	color: #ffffff !important;
+}
+
+.toolbar-btn-apply:hover,
+.toolbar-btn-primary:hover {
+	background: linear-gradient(135deg, #1849c7 0%, #2568ff 100%);
+	border-color: transparent;
+	color: white;
+}
+
+.toolbar-btn-reset {
+	background: rgba(255, 255, 255, 0.96);
+	color: var(--primary-blue);
+	border: 1px solid rgba(43, 111, 255, 0.22);
+	box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+}
+
+.toolbar-btn-reset:hover,
+.toolbar-btn-reset:focus {
+	background: #ffffff;
+	color: var(--primary-blue);
+	border-color: rgba(43, 111, 255, 0.4);
+}
+
+body.crm-theme .dashboard-toolbar a.toolbar-btn-reset {
+	color: var(--primary-blue) !important;
+}
+
+.toolbar-btn-dropdown {
+	background: linear-gradient(135deg, var(--crm-blue-deep) 0%, var(--crm-blue) 100%);
+	color: white;
+	border: 1px solid rgba(43, 111, 255, 0.45);
+	box-shadow: 0 14px 28px rgba(43, 111, 255, 0.18);
+}
+
+.toolbar-btn-dropdown:hover,
+.toolbar-btn-dropdown:focus,
+.toolbar-btn-dropdown:active,
+.toolbar-btn-dropdown.show {
+	background: linear-gradient(135deg, #1849c7 0%, #2568ff 100%);
+	color: white;
+	border-color: rgba(43, 111, 255, 0.6);
+}
+
+body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown,
+body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown:hover,
+body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown:focus,
+body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown:active,
+body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
+	color: #ffffff !important;
+}
+
+.toolbar-onsite-btn {
+	justify-content: space-between;
+	gap: 0.75rem;
+	min-height: 38px;
+	height: auto;
+	padding: 0.4rem 0.72rem 0.4rem 0.92rem;
+	text-align: left;
+}
+
+.toolbar-onsite-copy {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.08rem;
+	line-height: 1.08;
+}
+
+.toolbar-onsite-title,
+.toolbar-onsite-menu-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+
+.toolbar-onsite-subtitle {
+	font-size: 0.64rem;
+	font-weight: 800;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.88);
+}
+
+.toolbar-onsite-badge,
+.toolbar-onsite-menu-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 999px;
+	font-size: 0.74rem;
+	font-weight: 800;
+	line-height: 1;
+}
+
+.toolbar-onsite-badge {
+	min-width: 1.9rem;
+	height: 1.9rem;
+	padding: 0 0.48rem;
+	background: rgba(255, 255, 255, 0.96);
+	color: #a61b23;
+	box-shadow: 0 10px 20px rgba(15, 23, 42, 0.16);
+}
+
+.toolbar-onsite-btn-alert {
+	background: linear-gradient(135deg, #b91c1c 0%, #ef4444 55%, #f97316 100%);
+	border-color: rgba(255, 214, 214, 0.34);
+	box-shadow: 0 18px 34px rgba(239, 68, 68, 0.26);
+	animation: toolbarOnsitePulse 1.9s ease-in-out infinite;
+}
+
+.toolbar-onsite-btn-alert:hover,
+.toolbar-onsite-btn-alert:focus,
+.toolbar-onsite-btn-alert:active,
+.toolbar-onsite-btn-alert.show {
+	background: linear-gradient(135deg, #991b1b 0%, #dc2626 52%, #ea580c 100%);
+	border-color: rgba(255, 232, 232, 0.42);
+}
+
+.toolbar-onsite-menu-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+}
+
+.toolbar-onsite-menu-item-alert {
+	background: rgba(239, 68, 68, 0.08);
+	color: #a61b23 !important;
+	font-weight: 700;
+}
+
+.toolbar-onsite-menu-item-alert:hover,
+.toolbar-onsite-menu-item-alert:focus {
+	background: rgba(239, 68, 68, 0.14);
+	color: #8f1520 !important;
+}
+
+.toolbar-onsite-menu-badge {
+	min-width: 2rem;
+	height: 1.55rem;
+	padding: 0 0.5rem;
+	background: rgba(239, 68, 68, 0.14);
+	color: #a61b23;
+}
+
+@keyframes toolbarOnsitePulse {
+	0%,
+	100% {
+		box-shadow: 0 18px 34px rgba(239, 68, 68, 0.22);
+	}
+	50% {
+		box-shadow: 0 22px 42px rgba(239, 68, 68, 0.36);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.toolbar-onsite-btn-alert {
+		animation: none;
+	}
+}
+
+@media (max-width: 768px) {
+	.toolbar-onsite-btn {
+		justify-content: center;
+		text-align: center;
+		padding-left: 0.9rem;
+		padding-right: 0.9rem;
+	}
+
+	.toolbar-onsite-copy {
+		align-items: center;
+		text-align: center;
+	}
+}
+
+.toolbar-actions-menu {
+	border: 1px solid var(--border-soft);
+	border-radius: 10px;
+	box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+	padding: 0.4rem;
+	min-width: 220px;
+	z-index: 1300;
+	background: var(--surface-white);
+	overflow: hidden;
+	will-change: opacity;
+}
+
+.toolbar-shortcuts-menu {
+	min-width: 238px;
+}
+
+.toolbar-actions-menu.show {
+	animation: toolbarDropdownFade 0.18s ease-out;
+}
+
+.toolbar-actions-menu.show .dropdown-header,
+.toolbar-actions-menu.show .dropdown-divider,
+.toolbar-actions-menu.show .dropdown-item {
+	animation: toolbarDropdownItemIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes toolbarDropdownFade {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes toolbarDropdownItemIn {
+	from {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.toolbar-actions-menu .dropdown-header {
+	font-size: 0.72rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--text-muted);
+	padding: 0.45rem 0.6rem 0.35rem;
+}
+
+.toolbar-actions-menu .dropdown-item {
+	border-radius: 7px;
+	font-size: 0.84rem;
+	padding: 0.45rem 0.6rem;
+	display: flex;
+	align-items: center;
+	gap: 0.45rem;
+	color: var(--primary-blue);
+	opacity: 1;
+}
+
+
+.toolbar-actions-menu .dropdown-item:hover,
+.toolbar-actions-menu .dropdown-item:focus,
+.toolbar-actions-menu .dropdown-item:active {
+	background: rgba(43, 111, 255, 0.10);
+	color: var(--primary-blue);
+}
+
+.toolbar-actions-menu .dropdown-item.report-option.is-active {
+	background: linear-gradient(135deg, var(--crm-blue-deep) 0%, var(--crm-blue) 100%);
+	color: #ffffff;
+	box-shadow: 0 10px 20px rgba(43, 111, 255, 0.18);
+}
+
+.toolbar-actions-menu .dropdown-item.report-option.is-active:hover,
+.toolbar-actions-menu .dropdown-item.report-option.is-active:focus,
+.toolbar-actions-menu .dropdown-item.report-option.is-active:active {
+	background: linear-gradient(135deg, #1849c7 0%, #2568ff 100%);
+	color: #ffffff;
+}
+
+.kpi-section,
+.chart-grid,
+.report-cards-grid,
+.report-card-section {
+	position: relative;
+	z-index: 1;
+}
+
+.toolbar-active-filters {
+	margin-bottom: 1.5rem;
+}
+
+.toolbar-active-filters .badge {
+	white-space: normal;
+	text-align: left;
+	padding: 0.45rem 0.8rem;
+	font-size: 0.78rem;
+}
+
+/* KPI Cards Section */
+.kpi-section {
+	margin-bottom: 2rem;
+}
+
+.kpi-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 1.5rem;
+}
+
+.kpi-card {
+	background: var(--surface-white);
+	border-radius: 10px;
+	padding: 1.5rem;
+	border: 1px solid var(--border-soft);
+	box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
+	transition: all 0.3s ease;
+	position: relative;
+	overflow: hidden;
+}
+
+.kpi-card:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 10px 20px rgba(15, 23, 42, 0.1);
+}
+
+.kpi-card::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 4px;
+	background: linear-gradient(90deg, var(--primary-blue), var(--accent-teal));
+}
+
+.kpi-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 45px;
+	height: 45px;
+	border-radius: 8px;
+	font-size: 1.5rem;
+	margin-bottom: 0.5rem;
+}
+
+.kpi-icon.total {
+	background: rgba(13, 71, 161, 0.1);
+	color: var(--primary-blue);
+}
+
+.kpi-icon.active {
+	background: rgba(0, 137, 123, 0.1);
+	color: var(--accent-teal);
+}
+
+.kpi-icon.open {
+	background: rgba(251, 191, 36, 0.1);
+	color: #fbbf24;
+}
+
+.kpi-icon.closed {
+	background: rgba(34, 197, 94, 0.1);
+	color: #22c55e;
+}
+
+.kpi-label {
+	font-size: 0.8rem;
+	color: var(--text-muted);
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	margin-bottom: 0.5rem;
+}
+
+.kpi-value {
+	font-size: 2.2rem;
+	font-weight: 700;
+	color: var(--text-dark);
+	line-height: 1;
+	margin-bottom: 0.5rem;
+}
+
+.kpi-action {
+	display: inline-block;
+	color: var(--primary-blue);
+	text-decoration: none;
+	font-weight: 600;
+	font-size: 0.8rem;
+	transition: all 0.3s ease;
+}
+
+.kpi-action:hover {
+	color: var(--secondary-blue);
+	text-decoration: underline;
+}
+
+.kpi-card.kpi-card-warning {
+	border-color: rgba(220, 38, 38, 0.2);
+	box-shadow: 0 8px 18px rgba(220, 38, 38, 0.08);
+}
+
+.kpi-card.kpi-card-warning::before {
+	background: linear-gradient(90deg, #dc2626, #f97316);
+}
+
+.kpi-warning-pill {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.4rem;
+	width: 100%;
+	max-width: 100%;
+	margin-top: 0.7rem;
+	padding: 0.4rem 0.75rem;
+	border-radius: 999px;
+	border: 1px solid rgba(220, 38, 38, 0.22);
+	background: rgba(220, 38, 38, 0.08);
+	color: #dc2626;
+	font-size: 0.72rem;
+	font-weight: 700;
+	line-height: 1.2;
+	box-sizing: border-box;
+}
+
+.kpi-warning-pill i {
+	flex: 0 0 auto;
+	font-size: 0.74rem;
+	margin-top: 0.05rem;
+}
+
+.kpi-warning-message {
+	min-width: 0;
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+/* Quick Action Buttons */
+.quick-actions {
+	display: flex;
+	gap: 0.75rem;
+	margin-bottom: 2rem;
+	flex-wrap: wrap;
+}
+
+.btn-action {
+	background: white;
+	color: var(--primary-blue);
+	border: 1.5px solid var(--primary-blue);
+	border-radius: 6px;
+	padding: 0.6rem 1rem;
+	font-weight: 600;
+	font-size: 0.85rem;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.btn-action:hover {
+	background: var(--primary-blue);
+	color: white;
+	transform: translateY(-2px);
+}
+
+.btn-action.primary {
+	background: var(--primary-blue);
+	color: white;
+}
+
+.btn-action.primary:hover {
+	background: var(--secondary-blue);
+}
+
+/* Alert Banner */
+.alert-banner {
+	border-radius: 8px;
+	padding: 1rem 1.5rem;
+	margin-bottom: 1.5rem;
+	border: 1px solid transparent;
+	border-left: 4px solid;
+	font-weight: 500;
+	font-size: 0.95rem;
+	background: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(237, 244, 255, 0.9) 100%);
+	box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+}
+
+.alert-banner.success {
+	background: linear-gradient(135deg, rgba(88, 197, 143, 0.14) 0%, rgba(237, 244, 255, 0.96) 100%);
+	border-color: rgba(88, 197, 143, 0.3);
+	border-left-color: var(--crm-mint);
+	color: var(--crm-navy-soft);
+}
+
+.alert-banner.warning {
+	background: linear-gradient(135deg, rgba(90, 169, 255, 0.15) 0%, rgba(237, 244, 255, 0.96) 100%);
+	border-color: rgba(90, 169, 255, 0.32);
+	border-left-color: var(--crm-chart-sky);
+	color: var(--crm-navy-soft);
+}
+
+.alert-banner.danger {
+	background: linear-gradient(135deg, rgba(242, 107, 94, 0.14) 0%, rgba(255, 255, 255, 0.96) 100%);
+	border-color: rgba(242, 107, 94, 0.28);
+	border-left-color: var(--crm-coral);
+	color: var(--crm-navy-soft);
+}
+
+.alert-banner.primary {
+	background: linear-gradient(135deg, rgba(43, 111, 255, 0.14) 0%, rgba(237, 244, 255, 0.96) 100%);
+	border-color: rgba(43, 111, 255, 0.3);
+	border-left-color: var(--secondary-blue);
+	color: var(--crm-navy-soft);
+}
+
+.alert-banner.secondary {
+	background: linear-gradient(135deg, rgba(125, 144, 173, 0.14) 0%, rgba(255, 255, 255, 0.96) 100%);
+	border-color: rgba(125, 144, 173, 0.28);
+	border-left-color: var(--crm-chart-slate);
+	color: var(--crm-navy-soft);
+}
+
+/* Charts Section */
+.charts-section-title {
+	font-size: 1.08rem;
+	font-weight: 700;
+	color: var(--crm-navy);
+	margin-bottom: 1.1rem;
+	padding-top: 0.5rem;
+	letter-spacing: 0.01em;
+}
+
+.chart-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+	gap: 1rem;
+	align-items: start;
+	margin-bottom: 2rem;
+}
+
+.chart-card {
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 251, 255, 0.96) 100%);
+	border-radius: 18px;
+	padding: 1.5rem;
+	border: 1px solid rgba(157, 177, 205, 0.42);
+	box-shadow: var(--crm-shadow-soft);
+	transition: all 0.3s ease;
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	position: relative;
+	overflow: hidden;
+	isolation: isolate;
+}
+
+.chart-card::before {
+	content: "";
+	position: absolute;
+	inset: 0 0 auto 0;
+	height: 5px;
+	background: linear-gradient(90deg, var(--secondary-blue) 0%, var(--accent-teal) 55%, var(--crm-chart-sky) 100%);
+	z-index: 0;
+}
+
+.chart-card > * {
+	position: relative;
+	z-index: 1;
+}
+
+.chart-card:hover {
+	box-shadow: var(--crm-shadow);
+	transform: translateY(-3px);
+}
+
+.chart-card-title {
+	font-size: 1rem;
+	font-weight: 700;
+	color: var(--crm-navy);
+	margin-bottom: 1rem;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.chart-card-heading-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45rem;
+	color: inherit;
+	text-decoration: none;
+	transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.chart-card-heading-link:hover,
+.chart-card-heading-link:focus {
+	color: var(--crm-blue-deep);
+	text-decoration: none;
+	transform: translateY(-1px);
+}
+
+.chart-card-heading-link i {
+	font-size: 0.76rem;
+	opacity: 0.7;
+}
+
+.chart-card-title > div {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.45rem;
+}
+
+.chart-card-title .badge {
+	text-decoration: none;
+	border: 1px solid transparent;
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+	.chart-card-title .chart-badge-sky {
+		background: linear-gradient(135deg, rgba(90, 169, 255, 0.18) 0%, rgba(237, 244, 255, 0.98) 100%);
+		border-color: rgba(90, 169, 255, 0.34);
+		color: var(--crm-blue-deep);
+	}
+
+	.chart-card-title .chart-badge-indigo {
+		background: linear-gradient(135deg, rgba(85, 104, 255, 0.16) 0%, rgba(237, 244, 255, 0.98) 100%);
+		border-color: rgba(85, 104, 255, 0.3);
+		color: var(--crm-navy);
+	}
+
+.chart-canvas-wrap {
+	position: relative;
+	height: 250px;
+	margin-bottom: 1rem;
+	flex-grow: 1;
+	background: linear-gradient(180deg, rgba(237, 244, 255, 0.64) 0%, rgba(255, 255, 255, 0.26) 100%);
+	border: 1px solid rgba(157, 177, 205, 0.24);
+	border-radius: 16px;
+	padding: 0.4rem;
+}
+
+.crm-chart-tooltip {
+	position: fixed;
+	z-index: 3200;
+	min-width: 164px;
+	max-width: 240px;
+	padding: 0.7rem 0.8rem;
+	border-radius: 12px;
+	background: rgba(15, 23, 42, 0.96);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	box-shadow: 0 18px 36px rgba(15, 23, 42, 0.28);
+	color: #eff6ff;
+	opacity: 0;
+	transform: translate3d(0, 8px, 0);
+	transition: opacity 0.12s ease, transform 0.12s ease;
+	pointer-events: none;
+}
+
+.crm-chart-tooltip.show {
+	opacity: 1;
+	transform: translate3d(0, 0, 0);
+}
+
+.crm-chart-tooltip-title {
+	font-size: 0.72rem;
+	font-weight: 700;
+	line-height: 1.25;
+	color: #ffffff;
+	margin-bottom: 0.35rem;
+}
+
+.crm-chart-tooltip-row {
+	display: flex;
+	align-items: center;
+	gap: 0.45rem;
+	font-size: 0.86rem;
+	line-height: 1.3;
+	color: #e2e8f0;
+}
+
+.crm-chart-tooltip-swatch {
+	width: 0.9rem;
+	height: 0.9rem;
+	flex: 0 0 0.9rem;
+	border-radius: 0.28rem;
+	border: 2px solid rgba(255, 255, 255, 0.92);
+	box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.18);
+	background: #5aa9ff;
+}
+
+.crm-chart-tooltip-value {
+	font-weight: 600;
+	word-break: break-word;
+}
+
+.quick-actions-panel {
+	padding-bottom: 1.25rem;
+	align-self: start;
+}
+
+.quick-actions-panel-body {
+	display: flex;
+	flex-direction: column;
+	gap: 0.65rem;
+	margin-top: 0.3rem;
+}
+
+.quick-actions-panel .btn {
+	justify-content: center;
+	border-radius: 7px;
+	font-weight: 600;
+}
+
+/* Revenue Summary Pills */
+.revenue-summary {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 0.75rem;
+}
+
+.revenue-pill {
+	padding: 0.9rem 0.75rem;
+	border-radius: 14px;
+	border: 1px solid rgba(157, 177, 205, 0.34);
+	background: rgba(255, 255, 255, 0.88);
+	text-align: center;
+	font-size: 0.8rem;
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.revenue-pill strong {
+	display: block;
+	font-size: 0.65rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	margin-bottom: 0.3rem;
+	opacity: 0.85;
+}
+
+.revenue-pill.target {
+	background: linear-gradient(135deg, rgba(43, 111, 255, 0.14) 0%, rgba(237, 244, 255, 0.94) 100%);
+	border-color: rgba(43, 111, 255, 0.24);
+	color: var(--crm-navy-soft);
+}
+
+.revenue-pill.achieved {
+	background: linear-gradient(135deg, rgba(39, 194, 217, 0.16) 0%, rgba(237, 244, 255, 0.94) 100%);
+	border-color: rgba(39, 194, 217, 0.28);
+	color: var(--crm-navy-soft);
+}
+
+.revenue-pill.balance {
+	background: linear-gradient(135deg, rgba(90, 169, 255, 0.16) 0%, rgba(247, 251, 255, 0.94) 100%);
+	border-color: rgba(90, 169, 255, 0.24);
+	color: var(--crm-navy-soft);
+}
+
+.revenue-pill.percent {
+	background: linear-gradient(135deg, rgba(85, 104, 255, 0.14) 0%, rgba(237, 244, 255, 0.94) 100%);
+	border-color: rgba(85, 104, 255, 0.24);
+	color: var(--crm-navy-soft);
+}
+
+/* Report Section */
+.report-section-title {
+	font-size: 1.1rem;
+	font-weight: 700;
+	color: var(--text-dark);
+	margin: 2rem 0 1.5rem 0;
+	padding-top: 0.5rem;
+}
+
+.report-cards-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	gap: 1.5rem;
+	margin-bottom: 2rem;
+}
+
+.report-card {
+	background: var(--surface-white);
+	border: 1px solid var(--border-soft);
+	border-radius: 10px;
+	padding: 1.75rem 1.5rem;
+	text-align: center;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	text-decoration: none;
+	color: var(--text-dark);
+}
+
+.report-card:hover {
+	border-color: var(--primary-blue);
+	box-shadow: 0 10px 20px rgba(29, 78, 216, 0.16);
+	transform: translateY(-4px);
+}
+
+.report-card i {
+	font-size: 2.2rem;
+	color: var(--primary-blue);
+	margin-bottom: 0.75rem;
+}
+
+.report-card h6 {
+	font-weight: 700;
+	margin: 0;
+	font-size: 1rem;
+}
+
+/* Tables */
+.report-card-section {
+	background: var(--surface-white);
+	border-radius: 10px;
+	padding: 1.5rem;
+	border: 1px solid var(--border-soft);
+	box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
+	margin-bottom: 2rem;
+}
+
+.report-card-section.d-none {
+	display: none;
+}
+
+.report-card-section h5 {
+	font-weight: 700;
+	color: var(--text-dark);
+	margin-bottom: 1.5rem;
+	font-size: 1.05rem;
+}
+
+.report-card-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.9rem;
+	margin-bottom: 1.2rem;
+}
+
+.report-card-header h5 {
+	margin-bottom: 0;
+}
+
+.report-card-close {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.35rem;
+	padding: 0.45rem 0.85rem;
+	border-radius: 999px;
+	border: 1px solid rgba(43, 111, 255, 0.22);
+	background: rgba(255, 255, 255, 0.95);
+	color: var(--primary-blue);
+	font-size: 0.8rem;
+	font-weight: 700;
+	box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+	transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.report-card-close:hover,
+.report-card-close:focus {
+	background: rgba(237, 244, 255, 0.98);
+	color: var(--crm-blue-deep);
+	border-color: rgba(43, 111, 255, 0.4);
+	transform: translateY(-1px);
+}
+
+.report-card-filter {
+	display: flex;
+	align-items: flex-end;
+	gap: 0.85rem;
+	flex-wrap: wrap;
+	margin-bottom: 1.15rem;
+}
+
+.report-card-filter-group {
+	min-width: 160px;
+	flex: 1 1 160px;
+}
+
+.report-card-filter-group label {
+	display: block;
+	font-size: 0.8rem;
+	font-weight: 700;
+	color: var(--text-muted);
+	margin-bottom: 0.38rem;
+}
+
+.report-card-filter-group input {
+	width: 100%;
+	border: 1px solid rgba(148, 163, 184, 0.35);
+	border-radius: 10px;
+	padding: 0.58rem 0.75rem;
+	background: #ffffff;
+	color: var(--text-dark);
+}
+
+.report-card-filter-actions {
+	display: flex;
+	gap: 0.65rem;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	margin-left: auto;
+}
+
+.table-responsive {
+	overflow-x: auto;
+}
+
+.table {
+	margin-bottom: 0;
+	font-size: 0.9rem;
+}
+
+.table thead {
+	background: var(--light-bg);
+	border-bottom: 2px solid var(--border-soft);
+}
+
+.table th {
+	color: var(--text-dark);
+	font-weight: 600;
+	padding: 1rem 0.75rem;
+	border-color: var(--border-soft);
+}
+
+.table td {
+	padding: 0.75rem;
+	border-color: var(--border-soft);
+}
+
+.table tbody tr:hover {
+	background-color: var(--light-bg);
+}
+
+.table a {
+	color: var(--primary-blue);
+	text-decoration: none;
+	font-weight: 500;
+}
+
+.table a:hover {
+	text-decoration: underline;
+}
+
+
+.report-table-centered > :not(caption) > * > * {
+	text-align: center;
+	vertical-align: middle;
+}
+
+.report-table-centered > :not(caption) > * > :first-child {
+	text-align: center;
+	vertical-align: middle;
+}
+
+#ageingReport table.report-table-centered thead tr > th:first-child,
+#ageingReport table.report-table-centered tbody tr > td:first-child,
+#ageingReport table.report-table-centered tbody tr > td:first-child > strong {
+	text-align: center !important;
+}
+
+.table .table-secondary {
+	background-color: var(--light-bg);
+	font-weight: 600;
+}
+
+/* Badge Styling */
+.badge {
+	padding: 0.45rem 0.88rem;
+	font-weight: 700;
+	font-size: 0.79rem;
+	border-radius: 999px;
+	letter-spacing: 0.01em;
+}
+
+.badge.text-bg-success {
+	background: linear-gradient(135deg, rgba(88, 197, 143, 0.18) 0%, rgba(237, 244, 255, 0.95) 100%) !important;
+	border-color: rgba(88, 197, 143, 0.24);
+	color: var(--crm-navy-soft);
+}
+
+.badge.text-bg-danger {
+	background: linear-gradient(135deg, rgba(242, 107, 94, 0.16) 0%, rgba(255, 255, 255, 0.95) 100%) !important;
+	border-color: rgba(242, 107, 94, 0.24);
+	color: var(--crm-navy-soft);
+}
+
+.badge.text-bg-secondary {
+	background: linear-gradient(135deg, rgba(43, 111, 255, 0.14) 0%, rgba(237, 244, 255, 0.95) 100%) !important;
+	border-color: rgba(43, 111, 255, 0.22);
+	color: var(--crm-navy-soft);
+}
+
+.quick-actions-panel .btn-outline-primary {
+	border-color: rgba(43, 111, 255, 0.45);
+	color: #ffffff;
+	background: linear-gradient(135deg, rgba(29, 78, 216, 0.92) 0%, rgba(43, 111, 255, 0.92) 100%);
+	box-shadow: 0 12px 24px rgba(43, 111, 255, 0.16);
+}
+
+.quick-actions-panel .btn-outline-primary:hover {
+	background: linear-gradient(135deg, #1849c7 0%, #2568ff 100%);
+	border-color: transparent;
+	color: #ffffff;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+	.chart-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+
+	.dashboard-container {
+		padding-inline: 0.75rem;
+	}
+}
+
+@media (max-width: 768px) {
+	.dashboard-container {
+		padding: 1rem 0.75rem;
+	}
+
+	.navbar-custom {
+		padding: 0.5rem 1rem;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		row-gap: 0.75rem;
+	}
+
+	.navbar-brand-section {
+		gap: 0.75rem 1rem;
+		width: auto;
+		flex: 1 1 0;
+		min-width: 0;
+		flex-wrap: wrap;
+		align-items: flex-start;
+	}
+
+	.navbar-nav-section {
+		width: auto;
+		margin-left: auto;
+		margin-top: 0;
+		justify-content: flex-end;
+		align-self: flex-start;
+		gap: 0.6rem;
+	}
+
+	.dashboard-toolbar {
+		padding: 0.7rem;
+	}
+
+	.dashboard-toolbar-form,
+	.toolbar-left,
+	.toolbar-right {
+		width: 100%;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.55rem;
+	}
+
+	.toolbar-date-group {
+		width: 100%;
+		justify-content: space-between;
+	}
+
+	.toolbar-date-group input[type="date"] {
+		min-width: 0;
+		width: calc(50% - 0.8rem);
+	}
+
+	.toolbar-date-preview,
+	.toolbar-btn,
+	.toolbar-right .dropdown,
+	.toolbar-right .dropdown .toolbar-btn-dropdown {
+		width: 100%;
+	}
+
+	.toolbar-date-range {
+		order: 1;
+	}
+
+	.toolbar-apply-wrap {
+		order: 2;
+	}
+
+	.toolbar-new-job {
+		order: 3;
+	}
+
+	.toolbar-right .toolbar-actions-wrap {
+		order: 5;
+	}
+
+	.toolbar-right .toolbar-shortcuts-wrap {
+		order: 4;
+	}
+
+	.toolbar-right .toolbar-actions-wrap .toolbar-actions-menu.show {
+		position: static !important;
+		inset: auto !important;
+		transform: none !important;
+		margin-top: 0.45rem !important;
+		width: 100%;
+		min-width: 0;
+	}
+
+	.chart-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.report-cards-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.kpi-grid {
+		grid-template-columns: 1fr;
+		gap: 1rem;
+	}
+
+	.kpi-card {
+		padding: 1rem;
+	}
+
+	.kpi-value {
+		font-size: 1.8rem;
+	}
+
+	.quick-actions {
+		flex-direction: column;
+	}
+
+	.btn-action {
+		width: 100%;
+		justify-content: center;
+	}
+
+	.revenue-summary {
+		grid-template-columns: repeat(2, 1fr);
+	}
+
+	.logo-text {
+		font-size: 1.1rem;
+	}
+
+	.navbar-profile-name {
+		max-width: 72px;
+		font-size: 0.68rem;
+	}
+
+	.branch-switch-wrap,
+	.branch-switch-toggle {
+		order: 2;
+		flex: 0 0 100%;
+		width: 100%;
+		margin-top: 0.1rem;
+	}
+
+	.branch-switch-label {
+		max-width: none;
+	}
+
+	.navbar-custom .nav-item {
+		margin-left: 0.75rem;
+		font-size: 0.9rem;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.toolbar-actions-menu.show,
+	.toolbar-actions-menu.show .dropdown-header,
+	.toolbar-actions-menu.show .dropdown-divider,
+	.toolbar-actions-menu.show .dropdown-item {
+		animation: none;
+	}
+}
+
+@media (max-width: 576px) {
+	.revenue-summary {
+		grid-template-columns: 1fr;
+	}
+
+	.report-card-header {
+		align-items: flex-start;
+	}
+
+	.report-card-filter-actions {
+		margin-left: 0;
+		width: 100%;
+		justify-content: flex-start;
+	}
+
+	.chart-card,
+	.report-card-section {
+		padding: 1rem;
+	}
+}
+</style>
+</head>
+
+<body class="crm-theme" data-dashboard-url="/dashboard" data-dashboard-branch-url="/dashboard/branch-scope" data-dashboard-branch-options-url="/dashboard/branch-options" data-dashboard-onsite-alert-url="/dashboard/onsite-alert" data-csrf-token="{{ csrf_token() }}" data-open-report="{{ open_report or '' }}">
+
+{% set toolbar_username = (dashboard_user.username if dashboard_user and dashboard_user.username else (session.get('username') or 'User')) %}
+{% set toolbar_profile_picture_url = ('/profile-picture/' ~ toolbar_username) if dashboard_user and dashboard_user.profile_picture else '' %}
+
+<!-- Top Navigation -->
+<nav class="navbar navbar-custom">
+	<div class="navbar-brand-section">
+		<a href="/dashboard" class="logo-text">
+			<i class="fas fa-chart-line"></i> SYSMANTECH
+		</a>
+		{% if can_switch_dashboard_branch %}
+		<div class="dropdown branch-switch-wrap">
+			<button class="btn dropdown-toggle branch-switch-toggle" type="button" id="dashboardBranchSwitcher" data-bs-toggle="dropdown" data-current-value="{{ selected_dashboard_branch }}" aria-expanded="false" aria-label="Select dashboard branch">
+				<span class="branch-switch-label">{% if selected_dashboard_branch == 'ALL' %}All Branches{% else %}{{ selected_dashboard_branch }}{% endif %}</span>
+			</button>
+			<ul class="dropdown-menu branch-switch-menu" aria-labelledby="dashboardBranchSwitcher">
+				{% for option in dashboard_branch_options %}
+				<li>
+					<button type="button" class="dropdown-item{% if option == selected_dashboard_branch %} active{% endif %}" data-dashboard-branch-option="{{ option }}">
+						{% if option == 'ALL' %}All Branches{% else %}{{ option }}{% endif %}
+					</button>
+				</li>
+				{% endfor %}
+			</ul>
+		</div>
+		{% else %}
+		<span class="branch-pill">{{ scope_label or branch }}</span>
+		{% endif %}
+	</div>
+	<div class="navbar-nav-section">
+		<a href="/new-job" class="nav-link" title="Create new job"><i class="fas fa-plus"></i></a>
+		{% include "_global_user_menu.html" %}
+	</div>
+</nav>
+
+<!-- Main Dashboard Container -->
+<div class="dashboard-container">
+
+	{% set month_map = {
+		'01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr',
+		'05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Aug',
+		'09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'
+	} %}
+	{% set from_label = (chart_from_date[8:10] ~ ' ' ~ month_map.get(chart_from_date[5:7], chart_from_date[5:7])) if chart_from_date and chart_from_date|length >= 10 else 'Start' %}
+	{% set to_label = (chart_to_date[8:10] ~ ' ' ~ month_map.get(chart_to_date[5:7], chart_to_date[5:7])) if chart_to_date and chart_to_date|length >= 10 else 'End' %}
+	{% set onsite_alert_count = onsite_dashboard_alert_count or 0 %}
+	{% set onsite_alert_badge = '99+' if onsite_alert_count > 99 else onsite_alert_count %}
+	{% set onsite_alert_label = onsite_dashboard_alert_label or 'onsite call' %}
+
+	<!-- Dashboard Toolbar -->
+	<div class="dashboard-toolbar">
+		<form method="GET" action="/dashboard" class="dashboard-toolbar-form" id="dashboardToolbarForm">
+			<input type="hidden" name="from_date" value="{{ from_date or '' }}">
+			<input type="hidden" name="to_date" value="{{ to_date or '' }}">
+			<input type="hidden" name="date_field" value="{{ date_field_filter or '' }}">
+			<input type="hidden" name="filter_branch" value="{{ filter_branch or '' }}">
+			<input type="hidden" name="filter_status" value="{{ filter_status or '' }}">
+			<input type="hidden" name="filter_closure" value="{{ filter_closure or '' }}">
+			<input type="hidden" name="filter_engineer" value="{{ filter_engineer or '' }}">
+
+			<div class="toolbar-left">
+				<div class="toolbar-date-range">
+					<div class="toolbar-date-group" role="group" aria-label="Chart date range">
+						<input type="date" name="chart_from_date" value="{{ chart_from_date }}" aria-label="From date">
+						<span class="toolbar-date-separator" aria-hidden="true">&rarr;</span>
+						<input type="date" name="chart_to_date" value="{{ chart_to_date }}" aria-label="To date">
+					</div>
+				</div>
+				<span class="toolbar-date-preview">{{ from_label }} &rarr; {{ to_label }}</span>
+				<div class="toolbar-apply-wrap">
+					<button type="submit" class="toolbar-btn toolbar-btn-apply">Apply</button>
+					<a href="/dashboard?from_date={{ from_date or '' }}&to_date={{ to_date or '' }}&date_field={{ date_field_filter or '' }}&filter_branch={{ filter_branch or '' }}&filter_status={{ filter_status or '' }}&filter_closure={{ filter_closure or '' }}&filter_engineer={{ filter_engineer or '' }}" class="toolbar-btn toolbar-btn-reset" id="dashboardResetCharts">
+						<i class="fas fa-undo"></i> Reset Charts
+					</a>
+				</div>
+			</div>
+
+			<div class="toolbar-right">
+				<a href="/new-job" class="toolbar-btn toolbar-btn-primary toolbar-new-job">
+					<i class="fas fa-plus"></i> New Job
+				</a>
+				<a href="{{ onsite_dashboard_url or '/onsite-calls' }}" class="toolbar-btn toolbar-btn-dropdown toolbar-onsite-btn{% if onsite_alert_count %} toolbar-onsite-btn-alert{% endif %}"{% if onsite_alert_count %} title="{{ onsite_alert_count }} {{ onsite_alert_label }}{% if onsite_alert_count != 1 %}s{% endif %} waiting for attention"{% endif %} data-onsite-toolbar-link>
+					<span class="toolbar-onsite-copy">
+						<span class="toolbar-onsite-title"><i class="fas fa-user-clock"></i> Onsite Calls</span>
+						<span class="toolbar-onsite-subtitle"{% if not onsite_alert_count %} hidden{% endif %}>Immediate attention</span>
+					</span>
+					<span class="toolbar-onsite-badge"{% if not onsite_alert_count %} hidden{% endif %}>{{ onsite_alert_badge }}</span>
+				</a>
+				<div class="dropdown toolbar-actions-wrap toolbar-shortcuts-wrap">
+					<button class="toolbar-btn toolbar-btn-dropdown dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+						<i class="fas fa-layer-group"></i> Action
+					</button>
+					<ul class="dropdown-menu dropdown-menu-end toolbar-actions-menu toolbar-shortcuts-menu">
+						<li><h6 class="dropdown-header">Dashboard Views</h6></li>
+						<li>
+							<button type="button" class="dropdown-item report-option" data-target="callAnalysisSection">
+								<i class="fas fa-chart-pie"></i> Call Summary
+							</button>
+						</li>
+						<li><a class="dropdown-item" href="{{ shortcut_closed_jobs_url }}"><i class="fas fa-check-circle"></i> Closed Jobs</a></li>
+						<li><a class="dropdown-item" href="{{ shortcut_all_jobs_url }}"><i class="fas fa-list"></i> View All Jobs</a></li>
+						<li><hr class="dropdown-divider"></li>
+						<li><h6 class="dropdown-header">Operations</h6></li>
+						<li><a class="dropdown-item" href="/quotations"><i class="fas fa-file-invoice"></i> Quotations</a></li>
+						<li><a class="dropdown-item" href="/cashflow"><i class="fas fa-money-bill-wave"></i> Cashflow</a></li>
+						<li>
+							<a class="dropdown-item toolbar-onsite-menu-item{% if onsite_alert_count %} toolbar-onsite-menu-item-alert{% endif %}" href="{{ onsite_dashboard_url or '/onsite-calls' }}" data-onsite-toolbar-menu-link>
+								<span class="toolbar-onsite-menu-label"><i class="fas fa-user-clock"></i> Onsite Calls</span>
+								<span class="toolbar-onsite-menu-badge"{% if not onsite_alert_count %} hidden{% endif %}>{{ onsite_alert_badge }}</span>
+							</a>
+						</li>
+						<li><a class="dropdown-item" href="/onsite-calls/new"><i class="fas fa-tools"></i> New Onsite Call</a></li>
+						{% if session.role in ['super_admin', 'admin'] %}
+						<li><hr class="dropdown-divider"></li>
+						<li><h6 class="dropdown-header">Reports</h6></li>
+						<li>
+							<button type="button" class="dropdown-item report-option" data-target="branchWiseReport">
+								<i class="fas fa-sitemap"></i> Branch Summary
+							</button>
+						</li>
+						<li>
+							<button type="button" class="dropdown-item report-option" data-target="ageingReport">
+								<i class="fas fa-history"></i> Ageing View
+							</button>
+						</li>
+						<li><a class="dropdown-item" href="/used-spares"><i class="fas fa-boxes"></i> Spares Log</a></li>
+						{% elif session.role in ['coordinator', 'engineer'] %}
+						<li><hr class="dropdown-divider"></li>
+						<li><h6 class="dropdown-header">Reports</h6></li>
+						<li>
+							<button type="button" class="dropdown-item report-option" data-target="branchReport">
+								<i class="fas fa-chart-line"></i> Branch Summary
+							</button>
+						</li>
+						<li>
+							<button type="button" class="dropdown-item report-option" data-target="ageingReport">
+								<i class="fas fa-history"></i> Ageing View
+							</button>
+						</li>
+						<li><a class="dropdown-item" href="/used-spares"><i class="fas fa-boxes"></i> Spares Log</a></li>
+						{% endif %}
+					</ul>
+				</div>
+			</div>
+		</form>
+	</div>
+
+	{% if from_date or to_date or filter_branch or filter_status or filter_closure or filter_engineer %}
+	<div class="toolbar-active-filters">
+		<a href="/dashboard" class="badge bg-info">Active Filters
+			{% if can_switch_dashboard_branch and selected_dashboard_branch != 'ALL' %} • Scope: {{ scope_label }}{% endif %}
+			{% if from_date %} • From: {{ from_date }}{% endif %}
+			{% if to_date %} • To: {{ to_date }}{% endif %}
+			{% if filter_branch %} • Branch: {{ filter_branch }}{% endif %}
+			{% if filter_status %} • Status: {{ filter_status }}{% endif %}
+		</a>
+	</div>
+	{% endif %}
+
+	<!-- KPI Cards Section -->
+	<section class="kpi-section">
+		<div class="kpi-grid">
+			<div class="kpi-card">
+				<div class="kpi-icon total">
+					<i class="fas fa-briefcase"></i>
+				</div>
+				<div class="kpi-label">Total Job Cards</div>
+				<div class="kpi-value">{{ total_cases }}</div>
+				<a href="{{ total_cases_url }}" class="kpi-action">View →</a>
+			</div>
+
+			<div class="kpi-card">
+				<div class="kpi-icon active">
+					<i class="fas fa-spinner"></i>
+				</div>
+				<div class="kpi-label">Pending Jobs</div>
+				<div class="kpi-value">{{ pending_jobs }}</div>
+				<a href="{{ pending_jobs_url }}" class="kpi-action">View →</a>
+			</div>
+
+			<div class="kpi-card{% if open_cases_over_2_days %} kpi-card-warning{% endif %}">
+				<div class="kpi-icon open">
+					<i class="fas fa-exclamation-circle"></i>
+				</div>
+				<div class="kpi-label">Open Jobs</div>
+				<div class="kpi-value">{{ open_cases }}</div>
+				<a href="{{ open_cases_url }}" class="kpi-action">View →</a>
+				{% if open_cases_over_2_days %}
+				<div class="kpi-warning-pill" title="{{ open_cases_over_2_days }} open jobs older than 2 days">
+					<i class="fas fa-triangle-exclamation"></i>
+					<span class="kpi-warning-message">{{ open_cases_over_2_days }} Cases above 2 days, Take Immediate Action</span>
+				</div>
+				{% endif %}
+			</div>
+
+			<div class="kpi-card">
+				<div class="kpi-icon closed">
+					<i class="fas fa-user-clock"></i>
+				</div>
+				<div class="kpi-label">Completed Jobs</div>
+				<div class="kpi-value">{{ completed_jobs }}</div>
+				<a href="{{ completed_jobs_url }}" class="kpi-action">View →</a>
+			</div>
+
+			{% if active_transfer_jobs %}
+			<div class="kpi-card">
+				<div class="kpi-icon closed">
+					<i class="fas fa-arrow-right-arrow-left"></i>
+				</div>
+				<div class="kpi-label">Transfer Jobs</div>
+				<div class="kpi-value">{{ active_transfer_jobs }}</div>
+				<a href="{{ active_transfer_jobs_url }}" class="kpi-action">View →</a>
+			</div>
+			{% endif %}
+
+			<div class="kpi-card">
+				<div class="kpi-icon active">
+					<i class="fas fa-file-invoice"></i>
+				</div>
+				<div class="kpi-label">Pending Spare Billing</div>
+				<div class="kpi-value">{{ pending_spare_billing }}</div>
+				<a href="{{ pending_spare_billing_url }}" class="kpi-action">View →</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- Charts Section -->
+	<div class="charts-section-title">Dashboard Insights</div>
+
+	<div class="chart-grid">
+		<!-- Closed Results Chart -->
+		<div class="chart-card">
+			<div class="chart-card-title">
+				<a href="{{ closure_header_url }}" class="chart-card-heading-link" aria-label="Open closed jobs view">
+					<span>Closure Outcome</span>
+					<i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
+				</a>
+				<div>
+					<a href="{{ closed_success_url }}" class="badge chart-badge-sky">Success: {{ closed_success_count }}</a>
+					<a href="{{ closed_failed_url }}" class="badge chart-badge-indigo">Failed: {{ closed_failed_count }}</a>
+				</div>
+			</div>
+			<div class="chart-canvas-wrap"><canvas id="closedResultChart"></canvas></div>
+		</div>
+
+		<!-- Target Progress Chart (SYSCARE) -->
+		<div class="chart-card">
+			<div class="chart-card-title">
+				<a href="{{ syscare_header_url }}" class="chart-card-heading-link" aria-label="Open SYSCARE dashboard">
+					<span>SYSCARE Progress</span>
+					<i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
+				</a>
+				<span class="badge text-bg-secondary">Target: {{ syscare_target }}</span>
+			</div>
+			<div class="chart-canvas-wrap"><canvas id="syscarePlanChart"></canvas></div>
+			<div class="revenue-summary">
+				<div class="revenue-pill target">
+					<strong>Target</strong>
+					{{ syscare_target }}
+				</div>
+				<div class="revenue-pill achieved">
+					<strong>Achieved</strong>
+					{{ syscare_achieved }}
+				</div>
+				<div class="revenue-pill balance">
+					<strong>Balance</strong>
+					{{ syscare_remaining }}
+				</div>
+				<div class="revenue-pill percent">
+					<strong>% Complete</strong>
+					{{ '%.1f'|format(syscare_percentage or 0) }}%
+				</div>
+			</div>
+			<div class="alert-banner {{ syscare_advice_class }} mb-0">
+				{{ syscare_advice }}
+			</div>
+		</div>
+
+		<!-- Revenue Split Chart -->
+		<div class="chart-card">
+			<div class="chart-card-title">
+				<a href="{{ revenue_header_url }}" class="chart-card-heading-link" aria-label="Open revenue dashboard">
+					<span>Revenue Mix</span>
+					<i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
+				</a>
+				<span class="badge text-bg-secondary">{{ revenue_target_branch }}</span>
+			</div>
+			<div class="chart-canvas-wrap"><canvas id="revenueSplitChart"></canvas></div>
+			<div class="revenue-summary">
+				<div class="revenue-pill target">
+					<strong>Target</strong>
+					{{ '%.0f'|format(total_target or 0) }}
+				</div>
+				<div class="revenue-pill achieved">
+					<strong>Achieved</strong>
+					{{ '%.0f'|format(achieved_total or 0) }}
+				</div>
+				<div class="revenue-pill balance">
+					<strong>Balance</strong>
+					{{ '%.0f'|format(total_target_remaining or 0) }}
+				</div>
+				<div class="revenue-pill percent">
+					<strong>% Complete</strong>
+					{{ '%.1f'|format(achieved_percentage or 0) }}%
+				</div>
+			</div>
+			<div class="alert-banner {{ revenue_advice_class }} mb-0">
+				{{ revenue_advice }}
+			</div>
+		</div>
+
+		<div class="chart-card">
+			<div class="chart-card-title">
+				<a href="{{ cashflow_header_url }}" class="chart-card-heading-link" aria-label="Open cashflow dashboard">
+					<span>Cashflow Today</span>
+					<i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
+				</a>
+				<span class="badge text-bg-secondary">{{ scope_label }}</span>
+			</div>
+			<div class="revenue-summary">
+				<div class="revenue-pill achieved">
+					<strong>Cash</strong>
+					{{ '%.0f'|format(cashflow_today_cash or 0) }}
+				</div>
+				<div class="revenue-pill target">
+					<strong>Card</strong>
+					{{ '%.0f'|format(cashflow_today_card or 0) }}
+				</div>
+				<div class="revenue-pill percent">
+					<strong>UPI</strong>
+					{{ '%.0f'|format(cashflow_today_upi or 0) }}
+				</div>
+				<div class="revenue-pill balance">
+					<strong>Total</strong>
+					{{ '%.0f'|format(cashflow_today_total or 0) }}
+				</div>
+			</div>
+			<div class="alert-banner secondary mb-0 mt-3">
+				{% if cashflow_has_data %}
+				Today {{ cashflow_today_date }} | Current day service charges only. Cash deposit and cash request are tracked separately inside Cashflow.
+				{% else %}
+				No cashflow entry reported for today.
+				{% endif %}
+			</div>
+			{% if session.role in ['super_admin', 'admin'] and cashflow_pending_transfer_count %}
+			<div class="alert-banner danger mb-0 mt-3">
+				<strong>{{ cashflow_pending_transfer_count }} transfer review pending.</strong>
+				Pending amount {{ '%.0f'|format(cashflow_pending_transfers or 0) }}.
+				<a href="{{ cashflow_review_url }}" class="badge text-bg-danger ms-2">Open Transfer Review</a>
+			</div>
+			{% endif %}
+		</div>
+
+	</div>
+
+	<!-- Report Sections -->
+	{% set report_chart_mode = 'closed' if date_field_filter == 'closed' else 'created' %}
+	{% if session.role in ['super_admin', 'admin'] %}
+	<div class="report-card-section d-none" id="branchWiseReport">
+		<div class="report-card-header">
+			<h5><i class="fas fa-sitemap"></i> Branch-Wise Job Report</h5>
+			<button type="button" class="report-card-close" data-close-section="branchWiseReport">
+				<i class="fas fa-times"></i> Close
+			</button>
+		</div>
+		<form method="GET" action="/dashboard" class="report-card-filter">
+			<input type="hidden" name="chart_from_date" value="{{ chart_from_date or '' }}">
+			<input type="hidden" name="chart_to_date" value="{{ chart_to_date or '' }}">
+			<input type="hidden" name="date_field" value="{{ date_field_filter or 'created' }}">
+			<input type="hidden" name="filter_branch" value="{{ filter_branch or '' }}">
+			<input type="hidden" name="filter_status" value="{{ filter_status or '' }}">
+			<input type="hidden" name="filter_closure" value="{{ filter_closure or '' }}">
+			<input type="hidden" name="filter_engineer" value="{{ filter_engineer or '' }}">
+			<input type="hidden" name="open_report" value="branchWiseReport">
+			<div class="report-card-filter-group">
+				<label>From Date</label>
+				<input type="date" name="from_date" value="{{ from_date or '' }}">
+			</div>
+			<div class="report-card-filter-group">
+				<label>To Date</label>
+				<input type="date" name="to_date" value="{{ to_date or '' }}">
+			</div>
+			<div class="report-card-filter-actions">
+				<button type="submit" class="btn btn-primary btn-sm">Apply</button>
+				<a class="btn btn-outline-success btn-sm" href="{{ url_for('dashboard_report_export', report_name='branch-wise', from_date=from_date or '', to_date=to_date or '', date_field=date_field_filter or 'created', filter_branch=filter_branch or '', filter_status=filter_status or '', filter_closure=filter_closure or '', filter_engineer=filter_engineer or '') }}">Export CSV</a>
+			</div>
+		</form>
+		<div class="table-responsive ageing-report-wrap">
+			<table class="table report-table-centered ageing-report-table">
+				<thead>
+					<tr>
+						<th>Service Location</th>
+						{% for status_name in status_columns %}
+						<th>{{ status_name }}</th>
+						{% endfor %}
+						<th>Total</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for row in branch_wise_rows %}
+					<tr>
+						<td><strong>{{ row.branch_name }}</strong></td>
+						{% for status_name in status_columns %}
+						{% set value = row.counts[status_name] %}
+						<td>
+							{% if value > 0 %}
+							<a href="{{ url_for('jobs', view='active', branch_name=row.branch_name, status=status_name, chart_from_date=from_date or '', chart_to_date=to_date or '', chart_mode=report_chart_mode) }}">{{ value }}</a>
+							{% else %}
+							-
+							{% endif %}
+						</td>
+						{% endfor %}
+						<td><strong>
+							{% if row.total > 0 %}
+							<a href="{{ url_for('jobs', view='active', branch_name=row.branch_name, chart_from_date=from_date or '', chart_to_date=to_date or '', chart_mode=report_chart_mode) }}">{{ row.total }}</a>
+							{% else %}
+							0
+							{% endif %}
+						</strong></td>
+					</tr>
+					{% endfor %}
+					<tr class="table-secondary">
+						<td><strong>Total</strong></td>
+						{% for status_name in status_columns %}
+						{% set t = branch_wise_totals[status_name] %}
+						<td><strong>
+							{% if t > 0 %}
+							<a href="{{ url_for('jobs', view='active', status=status_name, chart_from_date=from_date or '', chart_to_date=to_date or '', chart_mode=report_chart_mode) }}">{{ t }}</a>
+							{% else %}
+							0
+							{% endif %}
+						</strong></td>
+						{% endfor %}
+						<td><strong><a href="{{ url_for('jobs', view='active', chart_from_date=from_date or '', chart_to_date=to_date or '', chart_mode=report_chart_mode) }}">{{ branch_wise_grand_total }}</a></strong></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+	{% endif %}
+
+	{% if session.role in ['coordinator', 'engineer'] %}
+	<div class="report-card-section d-none" id="branchReport">
+		<div class="report-card-header">
+			<h5><i class="fas fa-chart-line"></i> Branch Report ({{ scope_label }})</h5>
+			<button type="button" class="report-card-close" data-close-section="branchReport">
+				<i class="fas fa-times"></i> Close
+			</button>
+		</div>
+		<form method="GET" action="/dashboard" class="report-card-filter">
+			<input type="hidden" name="chart_from_date" value="{{ chart_from_date or '' }}">
+			<input type="hidden" name="chart_to_date" value="{{ chart_to_date or '' }}">
+			<input type="hidden" name="date_field" value="{{ date_field_filter or 'created' }}">
+			<input type="hidden" name="filter_branch" value="{{ filter_branch or '' }}">
+			<input type="hidden" name="filter_status" value="{{ filter_status or '' }}">
+			<input type="hidden" name="filter_closure" value="{{ filter_closure or '' }}">
+			<input type="hidden" name="filter_engineer" value="{{ filter_engineer or '' }}">
+			<input type="hidden" name="open_report" value="branchReport">
+			<div class="report-card-filter-group">
+				<label>From Date</label>
+				<input type="date" name="from_date" value="{{ from_date or '' }}">
+			</div>
+			<div class="report-card-filter-group">
+				<label>To Date</label>
+				<input type="date" name="to_date" value="{{ to_date or '' }}">
+			</div>
+			<div class="report-card-filter-actions">
+				<button type="submit" class="btn btn-primary btn-sm">Apply</button>
+				<a class="btn btn-outline-success btn-sm" href="{{ url_for('dashboard_report_export', report_name='branch', from_date=from_date or '', to_date=to_date or '', date_field=date_field_filter or 'created', filter_branch=filter_branch or '', filter_status=filter_status or '', filter_closure=filter_closure or '', filter_engineer=filter_engineer or '') }}">Export CSV</a>
+			</div>
+		</form>
+		<div class="table-responsive">
+			<table class="table report-table-centered">
+				<thead>
+					<tr>
+						{% for status_name in status_columns %}
+						<th>{{ status_name }}</th>
+						{% endfor %}
+						<th>Total</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						{% for status_name in status_columns %}
+						{% set value = branch_report_counts[status_name] %}
+						<td>
+							{% if value > 0 %}
+							<a href="{{ url_for('jobs', view='active', status=status_name, chart_from_date=from_date or '', chart_to_date=to_date or '', chart_mode=report_chart_mode) }}">{{ value }}</a>
+							{% else %}
+							-
+							{% endif %}
+						</td>
+						{% endfor %}
+						<td><strong><a href="{{ url_for('jobs', view='active', chart_from_date=from_date or '', chart_to_date=to_date or '', chart_mode=report_chart_mode) }}">{{ branch_report_total }}</a></strong></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+	{% endif %}
+
+	{% if session.role in ['super_admin', 'admin', 'coordinator', 'engineer'] %}
+	<div class="report-card-section d-none" id="ageingReport">
+		<div class="report-card-header">
+			<h5><i class="fas fa-history"></i> Ageing Analysis</h5>
+			<button type="button" class="report-card-close" data-close-section="ageingReport">
+				<i class="fas fa-times"></i> Close
+			</button>
+		</div>
+		<form method="GET" action="/dashboard" class="report-card-filter">
+			<input type="hidden" name="chart_from_date" value="{{ chart_from_date or '' }}">
+			<input type="hidden" name="chart_to_date" value="{{ chart_to_date or '' }}">
+			<input type="hidden" name="date_field" value="{{ date_field_filter or 'created' }}">
+			<input type="hidden" name="filter_branch" value="{{ filter_branch or '' }}">
+			<input type="hidden" name="filter_status" value="{{ filter_status or '' }}">
+			<input type="hidden" name="filter_closure" value="{{ filter_closure or '' }}">
+			<input type="hidden" name="filter_engineer" value="{{ filter_engineer or '' }}">
+			<input type="hidden" name="open_report" value="ageingReport">
+			<div class="report-card-filter-group">
+				<label>From Date</label>
+				<input type="date" name="from_date" value="{{ from_date or '' }}">
+			</div>
+			<div class="report-card-filter-group">
+				<label>To Date</label>
+				<input type="date" name="to_date" value="{{ to_date or '' }}">
+			</div>
+			<div class="report-card-filter-actions">
+				<button type="submit" class="btn btn-primary btn-sm">Apply</button>
+				<a class="btn btn-outline-success btn-sm" href="{{ url_for('dashboard_report_export', report_name='ageing', from_date=from_date or '', to_date=to_date or '', date_field=date_field_filter or 'created', filter_branch=filter_branch or '', filter_status=filter_status or '', filter_closure=filter_closure or '', filter_engineer=filter_engineer or '') }}">Export CSV</a>
+			</div>
+		</form>
+		<div class="table-responsive ageing-report-wrap">
+			<table class="table report-table-centered ageing-report-table">
+				<thead>
+					<tr>
+						<th style="text-align: center !important;">Job Card Status</th>
+						{% for bucket in age_buckets %}
+						<th>{{ bucket }} Days</th>
+						{% endfor %}
+						<th>Total</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for row in ageing_rows %}
+					<tr>
+						<td style="text-align: center !important;"><strong style="display: block; text-align: center !important;">{{ row.status }}</strong></td>
+						{% for bucket in age_buckets %}
+						{% set value = row.counts[bucket] %}
+						<td>
+							{% if value > 0 %}
+							<a href="{{ url_for('jobs', view='active', status=row.status, age_bucket=bucket, chart_from_date=from_date or '', chart_to_date=to_date or '', chart_mode=report_chart_mode) }}">{{ value }}</a>
+							{% else %}
+							-
+							{% endif %}
+						</td>
+						{% endfor %}
+						<td><strong>
+							{% if row.total > 0 %}
+							<a href="{{ url_for('jobs', view='active', status=row.status, chart_from_date=from_date or '', chart_to_date=to_date or '', chart_mode=report_chart_mode) }}">{{ row.total }}</a>
+							{% else %}
+							0
+							{% endif %}
+						</strong></td>
+					</tr>
+					{% endfor %}
+					<tr class="table-secondary">
+						<td style="text-align: center !important;"><strong style="display: block; text-align: center !important;">Total</strong></td>
+						{% for bucket in age_buckets %}
+						{% set t = ageing_totals_by_bucket[bucket] %}
+						<td><strong>
+							{% if t > 0 %}
+							<a href="{{ url_for('jobs', view='active', age_bucket=bucket, chart_from_date=from_date or '', chart_to_date=to_date or '', chart_mode=report_chart_mode) }}">{{ t }}</a>
+							{% else %}
+							0
+							{% endif %}
+						</strong></td>
+						{% endfor %}
+						<td><strong><a href="{{ url_for('jobs', view='active', chart_from_date=from_date or '', chart_to_date=to_date or '', chart_mode=report_chart_mode) }}">{{ ageing_grand_total }}</a></strong></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+	{% endif %}
+
+	<!-- Call Analysis Charts (Toggleable) -->
+	<div class="report-card-section d-none" id="callAnalysisSection">
+		<div class="report-card-header">
+			<h5><i class="fas fa-chart-pie"></i> Call Analysis</h5>
+			<button type="button" class="report-card-close" data-close-section="callAnalysisSection">
+				<i class="fas fa-times"></i> Close
+			</button>
+		</div>
+		
+		<div class="chart-grid">
+			<div class="chart-card">
+				<div class="chart-card-title">New Calls by Device</div>
+				<div class="chart-canvas-wrap"><canvas id="newCallsChart"></canvas></div>
+			</div>
+
+			<div class="chart-card">
+				<div class="chart-card-title">Call Types Distribution</div>
+				<div class="chart-canvas-wrap"><canvas id="callTypeChart"></canvas></div>
+			</div>
+		</div>
+	</div>
+
+	<script id="dashboardPageData" type="application/json">{{ dashboard_page_data|tojson }}</script>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+	var chartInstances = [];
+	var body = document.body;
+	var activeSectionId = body.getAttribute("data-open-report") || "";
+	var dashboardUrl = body.getAttribute("data-dashboard-url") || "/dashboard";
+	var branchScopeUrl = body.getAttribute("data-dashboard-branch-url") || "/dashboard/branch-scope";
+	var branchOptionsUrl = body.getAttribute("data-dashboard-branch-options-url") || "/dashboard/branch-options";
+	var onsiteAlertUrl = body.getAttribute("data-dashboard-onsite-alert-url") || "/dashboard/onsite-alert";
+	var csrfToken = body.getAttribute("data-csrf-token") || "";
+	var dashboardBranchSwitcher = document.getElementById("dashboardBranchSwitcher");
+	var dashboardBranchMenu = dashboardBranchSwitcher ? dashboardBranchSwitcher.parentElement.querySelector(".branch-switch-menu") : null;
+	var dashboardBranchSwitcherLabel = dashboardBranchSwitcher ? dashboardBranchSwitcher.querySelector(".branch-switch-label") : null;
+	var dashboardBranchOptions = dashboardBranchMenu ? Array.prototype.slice.call(dashboardBranchMenu.querySelectorAll("[data-dashboard-branch-option]")) : [];
+	var onsiteToolbarLink = null;
+	var onsiteToolbarMenuLink = null;
+	var onsiteAlertPollTimer = null;
+	var onsiteAlertPollInFlight = false;
+
+	function refreshOnsiteAlertTargets(root) {
+		var lookupRoot = root || document;
+		onsiteToolbarLink = lookupRoot.querySelector("[data-onsite-toolbar-link]") || document.querySelector("[data-onsite-toolbar-link]");
+		onsiteToolbarMenuLink = lookupRoot.querySelector("[data-onsite-toolbar-menu-link]") || document.querySelector("[data-onsite-toolbar-menu-link]");
+	}
+
+	function formatOnsiteAlertBadge(count) {
+		return count > 99 ? "99+" : String(count);
+	}
+
+	function syncOnsiteAlertLink(link, options) {
+		if (!link) {
+			return;
+		}
+
+		var count = Number(options.count) || 0;
+		var label = String(options.label || "onsite call").trim() || "onsite call";
+		var url = String(options.url || "/onsite-calls").trim() || "/onsite-calls";
+		var badgeText = formatOnsiteAlertBadge(count);
+		var badgeNode = link.querySelector(".toolbar-onsite-badge, .toolbar-onsite-menu-badge");
+		var subtitleNode = link.querySelector(".toolbar-onsite-subtitle");
+
+		link.setAttribute("href", url);
+		var isToolbarButton = link.classList.contains("toolbar-onsite-btn");
+		var isMenuLink = link.classList.contains("toolbar-onsite-menu-item");
+		if (count > 0) {
+			if (isToolbarButton) {
+				link.classList.add("toolbar-onsite-btn-alert");
+			}
+			if (isMenuLink) {
+				link.classList.add("toolbar-onsite-menu-item-alert");
+			}
+			link.setAttribute("title", count + " " + label + (count === 1 ? "" : "s") + " waiting for attention");
+		} else {
+			if (isToolbarButton) {
+				link.classList.remove("toolbar-onsite-btn-alert");
+			}
+			if (isMenuLink) {
+				link.classList.remove("toolbar-onsite-menu-item-alert");
+			}
+			link.removeAttribute("title");
+		}
+
+		if (badgeNode) {
+			badgeNode.textContent = badgeText;
+			badgeNode.hidden = count <= 0;
+		}
+
+		if (subtitleNode) {
+			subtitleNode.hidden = count <= 0;
+		}
+	}
+
+	function applyOnsiteAlertPayload(payload) {
+		if (!payload) {
+			return;
+		}
+
+		var count = Number(payload.onsite_dashboard_alert_count) || 0;
+		var label = payload.onsite_dashboard_alert_label || "onsite call";
+		var url = payload.onsite_dashboard_url || "/onsite-calls";
+
+		syncOnsiteAlertLink(onsiteToolbarLink, {
+			count: count,
+			label: label,
+			url: url
+		});
+		syncOnsiteAlertLink(onsiteToolbarMenuLink, {
+			count: count,
+			label: label,
+			url: url
+		});
+	}
+
+	function pollOnsiteAlert() {
+		if (!onsiteAlertUrl || onsiteAlertPollInFlight) {
+			return;
+		}
+
+		onsiteAlertPollInFlight = true;
+		fetch(onsiteAlertUrl, {
+			method: "GET",
+			headers: {
+				"X-Requested-With": "XMLHttpRequest"
+			},
+			credentials: "same-origin",
+			cache: "no-store"
+		})
+			.then(function (response) {
+				return response.json().catch(function () {
+					return {};
+				}).then(function (payload) {
+					if (!response.ok || !payload.success) {
+						throw new Error(payload.message || "Could not load onsite alert");
+					}
+					return payload;
+				});
+			})
+			.then(applyOnsiteAlertPayload)
+			.catch(function (error) {
+				console.error(error);
+			})
+			.finally(function () {
+				onsiteAlertPollInFlight = false;
+			});
+	}
+
+	function startOnsiteAlertPolling() {
+		refreshOnsiteAlertTargets();
+		if (!onsiteToolbarLink || onsiteAlertPollTimer) {
+			return;
+		}
+		pollOnsiteAlert();
+		onsiteAlertPollTimer = window.setInterval(pollOnsiteAlert, 5000);
+		document.addEventListener("visibilitychange", function () {
+			if (!document.hidden) {
+				pollOnsiteAlert();
+			}
+		});
+	}
+
+	if (window.Chart && window.ChartDataLabels && !window.__crmChartDataLabelsRegistered) {
+		Chart.register(ChartDataLabels);
+		window.__crmChartDataLabelsRegistered = true;
+	}
+
+	startOnsiteAlertPolling();
+
+	function updateDashboardBranchMenu(selectedValue) {
+		dashboardBranchOptions.forEach(function (item) {
+			item.classList.toggle("active", item.getAttribute("data-dashboard-branch-option") === selectedValue);
+		});
+		if (dashboardBranchSwitcher) {
+			dashboardBranchSwitcher.dataset.currentValue = selectedValue;
+		}
+		if (dashboardBranchSwitcherLabel) {
+			dashboardBranchSwitcherLabel.textContent = selectedValue === "ALL" ? "All Branches" : selectedValue;
+		}
+	}
+
+	function bindDashboardBranchOptions() {
+		dashboardBranchOptions = dashboardBranchMenu ? Array.prototype.slice.call(dashboardBranchMenu.querySelectorAll("[data-dashboard-branch-option]")) : [];
+
+		if (!dashboardBranchSwitcher || !dashboardBranchOptions.length) {
+			return;
+		}
+
+		dashboardBranchOptions.forEach(function (branchOption) {
+			branchOption.onclick = function () {
+				var previousValue = dashboardBranchSwitcher.dataset.currentValue || "ALL";
+				var nextValue = branchOption.getAttribute("data-dashboard-branch-option") || previousValue;
+
+				if (!nextValue || nextValue === previousValue) {
+					return;
+				}
+
+				dashboardBranchSwitcher.disabled = true;
+
+				fetch(branchScopeUrl, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						"X-CSRF-Token": csrfToken,
+						"X-Requested-With": "XMLHttpRequest"
+					},
+					credentials: "same-origin",
+					body: JSON.stringify({ branch_name: nextValue })
+				})
+					.then(function (response) {
+						return response.json().catch(function () {
+							return {};
+						}).then(function (payload) {
+							if (!response.ok || !payload.success) {
+								throw new Error(payload.message || "Could not update dashboard branch");
+							}
+							return payload;
+						});
+					})
+					.then(function (payload) {
+						updateDashboardBranchMenu(payload.selected_branch);
+						return loadDashboardContent(window.location.href, {
+							skipHistory: true,
+							activeSectionId: activeSectionId
+						});
+					})
+					.catch(function (error) {
+						console.error(error);
+						updateDashboardBranchMenu(previousValue);
+						window.alert(error.message || "Could not update dashboard branch");
+					})
+					.finally(function () {
+						dashboardBranchSwitcher.disabled = false;
+					});
+			};
+		});
+	}
+
+	function renderDashboardBranchOptions(options, selectedValue) {
+		if (!dashboardBranchMenu) {
+			return;
+		}
+
+		var branchList = Array.isArray(options) ? options : [];
+		dashboardBranchMenu.innerHTML = branchList.map(function (option) {
+			var label = option === "ALL" ? "All Branches" : option;
+			var isActive = option === selectedValue ? " active" : "";
+			return '<li><button type="button" class="dropdown-item' + isActive + '" data-dashboard-branch-option="' + option.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + '">' + label.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + '</button></li>';
+		}).join("");
+
+		bindDashboardBranchOptions();
+		updateDashboardBranchMenu(selectedValue || "ALL");
+	}
+
+	function loadDashboardBranchOptions() {
+		if (!dashboardBranchSwitcher || !dashboardBranchMenu) {
+			return Promise.resolve();
+		}
+
+		return fetch(branchOptionsUrl, {
+			method: "GET",
+			headers: {
+				"X-Requested-With": "XMLHttpRequest"
+			},
+			credentials: "same-origin"
+		})
+			.then(function (response) {
+				return response.json().catch(function () {
+					return {};
+				}).then(function (payload) {
+					if (!response.ok || !payload.success) {
+						throw new Error(payload.message || "Could not load dashboard branches");
+					}
+					return payload;
+				});
+			})
+			.then(function (payload) {
+				renderDashboardBranchOptions(payload.branch_options || [], payload.selected_branch || "ALL");
+			})
+			.catch(function (error) {
+				console.error(error);
+				bindDashboardBranchOptions();
+			});
+	}
+
+	function getDashboardContainer() {
+		return document.querySelector(".dashboard-container");
+	}
+
+	function getDashboardPageData(root) {
+		var dataNode = root ? root.querySelector("#dashboardPageData") : null;
+		if (!dataNode) {
+			return {};
+		}
+
+		try {
+			return JSON.parse(dataNode.textContent || "{}");
+		} catch (error) {
+			console.error("Could not parse dashboard page data", error);
+			return {};
+		}
+	}
+
+	function destroyDashboardCharts() {
+		chartInstances.forEach(function (chart) {
+			if (chart && typeof chart.destroy === "function") {
+				chart.destroy();
+			}
+		});
+		chartInstances = [];
+
+		var tooltip = document.getElementById("crmChartTooltip");
+		if (tooltip) {
+			tooltip.classList.remove("show");
+		}
+	}
+
+	function getThemeValue(name, fallback) {
+		var value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+		return value || fallback;
+	}
+
+	var chartSurface = getThemeValue("--crm-surface-strong", "#ffffff");
+	var legendColor = getThemeValue("--crm-muted", "#5f6f82");
+	var tooltipSurface = getThemeValue("--crm-navy", "#0f172a");
+	var multiPalette = [
+		getThemeValue("--crm-chart-sky", "#5aa9ff"),
+		getThemeValue("--crm-chart-cyan", "#27c2d9"),
+		getThemeValue("--crm-chart-blue", "#2b6fff"),
+		getThemeValue("--crm-chart-indigo", "#5568ff"),
+		getThemeValue("--crm-chart-navy", "#1c3558"),
+		"#274fbe",
+		"#2f6dd8",
+		"#317fe6",
+		"#23519d",
+		"#16376d"
+	];
+
+	function buildPiePalette(segmentCount) {
+		var palette = [];
+		for (var idx = 0; idx < segmentCount; idx += 1) {
+			palette.push(multiPalette[idx % multiPalette.length]);
+		}
+		return palette;
+	}
+
+	function resolvePiePalette(colors, segmentCount) {
+		if (Array.isArray(colors) && colors.length) {
+			var providedPalette = [];
+			for (var idx = 0; idx < segmentCount; idx += 1) {
+				providedPalette.push(colors[idx % colors.length]);
+			}
+			return providedPalette;
+		}
+		return buildPiePalette(segmentCount);
+	}
+
+	function parseColorChannels(colorText) {
+		var color = String(colorText || "").trim();
+		if (!color) {
+			return { r: 43, g: 111, b: 255 };
+		}
+
+		if (color.charAt(0) === "#") {
+			var hex = color.slice(1);
+			if (hex.length === 3) {
+				hex = hex.split("").map(function (part) {
+					return part + part;
+				}).join("");
+			}
+			if (hex.length === 6) {
+				return {
+					r: parseInt(hex.slice(0, 2), 16),
+					g: parseInt(hex.slice(2, 4), 16),
+					b: parseInt(hex.slice(4, 6), 16)
+				};
+			}
+		}
+
+		var rgbMatch = color.match(/^rgba?\(([^)]+)\)$/i);
+		if (rgbMatch) {
+			var parts = rgbMatch[1].split(",");
+			return {
+				r: parseFloat(parts[0]) || 0,
+				g: parseFloat(parts[1]) || 0,
+				b: parseFloat(parts[2]) || 0
+			};
+		}
+
+		return { r: 43, g: 111, b: 255 };
+	}
+
+	function getReadableTextColor(backgroundColor) {
+		var channels = parseColorChannels(backgroundColor);
+		var brightness = ((channels.r * 299) + (channels.g * 587) + (channels.b * 114)) / 1000;
+		return brightness > 156 ? getThemeValue("--crm-navy", "#0f172a") : "#ffffff";
+	}
+
+	function formatPieValue(value) {
+		var number = Number(value) || 0;
+		if (Math.round(number) !== number) {
+			return number.toLocaleString("en-IN", {
+				minimumFractionDigits: 1,
+				maximumFractionDigits: 1
+			});
+		}
+		return number.toLocaleString("en-IN");
+	}
+
+	function formatTooltipValue(value, renderOptions) {
+		var number = Number(value) || 0;
+		if (renderOptions && renderOptions.valueType === "currency") {
+			return "INR " + Math.round(number).toLocaleString("en-IN");
+		}
+		return formatPieValue(number);
+	}
+
+	function canUseExternalPieTooltip() {
+		return !!(window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+	}
+
+	function getExternalPieTooltipElement() {
+		var tooltipEl = document.getElementById("crmChartTooltip");
+		if (tooltipEl) {
+			return tooltipEl;
+		}
+
+		tooltipEl = document.createElement("div");
+		tooltipEl.id = "crmChartTooltip";
+		tooltipEl.className = "crm-chart-tooltip";
+
+		var titleEl = document.createElement("div");
+		titleEl.className = "crm-chart-tooltip-title";
+		tooltipEl.appendChild(titleEl);
+
+		var rowEl = document.createElement("div");
+		rowEl.className = "crm-chart-tooltip-row";
+
+		var swatchEl = document.createElement("span");
+		swatchEl.className = "crm-chart-tooltip-swatch";
+		rowEl.appendChild(swatchEl);
+
+		var valueEl = document.createElement("span");
+		valueEl.className = "crm-chart-tooltip-value";
+		rowEl.appendChild(valueEl);
+
+		tooltipEl.appendChild(rowEl);
+		document.body.appendChild(tooltipEl);
+		return tooltipEl;
+	}
+
+	function renderExternalPieTooltip(context, renderOptions, segmentColors) {
+		var tooltipModel = context.tooltip;
+		var tooltipEl = getExternalPieTooltipElement();
+		if (!tooltipEl) {
+			return;
+		}
+
+		if (!canUseExternalPieTooltip() || !tooltipModel || tooltipModel.opacity === 0 || !tooltipModel.dataPoints || !tooltipModel.dataPoints.length) {
+			tooltipEl.classList.remove("show");
+			return;
+		}
+
+		var dataPoint = tooltipModel.dataPoints[0];
+		var label = dataPoint.label || "";
+		var value = Number(dataPoint.parsed || dataPoint.raw || 0);
+		var data = (dataPoint.dataset && dataPoint.dataset.data) || [];
+		var total = data.reduce(function (sum, item) {
+			return sum + (Number(item) || 0);
+		}, 0) || 1;
+		var pct = ((value * 100) / total).toFixed(1);
+		var rect = context.chart.canvas.getBoundingClientRect();
+		var titleEl = tooltipEl.querySelector(".crm-chart-tooltip-title");
+		var valueEl = tooltipEl.querySelector(".crm-chart-tooltip-value");
+		var swatchEl = tooltipEl.querySelector(".crm-chart-tooltip-swatch");
+		var color = segmentColors[dataPoint.dataIndex % segmentColors.length];
+
+		titleEl.textContent = label;
+		valueEl.textContent = formatTooltipValue(value, renderOptions) + " (" + pct + "%)";
+		swatchEl.style.backgroundColor = color;
+
+		tooltipEl.classList.add("show");
+		tooltipEl.style.left = "0px";
+		tooltipEl.style.top = "0px";
+
+		var tipWidth = tooltipEl.offsetWidth;
+		var tipHeight = tooltipEl.offsetHeight;
+		var preferRight = tooltipModel.caretX < (context.chart.width / 2);
+		var margin = 16;
+		var left = rect.left + (preferRight ? tooltipModel.caretX + 24 : tooltipModel.caretX - tipWidth - 24);
+		var top = rect.top + tooltipModel.caretY - (tipHeight / 2);
+
+		left = Math.max(margin, Math.min(window.innerWidth - tipWidth - margin, left));
+		top = Math.max(margin, Math.min(window.innerHeight - tipHeight - margin, top));
+
+		tooltipEl.style.left = left + "px";
+		tooltipEl.style.top = top + "px";
+	}
+
+	function getPieSlicePercent(ctx) {
+		var data = (ctx.dataset && ctx.dataset.data) || [];
+		var total = data.reduce(function (sum, item) {
+			return sum + (Number(item) || 0);
+		}, 0) || 1;
+		var value = Number(data[ctx.dataIndex] || 0);
+		return (value * 100) / total;
+	}
+
+	function shouldHidePieLabel(ctx, renderOptions) {
+		var value = Number((ctx.dataset && ctx.dataset.data && ctx.dataset.data[ctx.dataIndex]) || 0);
+		if (!value) {
+			return true;
+		}
+		var hidePercent = renderOptions && renderOptions.hideLabelPercent;
+		if (hidePercent === undefined || hidePercent === null) {
+			hidePercent = renderOptions && renderOptions.valueType === "currency" ? 5 : 3;
+		}
+		return getPieSlicePercent(ctx) < hidePercent;
+	}
+
+	function shouldUseOutsidePieLabel(ctx, renderOptions) {
+		if (shouldHidePieLabel(ctx, renderOptions)) {
+			return false;
+		}
+		var outsidePercent = renderOptions && renderOptions.outsideLabelPercent;
+		if (outsidePercent === undefined || outsidePercent === null) {
+			outsidePercent = renderOptions && renderOptions.valueType === "currency" ? 14 : 9;
+		}
+		return getPieSlicePercent(ctx) < outsidePercent;
+	}
+
+	function makePieChart(canvasId, labels, counts, colors, links, renderOptions) {
+		var canvas = document.getElementById(canvasId);
+		if (!canvas) {
+			return;
+		}
+		renderOptions = renderOptions || {};
+		var useExternalPieTooltip = canUseExternalPieTooltip();
+		var segmentColors = resolvePiePalette(colors, labels.length || counts.length || 1);
+		var outerRingPlugin = {
+			id: "outerGuideRing_" + canvasId,
+			afterDraw: function (chart) {
+				var meta = chart.getDatasetMeta(0);
+				if (!meta || !meta.data || !meta.data.length) {
+					return;
+				}
+				var arc = meta.data[0];
+				if (!arc) {
+					return;
+				}
+				var ctx = chart.ctx;
+				var ringOffset = renderOptions.outerRingOffset || 8;
+				var ringWidth = renderOptions.outerRingWidth || 10;
+				var outerRadius = arc.outerRadius + ringOffset;
+				var gradient = ctx.createLinearGradient(
+					arc.x - outerRadius,
+					arc.y - outerRadius,
+					arc.x + outerRadius,
+					arc.y + outerRadius
+				);
+				gradient.addColorStop(0, getThemeValue("--crm-chart-sky", "#5aa9ff"));
+				gradient.addColorStop(0.45, getThemeValue("--crm-chart-blue", "#2b6fff"));
+				gradient.addColorStop(1, getThemeValue("--crm-chart-navy", "#1c3558"));
+
+				ctx.save();
+				ctx.beginPath();
+				ctx.arc(arc.x, arc.y, outerRadius, 0, Math.PI * 2);
+				ctx.lineWidth = ringWidth;
+				ctx.strokeStyle = gradient;
+				ctx.stroke();
+				ctx.restore();
+			}
+		};
+		var chartInstance = new Chart(canvas, {
+			type: "doughnut",
+			data: {
+				labels: labels,
+				datasets: [
+					{
+						data: counts,
+						backgroundColor: segmentColors,
+						borderColor: "rgba(255, 255, 255, 0.98)",
+						borderWidth: 4,
+						hoverBorderColor: "rgba(255, 255, 255, 0.98)",
+						hoverOffset: 4,
+						radius: renderOptions.radius || "88%",
+						cutout: renderOptions.cutout || "18%"
+					}
+				]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				rotation: -90,
+				circumference: 360,
+				layout: {
+					padding: {
+						top: 18,
+						bottom: 18,
+						left: 24,
+						right: 24
+					}
+				},
+				onClick: function (evt, elements) {
+					if (!elements || !elements.length) {
+						return;
+					}
+					var idx = elements[0].index;
+					if (links[idx]) {
+						window.location.href = links[idx];
+					}
+				},
+				plugins: {
+					legend: {
+						position: "bottom",
+						align: "center",
+						onClick: function (evt, legendItem, legend) {
+							legend.chart.toggleDataVisibility(legendItem.index);
+							legend.chart.update();
+						},
+						labels: {
+							usePointStyle: true,
+							boxWidth: 8,
+							padding: 12,
+							color: legendColor,
+							font: { size: 12, weight: "600" },
+							generateLabels: function (chart) {
+								return (chart.data.labels || []).map(function (label, index) {
+									return {
+										text: label,
+										fillStyle: segmentColors[index % segmentColors.length],
+										strokeStyle: chartSurface,
+										lineWidth: 0,
+										hidden: !chart.getDataVisibility(index),
+										index: index
+									};
+								});
+							}
+						}
+					},
+					tooltip: {
+						enabled: !useExternalPieTooltip,
+						external: useExternalPieTooltip ? function (context) {
+							renderExternalPieTooltip(context, renderOptions, segmentColors);
+						} : undefined,
+						backgroundColor: tooltipSurface,
+						bodyColor: "#eff6ff",
+						titleColor: "#ffffff",
+						borderColor: "rgba(255, 255, 255, 0.12)",
+						borderWidth: 1,
+						padding: 10,
+						caretPadding: 12,
+						titleMarginBottom: 4,
+						displayColors: true,
+						callbacks: {
+							label: function (ctx) {
+								var value = ctx.parsed || 0;
+								var total = ctx.dataset.data.reduce(function (a, b) { return a + b; }, 0) || 1;
+								var pct = ((value * 100) / total).toFixed(1);
+								return formatTooltipValue(value, renderOptions) + " (" + pct + "%)";
+							}
+						}
+					},
+					datalabels: {
+						display: function (ctx) {
+							return !shouldHidePieLabel(ctx, renderOptions);
+						},
+						formatter: function (value, ctx) {
+							if (shouldUseOutsidePieLabel(ctx, renderOptions)) {
+								return formatTooltipValue(value, renderOptions);
+							}
+							if (renderOptions.valueType === "currency") {
+								return ["INR", Math.round(Number(value) || 0).toLocaleString("en-IN")];
+							}
+							return formatPieValue(value);
+						},
+						color: function (ctx) {
+							if (shouldUseOutsidePieLabel(ctx, renderOptions)) {
+								return getThemeValue("--crm-navy", "#0f172a");
+							}
+							return getReadableTextColor(segmentColors[ctx.dataIndex % segmentColors.length]);
+						},
+						font: function (ctx) {
+							var useOutside = shouldUseOutsidePieLabel(ctx, renderOptions);
+							return {
+								size: renderOptions.valueType === "currency" ? (useOutside ? 9 : 10) : (useOutside ? 10 : 12),
+								weight: "700",
+								lineHeight: 1.05
+							};
+						},
+						backgroundColor: function (ctx) {
+							return shouldUseOutsidePieLabel(ctx, renderOptions) ? "rgba(255, 255, 255, 0.96)" : null;
+						},
+						borderColor: function (ctx) {
+							return shouldUseOutsidePieLabel(ctx, renderOptions) ? "rgba(43, 111, 255, 0.24)" : "transparent";
+						},
+						borderWidth: function (ctx) {
+							return shouldUseOutsidePieLabel(ctx, renderOptions) ? 1 : 0;
+						},
+						borderRadius: function (ctx) {
+							return shouldUseOutsidePieLabel(ctx, renderOptions) ? 999 : 0;
+						},
+						padding: function (ctx) {
+							return shouldUseOutsidePieLabel(ctx, renderOptions)
+								? { top: 4, right: 7, bottom: 4, left: 7 }
+								: 0;
+						},
+						textAlign: "center",
+						anchor: function (ctx) {
+							return shouldUseOutsidePieLabel(ctx, renderOptions) ? "end" : "center";
+						},
+						align: function (ctx) {
+							return shouldUseOutsidePieLabel(ctx, renderOptions) ? "end" : "center";
+						},
+						offset: function (ctx) {
+							return shouldUseOutsidePieLabel(ctx, renderOptions) ? 8 : 0;
+						},
+						clamp: true,
+						clip: false
+					}
+				}
+			},
+			plugins: [outerRingPlugin]
+		});
+
+		chartInstances.push(chartInstance);
+	}
+
+	function resetReportButtons(root) {
+		(root.querySelectorAll(".report-option") || []).forEach(function (btn) {
+			btn.classList.remove("is-active");
+			btn.setAttribute("aria-pressed", "false");
+		});
+	}
+
+	function showSection(root, sectionId, options) {
+		var sections = root.querySelectorAll(".report-card-section") || [];
+		sections.forEach(function (sec) {
+			sec.classList.add("d-none");
+		});
+		resetReportButtons(root);
+		activeSectionId = "";
+
+		if (!sectionId) {
+			return;
+		}
+
+		var activeSection = document.getElementById(sectionId);
+		if (!activeSection) {
+			return;
+		}
+
+		activeSection.classList.remove("d-none");
+		activeSectionId = sectionId;
+
+		var activeButton = root.querySelector('.report-option[data-target="' + sectionId + '"]');
+		if (activeButton) {
+			activeButton.classList.add("is-active");
+			activeButton.setAttribute("aria-pressed", "true");
+		}
+
+		if (!options || options.scroll !== false) {
+			activeSection.scrollIntoView({ behavior: "smooth", block: "start" });
+		}
+	}
+
+	function bindReportControls(root, options) {
+		(root.querySelectorAll(".report-option") || []).forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				showSection(root, btn.getAttribute("data-target"));
+			});
+		});
+
+		(root.querySelectorAll(".report-card-close") || []).forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				showSection(root, "", { scroll: false });
+				btn.blur();
+			});
+		});
+
+		var sectionToRestore = options && Object.prototype.hasOwnProperty.call(options, "activeSectionId")
+			? options.activeSectionId
+			: activeSectionId;
+
+		if (sectionToRestore) {
+			showSection(root, sectionToRestore, { scroll: !!(options && options.scrollToSection) });
+		} else {
+			resetReportButtons(root);
+		}
+	}
+
+	function buildDashboardUrlFromForm(form) {
+		var url = new URL(form.getAttribute("action") || dashboardUrl, window.location.origin);
+		var params = new URLSearchParams();
+
+		new FormData(form).forEach(function (value, key) {
+			var normalizedValue = String(value || "").trim();
+			if (!normalizedValue) {
+				return;
+			}
+			params.append(key, normalizedValue);
+		});
+
+		url.search = params.toString();
+		return url.toString();
+	}
+
+	function loadDashboardContent(urlLike, options) {
+		var container = getDashboardContainer();
+		if (!container) {
+			return Promise.resolve();
+		}
+
+		var displayUrl = new URL(urlLike || dashboardUrl, window.location.origin);
+		var requestUrl = new URL(displayUrl.toString());
+		var sectionToRestore = options && Object.prototype.hasOwnProperty.call(options, "activeSectionId")
+			? options.activeSectionId
+			: activeSectionId;
+
+		requestUrl.searchParams.set("partial", "1");
+		destroyDashboardCharts();
+		container.classList.add("is-loading");
+
+		return fetch(requestUrl.toString(), {
+			headers: {
+				"X-Requested-With": "XMLHttpRequest"
+			},
+			credentials: "same-origin"
+		})
+			.then(function (response) {
+				if (response.redirected) {
+					window.location.href = response.url;
+					throw new Error("redirected");
+				}
+				if (!response.ok) {
+					throw new Error("Dashboard refresh failed");
+				}
+				return response.text();
+			})
+			.then(function (html) {
+				container.innerHTML = html;
+				if (!options || options.skipHistory !== true) {
+					window.history.replaceState({}, "", displayUrl.pathname + (displayUrl.search || ""));
+				}
+				initializeDashboardContent({
+					activeSectionId: sectionToRestore,
+					scrollToSection: false
+				});
+			})
+			.catch(function (error) {
+				if (error && error.message === "redirected") {
+					return;
+				}
+				console.error(error);
+				window.location.href = displayUrl.toString();
+			})
+			.finally(function () {
+				container.classList.remove("is-loading");
+			});
+	}
+
+	function bindToolbarControls(root) {
+		var toolbarForm = root.querySelector("#dashboardToolbarForm");
+		if (toolbarForm) {
+			toolbarForm.addEventListener("submit", function (event) {
+				event.preventDefault();
+				loadDashboardContent(buildDashboardUrlFromForm(toolbarForm), {
+					activeSectionId: activeSectionId
+				});
+			});
+		}
+
+		var resetLink = root.querySelector("#dashboardResetCharts");
+		if (resetLink) {
+			resetLink.addEventListener("click", function (event) {
+				event.preventDefault();
+				loadDashboardContent(resetLink.href, {
+					activeSectionId: activeSectionId
+				});
+			});
+		}
+	}
+
+	function renderDashboardCharts(root) {
+		var pageData = getDashboardPageData(root);
+		var closedResult = pageData.closedResult || {};
+		var newCalls = pageData.newCalls || {};
+		var callTypes = pageData.callTypes || {};
+		var syscare = pageData.syscare || {};
+		var revenue = pageData.revenue || {};
+
+		makePieChart(
+			"closedResultChart",
+			closedResult.labels || [],
+			closedResult.counts || [],
+			[
+				getThemeValue("--crm-chart-sky", "#5aa9ff"),
+				getThemeValue("--crm-chart-indigo", "#5568ff")
+			],
+			closedResult.links || []
+		);
+
+		makePieChart(
+			"newCallsChart",
+			newCalls.labels || [],
+			newCalls.counts || [],
+			multiPalette,
+			newCalls.links || []
+		);
+
+		makePieChart(
+			"callTypeChart",
+			callTypes.labels || [],
+			callTypes.counts || [],
+			multiPalette,
+			callTypes.links || []
+		);
+
+		makePieChart(
+			"syscarePlanChart",
+			syscare.labels || [],
+			syscare.counts || [],
+			[
+				getThemeValue("--crm-chart-cyan", "#27c2d9"),
+				getThemeValue("--crm-chart-sky", "#5aa9ff")
+			],
+			syscare.links || []
+		);
+
+		makePieChart(
+			"revenueSplitChart",
+			revenue.labels || [],
+			revenue.counts || [],
+			[
+				getThemeValue("--crm-chart-cyan", "#27c2d9"),
+				getThemeValue("--crm-chart-blue", "#2b6fff")
+			],
+			revenue.links || [],
+			{ valueType: "currency" }
+		);
+	}
+
+	function initializeDashboardContent(options) {
+		var root = getDashboardContainer();
+		if (!root) {
+			return;
+		}
+
+		refreshOnsiteAlertTargets(root);
+		bindReportControls(root, options || {});
+		bindToolbarControls(root);
+		renderDashboardCharts(root);
+	}
+
+	bindingDashboardBranchOptions = bindDashboardBranchOptions;
+	loadDashboardBranchOptions();
+
+	initializeDashboardContent({
+		activeSectionId: activeSectionId,
+		scrollToSection: false
+	});
+});
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

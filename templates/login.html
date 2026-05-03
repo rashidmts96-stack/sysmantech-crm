@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>SYSMANTECH</title>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+	<link href="{{ url_for('static', filename='css/login.css') }}" rel="stylesheet">
+		<script src="{{ url_for('static', filename='js/login.js') }}" defer></script>
+</head>
+
+<body class="login-page">
+	<main class="login-shell container-fluid px-3 px-md-4">
+		<div class="login-frame">
+			<section class="login-brand-panel">
+				<div class="login-brand-copy">
+					<h1>SYSMANTECH</h1>
+					<p class="login-brand-subtitle">Smart Service CRM</p>
+				</div>
+			</section>
+
+			<section class="login-form-panel">
+				<div class="login-form-wrap">
+					<div class="login-mobile-brand" aria-label="SYSMANTECH Smart Service CRM">
+						<div class="login-mobile-brand-title">SYSMANTECH</div>
+						<div class="login-mobile-brand-subtitle">Smart Service CRM</div>
+					</div>
+
+					<div class="login-form-header">
+						<h2>Login</h2>
+						<p>Enter your username, password and branch to continue.</p>
+					</div>
+
+					{% with messages = get_flashed_messages(with_categories=True) %}
+					{% if messages %}
+					<div class="alert alert-{{ messages[0][0] if messages[0][0] != 'message' else 'danger' }} login-flash" role="alert">
+						{{ messages[0][1] }}
+					</div>
+					{% endif %}
+					{% endwith %}
+
+					<form method="POST" class="login-form" autocomplete="on">
+						<input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+						<div class="mb-3">
+							<label for="username" class="form-label">User</label>
+							<input type="text" id="username" name="username" class="form-control" placeholder="Enter username" autocomplete="username" autofocus required>
+						</div>
+
+						<div class="mb-3">
+							<label for="password" class="form-label">Password</label>
+							<input type="password" id="password" name="password" class="form-control" placeholder="Enter password" autocomplete="current-password" required>
+						</div>
+
+						<div class="mb-4">
+							<label for="branchInput" class="form-label">Branch</label>
+							<div class="branch-autocomplete" data-branches='{{ branches|tojson }}'>
+								<input type="text" name="branch" class="form-control" id="branchInput" placeholder="Start typing branch name" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-autocomplete="list" aria-controls="branchSuggestions" aria-expanded="false" required>
+								<div class="branch-suggestions" id="branchSuggestions" role="listbox" aria-label="Matching branches"></div>
+							</div>
+							<div class="login-help">Type branch name. Matching suggestions will appear while typing.</div>
+						</div>
+
+						<button class="btn btn-primary login-btn w-100" type="submit">Login</button>
+					</form>
+
+					<p class="login-footer-text mb-0">If branch access is missing, contact the super admin.</p>
+				</div>
+			</section>
+		</div>
+	</main>
+	{% include "_global_brand_footer.html" %}
+
+</body>
+</html>

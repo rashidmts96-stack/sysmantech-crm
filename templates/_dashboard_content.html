@@ -1,0 +1,522 @@
+{% set month_map = {
+	'01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr',
+	'05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Aug',
+	'09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'
+} %}
+{% set from_label = (chart_from_date[8:10] ~ ' ' ~ month_map.get(chart_from_date[5:7], chart_from_date[5:7])) if chart_from_date and chart_from_date|length >= 10 else 'Start' %}
+{% set to_label = (chart_to_date[8:10] ~ ' ' ~ month_map.get(chart_to_date[5:7], chart_to_date[5:7])) if chart_to_date and chart_to_date|length >= 10 else 'End' %}
+{% set onsite_alert_count = onsite_dashboard_alert_count or 0 %}
+{% set onsite_alert_badge = '99+' if onsite_alert_count > 99 else onsite_alert_count %}
+{% set onsite_alert_label = onsite_dashboard_alert_label or 'onsite call' %}
+
+<div class="dashboard-toolbar">
+	<form method="GET" action="/dashboard" class="dashboard-toolbar-form" id="dashboardToolbarForm">
+		<input type="hidden" name="from_date" value="{{ from_date or '' }}">
+		<input type="hidden" name="to_date" value="{{ to_date or '' }}">
+		<input type="hidden" name="date_field" value="{{ date_field_filter or '' }}">
+		<input type="hidden" name="filter_branch" value="{{ filter_branch or '' }}">
+		<input type="hidden" name="filter_status" value="{{ filter_status or '' }}">
+		<input type="hidden" name="filter_closure" value="{{ filter_closure or '' }}">
+		<input type="hidden" name="filter_engineer" value="{{ filter_engineer or '' }}">
+
+		<div class="toolbar-left">
+			<div class="toolbar-date-range">
+				<div class="toolbar-date-group" role="group" aria-label="Chart date range">
+					<input type="date" name="chart_from_date" value="{{ chart_from_date }}" aria-label="From date">
+					<span class="toolbar-date-separator" aria-hidden="true">&rarr;</span>
+					<input type="date" name="chart_to_date" value="{{ chart_to_date }}" aria-label="To date">
+				</div>
+			</div>
+			<span class="toolbar-date-preview">{{ from_label }} &rarr; {{ to_label }}</span>
+			<div class="toolbar-apply-wrap">
+				<button type="submit" class="toolbar-btn toolbar-btn-apply">Apply</button>
+				<a href="/dashboard?from_date={{ from_date or '' }}&to_date={{ to_date or '' }}&date_field={{ date_field_filter or '' }}&filter_branch={{ filter_branch or '' }}&filter_status={{ filter_status or '' }}&filter_closure={{ filter_closure or '' }}&filter_engineer={{ filter_engineer or '' }}" class="toolbar-btn toolbar-btn-reset" id="dashboardResetCharts">
+					<i class="fas fa-undo"></i> Reset Charts
+				</a>
+			</div>
+		</div>
+
+		<div class="toolbar-right">
+			<a href="/new-job" class="toolbar-btn toolbar-btn-primary toolbar-new-job">
+				<i class="fas fa-plus"></i> New Job
+			</a>
+			<a href="{{ onsite_dashboard_url or '/onsite-calls' }}" class="toolbar-btn toolbar-btn-dropdown toolbar-onsite-btn{% if onsite_alert_count %} toolbar-onsite-btn-alert{% endif %}"{% if onsite_alert_count %} title="{{ onsite_alert_count }} {{ onsite_alert_label }}{% if onsite_alert_count != 1 %}s{% endif %} waiting for attention"{% endif %} data-onsite-toolbar-link>
+				<span class="toolbar-onsite-copy">
+					<span class="toolbar-onsite-title"><i class="fas fa-user-clock"></i> Onsite Calls</span>
+					<span class="toolbar-onsite-subtitle"{% if not onsite_alert_count %} hidden{% endif %}>Immediate attention</span>
+				</span>
+				<span class="toolbar-onsite-badge"{% if not onsite_alert_count %} hidden{% endif %}>{{ onsite_alert_badge }}</span>
+			</a>
+			<div class="dropdown toolbar-actions-wrap toolbar-shortcuts-wrap">
+				<button class="toolbar-btn toolbar-btn-dropdown dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+					<i class="fas fa-layer-group"></i> Action
+				</button>
+				<ul class="dropdown-menu dropdown-menu-end toolbar-actions-menu toolbar-shortcuts-menu">
+					<li><h6 class="dropdown-header">Dashboard Views</h6></li>
+					<li>
+						<button type="button" class="dropdown-item report-option" data-target="callAnalysisSection">
+							<i class="fas fa-chart-pie"></i> Call Summary
+						</button>
+					</li>
+					<li><a class="dropdown-item" href="{{ shortcut_closed_jobs_url }}"><i class="fas fa-check-circle"></i> Closed Jobs</a></li>
+					<li><a class="dropdown-item" href="{{ shortcut_all_jobs_url }}"><i class="fas fa-list"></i> View All Jobs</a></li>
+					<li><hr class="dropdown-divider"></li>
+					<li><h6 class="dropdown-header">Operations</h6></li>
+					<li><a class="dropdown-item" href="/quotations"><i class="fas fa-file-invoice"></i> Quotations</a></li>
+					<li><a class="dropdown-item" href="/cashflow"><i class="fas fa-money-bill-wave"></i> Cashflow</a></li>
+					<li>
+						<a class="dropdown-item toolbar-onsite-menu-item{% if onsite_alert_count %} toolbar-onsite-menu-item-alert{% endif %}" href="{{ onsite_dashboard_url or '/onsite-calls' }}" data-onsite-toolbar-menu-link>
+							<span class="toolbar-onsite-menu-label"><i class="fas fa-user-clock"></i> Onsite Calls</span>
+							<span class="toolbar-onsite-menu-badge"{% if not onsite_alert_count %} hidden{% endif %}>{{ onsite_alert_badge }}</span>
+						</a>
+					</li>
+					<li><a class="dropdown-item" href="/onsite-calls/new"><i class="fas fa-tools"></i> New Onsite Call</a></li>
+					{% if session.role in ['super_admin', 'admin'] %}
+					<li><hr class="dropdown-divider"></li>
+					<li><h6 class="dropdown-header">Reports</h6></li>
+					<li>
+						<button type="button" class="dropdown-item report-option" data-target="branchWiseReport">
+							<i class="fas fa-sitemap"></i> Branch Summary
+						</button>
+					</li>
+					<li>
+						<button type="button" class="dropdown-item report-option" data-target="ageingReport">
+							<i class="fas fa-history"></i> Ageing View
+						</button>
+					</li>
+					<li><a class="dropdown-item" href="/used-spares"><i class="fas fa-boxes"></i> Spares Log</a></li>
+					{% elif session.role in ['coordinator', 'engineer'] %}
+					<li><hr class="dropdown-divider"></li>
+					<li><h6 class="dropdown-header">Reports</h6></li>
+					<li>
+						<button type="button" class="dropdown-item report-option" data-target="branchReport">
+							<i class="fas fa-chart-line"></i> Branch Summary
+						</button>
+					</li>
+					<li>
+						<button type="button" class="dropdown-item report-option" data-target="ageingReport">
+							<i class="fas fa-history"></i> Ageing View
+						</button>
+					</li>
+					<li><a class="dropdown-item" href="/used-spares"><i class="fas fa-boxes"></i> Spares Log</a></li>
+					{% endif %}
+				</ul>
+			</div>
+		</div>
+	</form>
+</div>
+
+{% if from_date or to_date or filter_branch or filter_status or filter_closure or filter_engineer or (can_switch_dashboard_branch and selected_dashboard_branch != 'ALL') %}
+<div class="toolbar-active-filters">
+	<a href="/dashboard" class="badge bg-info">Active Filters
+		{% if can_switch_dashboard_branch and selected_dashboard_branch != 'ALL' %} • Scope: {{ scope_label }}{% endif %}
+		{% if from_date %} • From: {{ from_date }}{% endif %}
+		{% if to_date %} • To: {{ to_date }}{% endif %}
+		{% if filter_branch %} • Branch: {{ filter_branch }}{% endif %}
+		{% if filter_status %} • Status: {{ filter_status }}{% endif %}
+	</a>
+</div>
+{% endif %}
+
+<section class="kpi-section">
+	<div class="kpi-grid">
+		<div class="kpi-card">
+			<div class="kpi-icon total">
+				<i class="fas fa-briefcase"></i>
+			</div>
+			<div class="kpi-label">Total Job Cards</div>
+			<div class="kpi-value">{{ total_cases }}</div>
+			<a href="{{ total_cases_url }}" class="kpi-action">View →</a>
+		</div>
+
+		<div class="kpi-card">
+			<div class="kpi-icon active">
+				<i class="fas fa-spinner"></i>
+			</div>
+			<div class="kpi-label">Pending Jobs</div>
+			<div class="kpi-value">{{ pending_jobs }}</div>
+			<a href="{{ pending_jobs_url }}" class="kpi-action">View →</a>
+		</div>
+
+		<div class="kpi-card{% if open_cases_over_2_days %} kpi-card-warning{% endif %}">
+			<div class="kpi-icon open">
+				<i class="fas fa-exclamation-circle"></i>
+			</div>
+			<div class="kpi-label">Open Jobs</div>
+			<div class="kpi-value">{{ open_cases }}</div>
+			<a href="{{ open_cases_url }}" class="kpi-action">View →</a>
+			{% if open_cases_over_2_days %}
+			<div class="kpi-warning-pill" title="{{ open_cases_over_2_days }} open jobs older than 2 days">
+				<i class="fas fa-triangle-exclamation"></i>
+				<span class="kpi-warning-message">{{ open_cases_over_2_days }} Cases above 2 days, Take Immediate Action</span>
+			</div>
+			{% endif %}
+		</div>
+
+		<div class="kpi-card">
+			<div class="kpi-icon closed">
+				<i class="fas fa-user-clock"></i>
+			</div>
+			<div class="kpi-label">Completed Jobs</div>
+			<div class="kpi-value">{{ completed_jobs }}</div>
+			<a href="{{ completed_jobs_url }}" class="kpi-action">View →</a>
+		</div>
+
+		{% if active_transfer_jobs %}
+		<div class="kpi-card">
+			<div class="kpi-icon closed">
+				<i class="fas fa-arrow-right-arrow-left"></i>
+			</div>
+			<div class="kpi-label">Transfer Jobs</div>
+			<div class="kpi-value">{{ active_transfer_jobs }}</div>
+			<a href="{{ active_transfer_jobs_url }}" class="kpi-action">View →</a>
+		</div>
+		{% endif %}
+
+		<div class="kpi-card">
+			<div class="kpi-icon active">
+				<i class="fas fa-file-invoice"></i>
+			</div>
+			<div class="kpi-label">Pending Spare Billing</div>
+			<div class="kpi-value">{{ pending_spare_billing }}</div>
+			<a href="{{ pending_spare_billing_url }}" class="kpi-action">View →</a>
+		</div>
+	</div>
+</section>
+
+<div class="charts-section-title">Dashboard Insights</div>
+
+<div class="chart-grid">
+	<div class="chart-card">
+		<div class="chart-card-title">
+			<a href="{{ closure_header_url }}" class="chart-card-heading-link" aria-label="Open closed jobs view">
+				<span>Closure Outcome</span>
+				<i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
+			</a>
+			<div>
+				<a href="{{ closed_success_url }}" class="badge text-bg-success">Success: {{ closed_success_count }}</a>
+				<a href="{{ closed_failed_url }}" class="badge text-bg-danger">Failed: {{ closed_failed_count }}</a>
+			</div>
+		</div>
+		<div class="chart-canvas-wrap"><canvas id="closedResultChart"></canvas></div>
+	</div>
+
+	<div class="chart-card">
+		<div class="chart-card-title">
+			<a href="{{ syscare_header_url }}" class="chart-card-heading-link" aria-label="Open SYSCARE dashboard">
+				<span>SYSCARE Progress</span>
+				<i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
+			</a>
+			<span class="badge text-bg-secondary">Target: {{ syscare_target }}</span>
+		</div>
+		<div class="chart-canvas-wrap"><canvas id="syscarePlanChart"></canvas></div>
+		<div class="revenue-summary">
+			<div class="revenue-pill target">
+				<strong>Target</strong>
+				{{ syscare_target }}
+			</div>
+			<div class="revenue-pill achieved">
+				<strong>Achieved</strong>
+				{{ syscare_achieved }}
+			</div>
+			<div class="revenue-pill balance">
+				<strong>Balance</strong>
+				{{ syscare_remaining }}
+			</div>
+			<div class="revenue-pill percent">
+				<strong>% Complete</strong>
+				{{ '%.1f'|format(syscare_percentage or 0) }}%
+			</div>
+		</div>
+		<div class="alert-banner {{ syscare_advice_class }} mb-0">
+			{{ syscare_advice }}
+		</div>
+	</div>
+
+	<div class="chart-card">
+		<div class="chart-card-title">
+			<a href="{{ revenue_header_url }}" class="chart-card-heading-link" aria-label="Open revenue dashboard">
+				<span>Revenue Mix</span>
+				<i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
+			</a>
+			<span class="badge text-bg-secondary">{{ revenue_target_branch }}</span>
+		</div>
+		<div class="chart-canvas-wrap"><canvas id="revenueSplitChart"></canvas></div>
+		<div class="revenue-summary">
+			<div class="revenue-pill target">
+				<strong>Target</strong>
+				{{ '%.0f'|format(total_target or 0) }}
+			</div>
+			<div class="revenue-pill achieved">
+				<strong>Achieved</strong>
+				{{ '%.0f'|format(achieved_total or 0) }}
+			</div>
+			<div class="revenue-pill balance">
+				<strong>Balance</strong>
+				{{ '%.0f'|format(total_target_remaining or 0) }}
+			</div>
+			<div class="revenue-pill percent">
+				<strong>% Complete</strong>
+				{{ '%.1f'|format(achieved_percentage or 0) }}%
+			</div>
+		</div>
+		<div class="alert-banner {{ revenue_advice_class }} mb-0">
+			{{ revenue_advice }}
+		</div>
+	</div>
+
+	<div class="chart-card">
+		<div class="chart-card-title">
+			<a href="{{ cashflow_header_url }}" class="chart-card-heading-link" aria-label="Open cashflow dashboard">
+				<span>Cashflow Today</span>
+				<i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
+			</a>
+			<span class="badge text-bg-secondary">{{ scope_label }}</span>
+		</div>
+		<div class="revenue-summary">
+			<div class="revenue-pill achieved">
+				<strong>Cash</strong>
+				{{ '%.0f'|format(cashflow_today_cash or 0) }}
+			</div>
+			<div class="revenue-pill target">
+				<strong>Card</strong>
+				{{ '%.0f'|format(cashflow_today_card or 0) }}
+			</div>
+			<div class="revenue-pill percent">
+				<strong>UPI</strong>
+				{{ '%.0f'|format(cashflow_today_upi or 0) }}
+			</div>
+			<div class="revenue-pill balance">
+				<strong>Total</strong>
+				{{ '%.0f'|format(cashflow_today_total or 0) }}
+			</div>
+		</div>
+		<div class="alert-banner secondary mb-0 mt-3">
+			{% if cashflow_has_data %}
+			Today {{ cashflow_today_date }} | Current day service charges only. Cash deposit and cash request are tracked separately inside Cashflow.
+			{% else %}
+			No cashflow entry reported for today.
+			{% endif %}
+		</div>
+		{% if session.role in ['super_admin', 'admin'] and cashflow_pending_transfer_count %}
+		<div class="alert-banner danger mb-0 mt-3">
+			<strong>{{ cashflow_pending_transfer_count }} transfer review pending.</strong>
+			Pending amount {{ '%.0f'|format(cashflow_pending_transfers or 0) }}.
+			<a href="{{ cashflow_review_url }}" class="badge text-bg-danger ms-2">Open Transfer Review</a>
+		</div>
+		{% endif %}
+	</div>
+</div>
+
+{% if session.role in ['super_admin', 'admin'] %}
+<div class="report-card-section d-none" id="branchWiseReport">
+	<div class="report-card-header">
+		<h5><i class="fas fa-sitemap"></i> Branch-Wise Job Report</h5>
+		<button type="button" class="report-card-close" data-close-section="branchWiseReport">
+			<i class="fas fa-times"></i> Close
+		</button>
+	</div>
+	<div class="table-responsive ageing-report-wrap">
+		<table class="table report-table-centered ageing-report-table">
+			<thead>
+				<tr>
+					<th>Service Location</th>
+					{% for status_name in status_columns %}
+					<th>{{ status_name }}</th>
+					{% endfor %}
+					<th>Total</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for row in branch_wise_rows %}
+				<tr>
+					<td><strong>{{ row.branch_name }}</strong></td>
+					{% for status_name in status_columns %}
+					{% set value = row.counts[status_name] %}
+					<td>
+						{% if value > 0 %}
+						<a href="{{ url_for('jobs', view='active', branch_name=row.branch_name, status=status_name) }}">{{ value }}</a>
+						{% else %}
+						-
+						{% endif %}
+					</td>
+					{% endfor %}
+					<td><strong>
+						{% if row.total > 0 %}
+						<a href="{{ url_for('jobs', view='active', branch_name=row.branch_name) }}">{{ row.total }}</a>
+						{% else %}
+						0
+						{% endif %}
+					</strong></td>
+				</tr>
+				{% endfor %}
+				<tr class="table-secondary">
+					<td><strong>Total</strong></td>
+					{% for status_name in status_columns %}
+					{% set t = branch_wise_totals[status_name] %}
+					<td><strong>
+						{% if t > 0 %}
+							{% if selected_jobs_branch %}
+							<a href="{{ url_for('jobs', view='active', branch_name=selected_jobs_branch, status=status_name) }}">{{ t }}</a>
+							{% else %}
+							<a href="{{ url_for('jobs', view='active', status=status_name) }}">{{ t }}</a>
+							{% endif %}
+						{% else %}
+						0
+						{% endif %}
+					</strong></td>
+					{% endfor %}
+					<td><strong>
+						{% if selected_jobs_branch %}
+						<a href="{{ url_for('jobs', view='active', branch_name=selected_jobs_branch) }}">{{ branch_wise_grand_total }}</a>
+						{% else %}
+						<a href="{{ url_for('jobs', view='active') }}">{{ branch_wise_grand_total }}</a>
+						{% endif %}
+					</strong></td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+</div>
+{% endif %}
+
+{% if session.role in ['coordinator', 'engineer'] %}
+<div class="report-card-section d-none" id="branchReport">
+	<div class="report-card-header">
+		<h5><i class="fas fa-chart-line"></i> Branch Report ({{ scope_label }})</h5>
+		<button type="button" class="report-card-close" data-close-section="branchReport">
+			<i class="fas fa-times"></i> Close
+		</button>
+	</div>
+	<div class="table-responsive">
+		<table class="table report-table-centered">
+			<thead>
+				<tr>
+					{% for status_name in status_columns %}
+					<th>{{ status_name }}</th>
+					{% endfor %}
+					<th>Total</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					{% for status_name in status_columns %}
+					{% set value = branch_report_counts[status_name] %}
+					<td>
+						{% if value > 0 %}
+						<a href="{{ url_for('jobs', view='active', branch_name=selected_jobs_branch, status=status_name) }}">{{ value }}</a>
+						{% else %}
+						-
+						{% endif %}
+					</td>
+					{% endfor %}
+					<td><strong><a href="{{ url_for('jobs', view='active', branch_name=selected_jobs_branch) }}">{{ branch_report_total }}</a></strong></td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+</div>
+{% endif %}
+
+{% if session.role in ['super_admin', 'admin', 'coordinator', 'engineer'] %}
+<div class="report-card-section d-none" id="ageingReport">
+	<div class="report-card-header">
+		<h5><i class="fas fa-history"></i> Ageing Analysis</h5>
+		<button type="button" class="report-card-close" data-close-section="ageingReport">
+			<i class="fas fa-times"></i> Close
+		</button>
+	</div>
+	<div class="table-responsive ageing-report-wrap">
+		<table class="table report-table-centered ageing-report-table">
+			<thead>
+				<tr>
+					<th style="text-align: center !important;">Job Card Status</th>
+					{% for bucket in age_buckets %}
+					<th>{{ bucket }} Days</th>
+					{% endfor %}
+					<th>Total</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for row in ageing_rows %}
+				<tr>
+					<td style="text-align: center !important;"><strong style="display: block; text-align: center !important;">{{ row.status }}</strong></td>
+					{% for bucket in age_buckets %}
+					{% set value = row.counts[bucket] %}
+					<td>
+						{% if value > 0 %}
+							{% if selected_jobs_branch %}
+							<a href="{{ url_for('jobs', view='active', branch_name=selected_jobs_branch, status=row.status, age_bucket=bucket) }}">{{ value }}</a>
+							{% else %}
+							<a href="{{ url_for('jobs', view='active', status=row.status, age_bucket=bucket) }}">{{ value }}</a>
+							{% endif %}
+						{% else %}
+						-
+						{% endif %}
+					</td>
+					{% endfor %}
+					<td><strong>
+						{% if row.total > 0 %}
+							{% if selected_jobs_branch %}
+							<a href="{{ url_for('jobs', view='active', branch_name=selected_jobs_branch, status=row.status) }}">{{ row.total }}</a>
+							{% else %}
+							<a href="{{ url_for('jobs', view='active', status=row.status) }}">{{ row.total }}</a>
+							{% endif %}
+						{% else %}
+						0
+						{% endif %}
+					</strong></td>
+				</tr>
+				{% endfor %}
+				<tr class="table-secondary">
+					<td style="text-align: center !important;"><strong style="display: block; text-align: center !important;">Total</strong></td>
+					{% for bucket in age_buckets %}
+					{% set t = ageing_totals_by_bucket[bucket] %}
+					<td><strong>
+						{% if t > 0 %}
+							{% if selected_jobs_branch %}
+							<a href="{{ url_for('jobs', view='active', branch_name=selected_jobs_branch, age_bucket=bucket) }}">{{ t }}</a>
+							{% else %}
+							<a href="{{ url_for('jobs', view='active', age_bucket=bucket) }}">{{ t }}</a>
+							{% endif %}
+						{% else %}
+						0
+						{% endif %}
+					</strong></td>
+					{% endfor %}
+					<td><strong>
+						{% if selected_jobs_branch %}
+						<a href="{{ url_for('jobs', view='active', branch_name=selected_jobs_branch) }}">{{ ageing_grand_total }}</a>
+						{% else %}
+						<a href="{{ url_for('jobs', view='active') }}">{{ ageing_grand_total }}</a>
+						{% endif %}
+					</strong></td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+</div>
+{% endif %}
+
+<div class="report-card-section d-none" id="callAnalysisSection">
+	<div class="report-card-header">
+		<h5><i class="fas fa-chart-pie"></i> Call Analysis</h5>
+		<button type="button" class="report-card-close" data-close-section="callAnalysisSection">
+			<i class="fas fa-times"></i> Close
+		</button>
+	</div>
+
+	<div class="chart-grid">
+		<div class="chart-card">
+			<div class="chart-card-title">New Calls by Device</div>
+			<div class="chart-canvas-wrap"><canvas id="newCallsChart"></canvas></div>
+		</div>
+
+		<div class="chart-card">
+			<div class="chart-card-title">Call Types Distribution</div>
+			<div class="chart-canvas-wrap"><canvas id="callTypeChart"></canvas></div>
+		</div>
+	</div>
+</div>
+
+<script id="dashboardPageData" type="application/json">{{ dashboard_page_data|tojson }}</script>

@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SYSCARE Membership Certificate - {{ entry.syscare_id }}</title>
+<link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+<style>
+  :root {
+    --rule: 0.45mm solid #222;
+    --frame-rule: 2mm solid #111827;
+    --page-rule: 0 solid transparent;
+    --customer-gap: 20mm;
+    --device-gap: 25mm;
+    --service-gap: 25mm;
+    --terms-gap: 20mm;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: 12px 0;
+    background: #e9edf2;
+    color: #1f2937;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  .toolbar {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px;
+    background: #111827;
+  }
+
+  .toolbar a,
+  .toolbar button {
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    background: #1d4ed8;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+  }
+
+  .toolbar a.secondary {
+    background: #475569;
+  }
+
+  .toolbar a.whatsapp-btn {
+    background: #25d366;
+  }
+
+  .certificate {
+    width: min(190mm, calc(100% - 16px));
+    min-height: 277mm;
+    margin: 8px auto;
+    background: #fff;
+    border: var(--page-rule);
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.10);
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .certificate-frame {
+    border: var(--frame-rule);
+    padding: 8mm 9mm 6mm;
+    display: flex;
+    flex-direction: column;
+    min-height: 277mm;
+  }
+
+  .logo {
+    width: 104px;
+    display: block;
+    margin: 0 auto 4px;
+  }
+
+  .title {
+    margin: 2px 0 0;
+    text-align: center;
+    font-size: 19px;
+    font-weight: 800;
+    text-decoration: underline;
+  }
+
+  .subtitle {
+    margin: 5px 0 4px;
+    text-align: center;
+    font-size: 11.8px;
+    line-height: 1.24;
+    font-style: italic;
+    font-weight: 700;
+    color: #334155;
+  }
+
+  .section-label {
+    margin: 0 0 3px;
+    font-size: 13.8px;
+    font-weight: 800;
+    text-decoration: underline;
+  }
+
+  .certificate-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  .certificate-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .customer-block {
+    margin-top: var(--customer-gap);
+  }
+
+  .certificate-lower {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    justify-content: flex-start;
+    gap: 2mm;
+    margin-top: var(--terms-gap);
+  }
+
+  .customer-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.95fr);
+    gap: 8px 18px;
+    margin-bottom: 0;
+    align-items: stretch;
+  }
+
+  .customer-primary,
+  .customer-secondary {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .customer-primary {
+    gap: 4px;
+  }
+
+  .customer-secondary {
+    justify-content: space-between;
+    min-height: 100%;
+    text-align: left;
+  }
+
+  .field {
+    font-size: 12.2px;
+    line-height: 1.32;
+  }
+
+  .field strong {
+    font-weight: 800;
+  }
+
+  .field-id {
+    font-size: 12.9px;
+    color: #ef4444;
+    font-weight: 800;
+  }
+
+  .field-valid {
+    font-size: 12.1px;
+    font-weight: 800;
+  }
+
+  .wide {
+    grid-column: 1 / -1;
+  }
+
+  .device-title,
+  .service-title,
+  .terms-title {
+    margin-top: 0;
+    margin-bottom: 3px;
+    font-size: 13.4px;
+    font-weight: 800;
+    text-decoration: underline;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .device-table th,
+  .device-table td,
+  .service-table td {
+    border: var(--rule);
+    padding: 5px 6px;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .device-table th {
+    font-size: 11.8px;
+    text-decoration: underline;
+    font-weight: 800;
+  }
+
+  .device-table td {
+    font-size: 11.9px;
+    font-weight: 700;
+  }
+
+  .device-table {
+    margin: 0;
+    table-layout: fixed;
+  }
+
+  .device-block {
+    margin-top: var(--device-gap);
+    width: 100%;
+  }
+
+  .service-table {
+    margin: 0;
+    table-layout: fixed;
+  }
+
+  .service-table td {
+    width: 50%;
+    font-size: 11.2px;
+    font-style: italic;
+    font-weight: 800;
+    position: relative;
+    padding: 5px 8px 5px 24px;
+    vertical-align: top;
+  }
+
+  .service-table td::before {
+    content: ">";
+    position: absolute;
+    left: 8px;
+    top: 4px;
+    width: 8px;
+    text-align: center;
+    font-style: normal;
+    font-weight: 700;
+  }
+
+  .service-block {
+    margin-top: var(--service-gap);
+    width: 100%;
+  }
+
+  .terms-block {
+    width: 100%;
+  }
+
+  .terms-list {
+    margin: 0;
+    padding-left: 0;
+    list-style: none;
+  }
+
+  .terms-list li {
+    position: relative;
+    padding-left: 16px;
+    margin: 1px 0;
+    font-size: 11.1px;
+    line-height: 1.25;
+    font-style: italic;
+    font-weight: 800;
+  }
+
+  .terms-list li::before {
+    content: ">";
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-style: normal;
+  }
+
+  .signature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    margin: 0;
+  }
+
+  .signature-box {
+    min-height: 54px;
+    border: var(--rule);
+    padding: 5px 6px;
+    font-size: 10.8px;
+  }
+
+  .signature-box + .signature-box {
+    border-left: 0;
+  }
+
+  .signature-label {
+    font-style: italic;
+    font-size: 11.8px;
+    color: #334155;
+    min-height: 20px;
+  }
+
+  .signature-date {
+    margin-top: 8px;
+    font-size: 10.6px;
+    font-weight: 800;
+  }
+
+  .bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 0;
+    align-items: start;
+  }
+
+  .support-box {
+    text-align: center;
+  }
+
+  .support-box h4 {
+    margin: 0 0 3px;
+    font-size: 10.4px;
+    font-style: normal;
+    font-weight: 800;
+  }
+
+  .qr-image {
+    width: 50px;
+    height: 50px;
+    display: block;
+    margin: 0 auto 3px;
+    border: var(--rule);
+    padding: 2px;
+    background: #fff;
+  }
+
+  .support-note {
+    font-size: 9.2px;
+    color: #475569;
+    line-height: 1.18;
+    word-break: break-word;
+  }
+
+  .meta-line {
+    margin-top: 0;
+    text-align: right;
+    font-size: 9.4px;
+    color: #475569;
+  }
+
+  .footer-branding {
+    border-top: var(--rule);
+    padding-top: 3.5mm;
+    display: flex;
+    flex-direction: column;
+    gap: 2mm;
+    margin-top: auto;
+    color: #111827;
+  }
+
+  .footer-branding-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8mm;
+    align-items: end;
+  }
+
+  .footer-branding-left,
+  .footer-branding-right {
+    font-size: 9.8px;
+    line-height: 1.28;
+  }
+
+  .footer-branding-left strong,
+  .footer-branding-right strong {
+    display: block;
+    font-size: 10.4px;
+    font-weight: 800;
+  }
+
+  .footer-branding-right {
+    text-align: right;
+  }
+
+  .footer-branding-center {
+    text-align: center;
+    font-size: 10.2px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+  }
+
+  .certificate-frame,
+  .certificate-main,
+  .certificate-lower,
+  .device-block,
+  .service-block,
+  .terms-block,
+  .signature-grid,
+  .bottom-grid,
+  .footer-branding {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  @media print {
+    :root {
+      --customer-gap: 14mm;
+      --device-gap: 18mm;
+      --service-gap: 18mm;
+      --terms-gap: 10mm;
+    }
+
+    html,
+    body {
+      width: auto;
+      height: auto;
+      background: #fff;
+    }
+
+    body {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .toolbar,
+    .toolbar * {
+      display: none !important;
+    }
+
+    .certificate {
+      width: 210mm;
+      height: 297mm;
+      min-height: 297mm;
+      margin: 0;
+      border: var(--page-rule);
+      box-shadow: none;
+      padding: 8mm;
+    }
+
+    .certificate-frame {
+      min-height: 100%;
+      height: 100%;
+      padding: 6mm 7mm 4.5mm;
+    }
+
+    .logo {
+      width: 96px;
+      margin-bottom: 4px;
+    }
+
+    .title {
+      font-size: 17px;
+    }
+
+    .subtitle {
+      margin: 4px 0 4px;
+      font-size: 10.5px;
+    }
+
+    .section-label,
+    .device-title,
+    .service-title,
+    .terms-title {
+      font-size: 12.4px;
+      margin-bottom: 3px;
+    }
+
+    .field {
+      font-size: 11.2px;
+      line-height: 1.22;
+    }
+
+    .field-id {
+      font-size: 12px;
+    }
+
+    .field-valid {
+      font-size: 11.2px;
+    }
+
+    .customer-grid {
+      gap: 4px 12px;
+    }
+
+    .customer-block {
+      margin-top: var(--customer-gap);
+    }
+
+    .device-block {
+      margin-top: var(--device-gap);
+    }
+
+    .service-block {
+      margin-top: var(--service-gap);
+    }
+
+    .certificate-lower {
+      gap: 1.2mm;
+      margin-top: var(--terms-gap);
+    }
+
+    .bottom-grid {
+      gap: 4px;
+    }
+
+    .device-table th,
+    .device-table td,
+    .service-table td {
+      padding: 3.5px 5px;
+    }
+
+    .service-table td {
+      font-size: 10.4px;
+      padding-left: 20px;
+    }
+
+    .terms-list li {
+      font-size: 10.3px;
+      margin: 1px 0;
+    }
+
+    .signature-box {
+      min-height: 48px;
+      font-size: 10.2px;
+    }
+
+    .signature-label {
+      font-size: 11.1px;
+      min-height: 16px;
+    }
+
+    .signature-date {
+      margin-top: 6px;
+      font-size: 10px;
+    }
+
+    .qr-image {
+      width: 42px;
+      height: 42px;
+    }
+
+    .footer-branding {
+      padding-top: 2mm;
+      gap: 1.2mm;
+    }
+
+    .footer-branding-row {
+      gap: 5mm;
+    }
+
+    .support-box h4,
+    .support-note,
+    .meta-line,
+    .footer-branding-left,
+    .footer-branding-right,
+    .footer-branding-center {
+      font-size: 9px;
+    }
+
+    .footer-branding-left strong,
+    .footer-branding-right strong {
+      font-size: 9.6px;
+    }
+  }
+
+  @media screen and (max-width: 720px) {
+    .certificate-frame {
+      padding: 18px;
+    }
+
+    .customer-grid,
+    .signature-grid,
+    .bottom-grid,
+    .footer-branding-row {
+      grid-template-columns: 1fr;
+    }
+
+    .certificate-lower {
+      margin-top: 4mm;
+    }
+
+    .signature-box + .signature-box {
+      border-left: var(--rule);
+      border-top: 0;
+    }
+
+    .footer-branding-right,
+    .footer-branding-center {
+      text-align: left;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <a href="/syscare" class="secondary">Back to SYSCARE</a>
+    <button type="button" class="secondary" onclick="window.print()">Print</button>
+    <a href="{{ build_whatsapp_chat_url(entry.contact_number, 'Document: SYSCARE Certificate\nSYSCARE ID: ' ~ (entry.syscare_id or entry.id) ~ '\nCustomer: ' ~ (entry.customer_name or 'Customer') ~ '\nMobile: ' ~ (entry.contact_number or '-')) }}" class="whatsapp-btn" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+    {% if can_edit %}
+    <a href="/syscare-edit/{{ entry.id }}" class="secondary">Edit</a>
+    {% endif %}
+    {% include "_global_user_menu.html" %}
+  </div>
+
+  <div class="certificate">
+    <div class="certificate-frame">
+      <img class="logo" src="{{ url_for('static', filename='cert_assets/syscare_logo.png') }}" alt="SYSCARE Logo">
+
+      <div class="title">SYSCARE Membership Certificate</div>
+      <div class="subtitle">Thank you for choosing SYSCARE. Enjoy reliable, worry-free support and exclusive benefits.</div>
+
+      <div class="certificate-body">
+        <div class="certificate-main">
+          <div class="customer-block">
+            <div class="section-label">Customer Information</div>
+            <div class="customer-grid">
+              <div class="customer-primary">
+                <div class="field"><strong>Name:</strong> {{ entry.customer_name or '-' }}</div>
+                <div class="field"><strong>Contact Number:</strong> {{ entry.contact_number or '-' }}</div>
+                <div class="field"><strong>Address:</strong> {{ entry.address or '-' }}</div>
+                <div class="field"><strong>Email ID:</strong> {{ entry.mail_id or '-' }}</div>
+                <div class="field"><strong>Branch:</strong> {{ entry.branch_name or '-' }}</div>
+              </div>
+              <div class="customer-secondary">
+                <div class="field field-id"><strong>SYSCARE ID:</strong> {{ entry.syscare_id or '-' }}</div>
+                <div class="field field-valid"><strong>Service Valid Till:</strong> {{ entry.expiry_date_display or '-' }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="device-block">
+            <div class="device-title">Device Details</div>
+            <table class="device-table">
+              <tr>
+                <th>Product Model:</th>
+                <th>Serial Number:</th>
+              </tr>
+              <tr>
+                <td>{{ entry.product_model or '-' }}</td>
+                <td>{{ entry.serial_number or '-' }}</td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="service-block">
+            <div class="service-title">Scope of Service</div>
+            <table class="service-table">
+              <tr>
+                <td>Free Thermal Paste Replacement with Dust Cleaning - 2 Times Per Year</td>
+                <td>Special Discounts on Laptop & Printer Purchases</td>
+              </tr>
+              <tr>
+                <td>Up to 40% Discount on Spare Replacement</td>
+                <td>All-Kerala Onsite Service Support at Best Price</td>
+              </tr>
+              <tr>
+                <td>Unlimited Remote Support</td>
+                <td>Free Software Installation - No Service Charges</td>
+              </tr>
+              <tr>
+                <td>30+ Service Centres Across Kerala</td>
+                <td>Priority Support for SYSCARE Members</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="certificate-lower">
+          <div class="terms-block">
+            <div class="terms-title">Terms & Conditions</div>
+            <ul class="terms-list">
+              <li>SYSCARE services are available for carry-in customers only</li>
+              <li>Spare replacement cost is not included in the plan</li>
+              <li>One SYSCARE plan is valid for only one device</li>
+              <li>Each device has a unique, non-transferable SYSCARE ID</li>
+            </ul>
+          </div>
+
+          <div class="signature-grid">
+            <div class="signature-box">
+              <div class="signature-label">For SYSMANTECH</div>
+              <div class="signature-date">Date: {{ entry.record_date_display or '-' }}</div>
+            </div>
+            <div class="signature-box">
+              <div class="signature-label">For Customer<br>Name & Signature</div>
+            </div>
+          </div>
+
+          <div class="bottom-grid">
+            <div class="support-box">
+              <h4>Scan to Book Complaint</h4>
+              <img class="qr-image" src="{{ book_complaint_qr }}" alt="Book complaint QR">
+              <div class="support-note">{{ book_complaint_url }}</div>
+            </div>
+            <div class="support-box">
+              <h4>Find Nearest Store</h4>
+              <img class="qr-image" src="{{ store_locator_qr }}" alt="Store locator QR">
+              <div class="support-note">{{ store_locator_url }}</div>
+            </div>
+          </div>
+
+          <div class="meta-line">Plan Amount: {{ '%.2f'|format(entry.amount or 0) }}</div>
+
+          <div class="footer-branding">
+            <div class="footer-branding-row">
+              <div class="footer-branding-left">
+                <strong>Powered by SYSMANTECH</strong>
+                <div>Trusted Across Kerala</div>
+              </div>
+              <div class="footer-branding-right">
+                <strong>Phone: +91 90728 58802</strong>
+                <div>Email: support@sysmantech.net</div>
+                <div>Website: www.sysmantech.online</div>
+              </div>
+            </div>
+            <div class="footer-branding-center">SYSCARE - Reliable Support, Anytime Anywhere</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

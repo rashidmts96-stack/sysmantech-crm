@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Onsite Call #{{ detail.call.id }} | SYSCARE CRM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/onsite-calls.css', v='20260411-leadmode') }}">
+</head>
+<body class="onsite-page">
+    <main class="onsite-shell">
+        {% include "_global_user_menu.html" %}
+
+        <section class="onsite-hero">
+            <span class="onsite-pill">Call #{{ detail.call.id }}</span>
+            <h1>{{ detail.call.customer_name }}</h1>
+            <p>{{ detail.call.complaint_description }}</p>
+            <div class="onsite-hero-actions">
+                <span class="onsite-badge {{ detail.call.type_badge_class }}">{{ detail.call.call_type }}</span>
+                <span class="onsite-badge {{ detail.call.status_badge_class }}">{{ detail.call.status }}</span>
+                {% if detail.call.priority %}
+                <span class="onsite-badge {{ detail.call.priority_badge_class }}">{{ detail.call.priority }}</span>
+                {% endif %}
+                {% if detail.call.phone_call_url %}
+                <a class="onsite-btn" href="{{ detail.call.phone_call_url }}">Call Customer</a>
+                {% endif %}
+                <a class="onsite-btn onsite-btn-secondary" href="/onsite-calls">Back to Dashboard</a>
+            </div>
+        </section>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <section class="onsite-flash-stack">
+            {% for category, message in messages %}
+            <div class="onsite-flash onsite-flash-{{ 'danger' if category == 'error' else category }}">{{ message }}</div>
+            {% endfor %}
+        </section>
+        {% endif %}
+        {% endwith %}
+
+        <section class="onsite-summary-grid">
+            <article class="onsite-panel">
+                <div class="onsite-section-header">
+                    <div>
+                        <h2 class="onsite-section-title">Call Summary</h2>
+                        <p class="onsite-section-subtitle">Primary customer and issue details.</p>
+                    </div>
+                </div>
+                <div class="onsite-detail-grid">
+                    <div>
+                        <p class="onsite-muted">Phone</p>
+                        <strong>{{ detail.call.phone }}</strong>
+                    </div>
+                    <div>
+                        <p class="onsite-muted">Location</p>
+                        <strong>{{ ((detail.call.location + ', ') if detail.call.location else '') ~ detail.call.district }}</strong>
+                    </div>
+                    <div>
+                        <p class="onsite-muted">Entry Type</p>
+                        <span class="onsite-badge {{ detail.call.type_badge_class }}">{{ detail.call.call_type }}</span>
+                    </div>
+                    <div>
+                        <p class="onsite-muted">Complaint Type</p>
+                        <strong>{{ detail.call.complaint_type }}</strong>
+                    </div>
+                    {% if detail.call.is_lead %}
+                    <div>
+                        <p class="onsite-muted">Lead Source</p>
+                        <strong>{{ detail.call.lead_source or 'Not provided' }}</strong>
+                    </div>
+                    {% else %}
+                    <div>
+                        <p class="onsite-muted">Service Type</p>
+                        <strong>{{ detail.call.preferred_service }}</strong>
+                    </div>
+                    <div>
+                        <p class="onsite-muted">Preferred Time</p>
+                        <strong>{{ detail.call.preferred_datetime_display }}</strong>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <p class="onsite-muted">Device Model</p>
+                        <strong>{{ detail.call.device_model or 'Not provided' }}</strong>
+                    </div>
+                    <div>
+                        <p class="onsite-muted">Assigned Branch</p>
+                        <strong>{{ detail.call.assigned_branch_name or 'Unassigned' }}</strong>
+                    </div>
+                    <div>
+                        <p class="onsite-muted">Assigned Engineer</p>
+                        <strong>{{ detail.call.assigned_engineer_name or 'Unassigned' }}</strong>
+                    </div>
+                    <div>
+                        <p class="onsite-muted">Created By</p>
+                        <strong>{{ detail.call.created_by or detail.call.source }}</strong>
+                    </div>
+                    <div>
+                        <p class="onsite-muted">Created / Updated</p>
+                        <strong>{{ detail.call.created_at_display }} / {{ detail.call.updated_at_display }}</strong>
+                    </div>
+                </div>
+            </article>
+
+            {% if detail.closure %}
+            <article class="onsite-panel onsite-closure-summary">
+                <div class="onsite-section-header">
+                    <div>
+                        <h2 class="onsite-section-title">Closure Summary</h2>
+                        <p class="onsite-section-subtitle">Final status, billing, and payment details captured when the case was closed.</p>
+                    </div>
+                </div>
+                <div class="onsite-detail-grid">
+                    <div>
+                        <p class="onsite-muted">Final Status</p>
+                        <strong>{{ detail.closure.final_status }}</strong>
+                    </div>
+                    {% if detail.closure.completion_type %}
+                    <div>
+                        <p class="onsite-muted">Completion Type</p>
+                        <strong>{{ detail.closure.completion_type }}</strong>
+                    </div>
+                    {% endif %}
+                    {% if detail.closure.close_reason %}
+                    <div>
+                        <p class="onsite-muted">Reason</p>
+                        <strong>{{ detail.closure.close_reason }}</strong>
+                    </div>
+                    {% endif %}
+                    {% if detail.closure.narration %}
+                    <div>
+                        <p class="onsite-muted">Narration</p>
+                        <strong>{{ detail.closure.narration }}</strong>
+                    </div>
+                    {% endif %}
+                    {% if detail.closure.engineer_name %}
+                    <div>
+                        <p class="onsite-muted">Engineer</p>
+                        <strong>{{ detail.closure.engineer_name }}</strong>
+                    </div>
+                    {% endif %}
+                    {% if detail.closure.closed_by_brand %}
+                    <div>
+                        <p class="onsite-muted">Closed By</p>
+                        <strong>{{ detail.closure.closed_by_brand }}</strong>
+                    </div>
+                    {% endif %}
+                    {% if detail.closure.payment_mode %}
+                    <div>
+                        <p class="onsite-muted">Mode of Payment</p>
+                        <strong>{{ detail.closure.payment_mode }}</strong>
+                    </div>
+                    {% endif %}
+                    {% if detail.closure.payment_status %}
+                    <div>
+                        <p class="onsite-muted">Payment Status</p>
+                        <span class="onsite-badge {{ detail.closure.payment_status_badge_class }}">{{ detail.closure.payment_status }}</span>
+                    </div>
+                    {% endif %}
+                    {% if detail.closure.completion_type == 'Paid Service' %}
+                    <div>
+                        <p class="onsite-muted">Service Charges</p>
+                        <strong>{{ '%.2f'|format(detail.closure.service_charges|float) }}</strong>
+                    </div>
+                    <div>
+                        <p class="onsite-muted">Product Value</p>
+                        <strong>{{ '%.2f'|format(detail.closure.product_value|float) }}</strong>
+                    </div>
+                    <div>
+                        <p class="onsite-muted">Customer Price</p>
+                        <strong>{{ '%.2f'|format(detail.closure.customer_price|float) }}</strong>
+                    </div>
+                    <div>
+                        <p class="onsite-muted">Product Profit</p>
+                        <strong>{{ '%.2f'|format(detail.closure.product_profit|float) }}</strong>
+                    </div>
+                    <div>
+                        <p class="onsite-muted">Total Profit</p>
+                        <strong>{{ '%.2f'|format(detail.closure.total_profit|float) }}</strong>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <p class="onsite-muted">Closed At</p>
+                        <strong>{{ detail.closure.closed_at_display }}</strong>
+                    </div>
+                    <div>
+                        <p class="onsite-muted">Closed By User</p>
+                        <strong>{{ detail.closure.closed_by_user or 'System' }}</strong>
+                    </div>
+                </div>
+            </article>
+            {% endif %}
+        </section>
+
+        {% if detail.attachments %}
+        <section class="onsite-summary-grid">
+            <article class="onsite-panel">
+                <div class="onsite-section-header">
+                    <div>
+                        <h2 class="onsite-section-title">Complaint Media</h2>
+                        <p class="onsite-section-subtitle">Complaint or device images/videos uploaded with the case. Media auto-deletes 30 days after Completed, Failed, or Cancelled.</p>
+                    </div>
+                </div>
+                <div class="onsite-media-grid">
+                    {% for attachment in detail.attachments %}
+                    <article class="onsite-media-card">
+                        {% set media_url = url_for('onsite_calls.onsite_call_attachment', call_id=detail.call.id, attachment_id=attachment.id) %}
+                        <a
+                            class="onsite-media-card-link"
+                            href="{{ media_url }}"
+                            target="_blank"
+                            rel="noopener"
+                            aria-label="Open {{ 'video' if attachment.media_kind == 'video' else 'image' }} attachment {{ loop.index }}"
+                        >
+                            <span class="onsite-media-icon-shell" aria-hidden="true">
+                                {% if attachment.media_kind == 'video' %}
+                                <svg class="onsite-media-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="3.5" y="5.5" width="13" height="13" rx="2.5" stroke="currentColor" stroke-width="1.8"/>
+                                    <path d="M10 9L14 12L10 15V9Z" fill="currentColor"/>
+                                    <path d="M16.5 9.5L20 7.5V16.5L16.5 14.5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                                </svg>
+                                {% else %}
+                                <svg class="onsite-media-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="3.5" y="5.5" width="17" height="13" rx="2.5" stroke="currentColor" stroke-width="1.8"/>
+                                    <circle cx="9" cy="10" r="1.5" fill="currentColor"/>
+                                    <path d="M6.5 16L11 11.5L13.8 14.3L16 12.1L19 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                {% endif %}
+                            </span>
+                            <div class="onsite-media-copy">
+                                <div class="onsite-media-topline">
+                                    <span class="onsite-pill onsite-pill-muted">{{ 'Video' if attachment.media_kind == 'video' else 'Image' }}</span>
+                                    <span class="onsite-media-label">Attachment {{ loop.index }}</span>
+                                </div>
+                                <span class="onsite-muted">Uploaded {{ attachment.uploaded_at_display }}</span>
+                                <span class="onsite-media-open-hint">Open attachment</span>
+                            </div>
+                        </a>
+                    </article>
+                    {% endfor %}
+                </div>
+            </article>
+        </section>
+        {% endif %}
+
+        <section class="onsite-detail-grid">
+            {% if can_assign %}
+            <article class="onsite-panel">
+                <div class="onsite-section-header">
+                    <div>
+                        <h2 class="onsite-section-title">Assign Call</h2>
+                        <p class="onsite-section-subtitle">{% if actor.role in ['admin', 'super_admin'] %}Admin and super admin can assign the case to a branch and optionally choose an engineer now or later.{% else %}Coordinator can fill engineer name when the case is already assigned to their branch and no engineer has been selected yet.{% endif %}</p>
+                    </div>
+                </div>
+                <form method="post" action="/api/onsite-call/assign" class="onsite-form-grid">
+                    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+                    <input type="hidden" name="call_id" value="{{ detail.call.id }}">
+                    <input type="hidden" name="return_url" value="/onsite-calls/{{ detail.call.id }}">
+                    {% if actor.role in ['admin', 'super_admin'] %}
+                    <div>
+                        <label class="onsite-form-label" for="assign_branch_name">Branch</label>
+                        <select class="onsite-select" id="assign_branch_name" name="branch_name" required>
+                            <option value="">Select Branch</option>
+                            {% for item in branch_options %}
+                            <option value="{{ item }}" {% if (detail.call.assigned_branch_name or actor.branch) == item %}selected{% endif %}>{{ item }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% else %}
+                    <div>
+                        <label class="onsite-form-label" for="assign_branch_name_locked">Assigned Branch</label>
+                        <input class="onsite-input" type="text" id="assign_branch_name_locked" value="{{ detail.call.assigned_branch_name or actor.branch }}" readonly>
+                        <input type="hidden" id="assign_branch_name" name="branch_name" value="{{ detail.call.assigned_branch_name or actor.branch }}">
+                    </div>
+                    {% endif %}
+                    <div>
+                        <label class="onsite-form-label" for="assign_engineer_id">Engineer</label>
+                        <div class="onsite-typeahead-shell">
+                            <input
+                                class="onsite-input"
+                                type="text"
+                                id="assign_engineer_name"
+                                name="assigned_engineer_name"
+                                value="{{ selected_engineer_name or detail.call.assigned_engineer_name or '' }}"
+                                autocomplete="off"
+                                placeholder="Type engineer name"
+                                data-engineer-search-endpoint="/api/onsite-call/engineers"
+                                data-engineer-branch="assign_branch_name"
+                                data-engineer-target="assign_engineer_id"
+                                data-engineer-results="assign_engineer_results"
+                                data-engineer-required="{{ '0' if actor.role in ['admin', 'super_admin'] else '1' }}"
+                            >
+                            <input type="hidden" id="assign_engineer_id" name="assigned_engineer_id" value="{{ detail.call.assigned_engineer_id or '' }}">
+                            <div class="onsite-typeahead-results" id="assign_engineer_results" hidden></div>
+                        </div>
+                        <div class="onsite-field-note">{% if actor.role in ['admin', 'super_admin'] %}Leave engineer blank to assign this case only to the branch. Choose a name if you want to lock it to one engineer now.{% else %}Choose the engineer from the search results to complete the branch assignment.{% endif %}</div>
+                    </div>
+                    <div class="onsite-field-full">
+                        <button class="onsite-btn onsite-btn-success" type="submit">Save Assignment</button>
+                    </div>
+                </form>
+            </article>
+            {% elif assign_message %}
+            <article class="onsite-panel">
+                <div class="onsite-section-header">
+                    <div>
+                        <h2 class="onsite-section-title">Assign Call</h2>
+                        <p class="onsite-section-subtitle">Engineer assignment permissions depend on role and current assignment state.</p>
+                    </div>
+                </div>
+                <div class="onsite-field-note">{{ assign_message }}</div>
+            </article>
+            {% endif %}
+
+            <article class="onsite-panel">
+                <div class="onsite-section-header">
+                    <div>
+                        <h2 class="onsite-section-title">Update Status</h2>
+                        <p class="onsite-section-subtitle">Allowed transitions are enforced at the API layer.</p>
+                    </div>
+                </div>
+                {% if can_update_status %}
+                <form method="post" action="/api/onsite-call/update-status" class="onsite-form-grid">
+                    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+                    <input type="hidden" name="call_id" value="{{ detail.call.id }}">
+                    <input type="hidden" name="return_url" value="/onsite-calls/{{ detail.call.id }}">
+                    <div>
+                        <label class="onsite-form-label" for="status">Status</label>
+                        <select class="onsite-select" id="status" name="status" required>
+                            <option value="" selected disabled>Select next status</option>
+                            {% for item in status_choices %}
+                            <option value="{{ item }}">{{ item }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="onsite-form-label" for="status_note">Update Note</label>
+                        <input class="onsite-input" type="text" id="status_note" name="status_note" maxlength="255" placeholder="Optional note for this status update">
+                    </div>
+                    <div class="onsite-field-full">
+                        <button class="onsite-btn" type="submit">Update Status</button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="onsite-field-note">{{ status_update_message }}</div>
+                {% endif %}
+            </article>
+
+            <article class="onsite-panel">
+                <div class="onsite-section-header">
+                    <div>
+                        <h2 class="onsite-section-title">Close Case</h2>
+                        <p class="onsite-section-subtitle">Finalise the case with the required reason, narration, or billing details.</p>
+                    </div>
+                </div>
+                {% if can_close %}
+                <form method="post" action="/api/onsite-call/close" class="onsite-form-grid" data-onsite-close-form>
+                    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+                    <input type="hidden" name="call_id" value="{{ detail.call.id }}">
+                    <input type="hidden" name="return_url" value="/onsite-calls/{{ detail.call.id }}">
+                    <input type="hidden" id="close_branch_name" name="branch_name" value="{{ detail.call.assigned_branch_name or actor.branch }}">
+                    <div>
+                        <label class="onsite-form-label" for="final_status">Final Status</label>
+                        <select class="onsite-select" id="final_status" name="final_status" required data-onsite-close-status>
+                            <option value="" selected disabled>Select final status</option>
+                            {% for item in close_status_choices %}
+                            <option value="{{ item }}">{{ item }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="onsite-close-field" data-close-block="reason" hidden>
+                        <label class="onsite-form-label" for="close_reason">Reason</label>
+                        <input class="onsite-input" type="text" id="close_reason" name="close_reason" maxlength="255" placeholder="Reason required for Failed or Cancelled">
+                    </div>
+                    <div class="onsite-close-field" data-close-block="completion-type" hidden>
+                        <label class="onsite-form-label" for="completion_type">Completion Type</label>
+                        <select class="onsite-select" id="completion_type" name="completion_type" data-onsite-completion-type>
+                            <option value="" selected disabled>Select completion type</option>
+                            {% for item in completion_types %}
+                            <option value="{{ item }}">{{ item }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="onsite-field-full onsite-close-field" data-close-block="narration" hidden>
+                        <label class="onsite-form-label" for="closure_narration">Narration</label>
+                        <textarea class="onsite-textarea" id="closure_narration" name="narration" placeholder="Required for Warranty Service or Free Service"></textarea>
+                    </div>
+                    <div class="onsite-close-field" data-close-block="service-charges" hidden>
+                        <label class="onsite-form-label" for="service_charges">Service Charges</label>
+                        <input class="onsite-input" type="number" step="0.01" min="0" id="service_charges" name="service_charges" value="0.00" data-onsite-profit-input="service_charges">
+                    </div>
+                    <div class="onsite-close-field" data-close-block="engineer" hidden>
+                        <label class="onsite-form-label" for="closure_engineer_name">Engineer Name</label>
+                        <div class="onsite-typeahead-shell">
+                            <input
+                                class="onsite-input"
+                                type="text"
+                                id="closure_engineer_name"
+                                name="closure_engineer_name"
+                                autocomplete="off"
+                                placeholder="Type engineer name"
+                                data-engineer-search-endpoint="/api/onsite-call/engineers"
+                                data-engineer-branch="close_branch_name"
+                                data-engineer-target="closure_engineer_id"
+                                data-engineer-results="closure_engineer_results"
+                                data-engineer-required="0"
+                            >
+                            <input type="hidden" id="closure_engineer_id" name="closure_engineer_id" value="">
+                            <div class="onsite-typeahead-results" id="closure_engineer_results" hidden></div>
+                        </div>
+                        <div class="onsite-field-note">Choose the engineer from the branch engineer list.</div>
+                    </div>
+                    <div class="onsite-close-field" data-close-block="product-value" hidden>
+                        <label class="onsite-form-label" for="product_value">Product Value</label>
+                        <input class="onsite-input" type="number" step="0.01" min="0" id="product_value" name="product_value" value="0.00" data-onsite-profit-input="product_value">
+                    </div>
+                    <div class="onsite-close-field" data-close-block="customer-price" hidden>
+                        <label class="onsite-form-label" for="customer_price">Customer Price</label>
+                        <input class="onsite-input" type="number" step="0.01" min="0" id="customer_price" name="customer_price" value="0.00" data-onsite-profit-input="customer_price">
+                    </div>
+                    <div class="onsite-close-field" data-close-block="product-profit" hidden>
+                        <label class="onsite-form-label" for="product_profit">Product Profit</label>
+                        <input class="onsite-input" type="text" id="product_profit" value="0.00" data-onsite-profit-output="product_profit" readonly>
+                    </div>
+                    <div class="onsite-close-field" data-close-block="total-profit" hidden>
+                        <label class="onsite-form-label" for="total_profit">Total Profit</label>
+                        <input class="onsite-input" type="text" id="total_profit" value="0.00" data-onsite-profit-output="total_profit" readonly>
+                    </div>
+                    <div class="onsite-close-field" data-close-block="closed-by" hidden>
+                        <label class="onsite-form-label" for="closed_by_brand">Closed By</label>
+                        <select class="onsite-select" id="closed_by_brand" name="closed_by_brand">
+                            <option value="" selected disabled>Select closing brand</option>
+                            {% for item in closed_by_options %}
+                            <option value="{{ item }}">{{ item }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="onsite-close-field" data-close-block="payment-mode" hidden>
+                        <label class="onsite-form-label" for="payment_mode">Mode of Payment</label>
+                        <select class="onsite-select" id="payment_mode" name="payment_mode" data-onsite-payment-mode>
+                            <option value="" selected disabled>Select payment mode</option>
+                            {% for item in payment_mode_options %}
+                            <option value="{{ item }}">{{ item }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="onsite-field-full onsite-close-field onsite-credit-hint" data-close-block="payment-hint" hidden>
+                        Credit mode-il close cheythal case service queue-il ninnu close aakum, but credit pending section-il kanum. Payment settle cheythal Cash, Card, allenkil UPI aakki update cheyyam.
+                    </div>
+                    <div class="onsite-field-full">
+                        <button class="onsite-btn onsite-btn-success" type="submit">Close Case</button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="onsite-field-note">{{ close_message }}</div>
+                {% endif %}
+            </article>
+
+            <article class="onsite-panel">
+                <div class="onsite-section-header">
+                    <div>
+                        <h2 class="onsite-section-title">Reschedule</h2>
+                        <p class="onsite-section-subtitle">Moves the call to Rescheduled and stores the new preferred time.</p>
+                    </div>
+                </div>
+                {% if can_reschedule %}
+                <form method="post" action="/api/onsite-call/reschedule" class="onsite-form-grid">
+                    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+                    <input type="hidden" name="call_id" value="{{ detail.call.id }}">
+                    <input type="hidden" name="return_url" value="/onsite-calls/{{ detail.call.id }}">
+                    <div>
+                        <label class="onsite-form-label" for="reschedule_datetime">Preferred Date & Time</label>
+                        <input class="onsite-input" type="datetime-local" id="reschedule_datetime" name="preferred_datetime" required value="{{ detail.call.preferred_datetime_value }}">
+                    </div>
+                    <div>
+                        <label class="onsite-form-label" for="reschedule_reason">Reason</label>
+                        <input class="onsite-input" type="text" id="reschedule_reason" name="reason" maxlength="255" placeholder="Optional reason">
+                    </div>
+                    <div class="onsite-field-full">
+                        <button class="onsite-btn onsite-btn-secondary" type="submit">Reschedule Call</button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="onsite-field-note">{{ reschedule_message }}</div>
+                {% endif %}
+            </article>
+
+            <article class="onsite-panel">
+                <div class="onsite-section-header">
+                    <div>
+                        <h2 class="onsite-section-title">Add Note</h2>
+                        <p class="onsite-section-subtitle">Use notes for follow-up, spare requirements, and engineer remarks.</p>
+                    </div>
+                </div>
+                {% if can_add_note %}
+                <form method="post" action="/api/onsite-call/add-note" class="onsite-form-grid">
+                    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+                    <input type="hidden" name="call_id" value="{{ detail.call.id }}">
+                    <input type="hidden" name="return_url" value="/onsite-calls/{{ detail.call.id }}">
+                    <div class="onsite-field-full">
+                        <label class="onsite-form-label" for="note">Note</label>
+                        <textarea class="onsite-textarea" id="note" name="note" required></textarea>
+                    </div>
+                    <div class="onsite-field-full">
+                        <button class="onsite-btn" type="submit">Save Note</button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="onsite-field-note">{{ note_message }}</div>
+                {% endif %}
+            </article>
+
+            {% if detail.closure and detail.closure.is_credit_pending %}
+            <article class="onsite-panel onsite-credit-panel">
+                <div class="onsite-section-header">
+                    <div>
+                        <h2 class="onsite-section-title">Credit Settlement</h2>
+                        <p class="onsite-section-subtitle">Mark this completed paid service as received once the customer clears the pending credit.</p>
+                    </div>
+                </div>
+                {% if can_update_credit_payment %}
+                <form method="post" action="/api/onsite-call/update-payment" class="onsite-form-grid">
+                    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+                    <input type="hidden" name="call_id" value="{{ detail.call.id }}">
+                    <input type="hidden" name="return_url" value="/onsite-calls/{{ detail.call.id }}">
+                    <div>
+                        <label class="onsite-form-label" for="credit_payment_mode">Received Mode</label>
+                        <select class="onsite-select" id="credit_payment_mode" name="payment_mode" required>
+                            <option value="" selected disabled>Select received mode</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Card">Card</option>
+                            <option value="UPI">UPI</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="onsite-form-label" for="credit_payment_note">Payment Note</label>
+                        <input class="onsite-input" type="text" id="credit_payment_note" name="payment_note" maxlength="255" placeholder="Optional note for the received payment">
+                    </div>
+                    <div class="onsite-field-full">
+                        <button class="onsite-btn onsite-btn-secondary" type="submit">Update Payment</button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="onsite-field-note">{{ credit_payment_message }}</div>
+                {% endif %}
+            </article>
+            {% endif %}
+        </section>
+
+        <section class="onsite-detail-grid">
+            <article class="onsite-note-list">
+                <div class="onsite-section-header">
+                    <div>
+                        <h2 class="onsite-section-title">Notes</h2>
+                        <p class="onsite-section-subtitle">Latest call notes in reverse chronological order.</p>
+                    </div>
+                </div>
+                {% if detail.notes %}
+                {% for note in detail.notes %}
+                <div class="onsite-note-item">
+                    <strong>{{ note.created_by or 'System' }}</strong>
+                    <div class="onsite-note-meta">{{ note.created_at_display }}</div>
+                    <p>{{ note.note }}</p>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="onsite-empty-state">
+                    <h3>No notes yet</h3>
+                    <p>Add a note to capture the next action.</p>
+                </div>
+                {% endif %}
+            </article>
+
+            <article class="onsite-timeline">
+                <div class="onsite-section-header">
+                    <div>
+                        <h2 class="onsite-section-title">Timeline</h2>
+                        <p class="onsite-section-subtitle">System activity, notifications, status changes, and notes.</p>
+                    </div>
+                </div>
+                {% if detail.timeline %}
+                {% for item in detail.timeline %}
+                <div class="onsite-timeline-item">
+                    <strong>{{ item.title }}</strong>
+                    <div class="onsite-timeline-meta">{{ item.created_at_display }} · {{ item.done_by or 'System' }}</div>
+                    <p>{{ item.description }}</p>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="onsite-empty-state">
+                    <h3>No activity yet</h3>
+                    <p>The timeline will populate as the call moves through the workflow.</p>
+                </div>
+                {% endif %}
+            </article>
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/onsite-calls.js', v='20260411-closeflow') }}"></script>
+</body>
+</html>

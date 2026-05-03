@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - Service CRM</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+    <style>
+        :root {
+            --profile-primary: #2563eb;
+            --profile-primary-strong: #1d4ed8;
+            --profile-primary-soft: #eff6ff;
+            --profile-page-bg: #f8fafc;
+            --profile-surface: #ffffff;
+            --profile-text: #1e293b;
+            --profile-text-muted: #64748b;
+            --profile-border: #e2e8f0;
+            --profile-success-bg: #f0fdf4;
+            --profile-success-text: #166534;
+            --profile-success-border: rgba(34, 197, 94, 0.18);
+            --profile-danger-bg: #fef2f2;
+            --profile-danger-text: #b91c1c;
+            --profile-danger-border: rgba(239, 68, 68, 0.18);
+            --profile-shadow: 0 8px 20px rgba(37, 99, 235, 0.08);
+            --profile-shadow-lg: 0 20px 40px rgba(37, 99, 235, 0.12);
+            --profile-radius: 12px;
+            --profile-transition: 0.3s ease;
+            --profile-shell-width: 1320px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body.crm-theme.profile-page {
+            min-height: 100vh;
+            margin: 0;
+            padding: clamp(0.9rem, 1.8vw, 1.25rem) clamp(0.85rem, 2.3vw, 2rem) 2rem;
+            background:
+                radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 32%),
+                radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent 26%),
+                linear-gradient(180deg, #f8fbff 0%, var(--profile-page-bg) 45%, #eef4ff 100%);
+            color: var(--profile-text);
+            font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .profile-page-shell {
+            width: min(100%, var(--profile-shell-width));
+            margin: 0 auto;
+        }
+
+        .profile-stack {
+            display: grid;
+            gap: clamp(0.9rem, 1.6vw, 1.25rem);
+        }
+
+        .profile-hero {
+            position: relative;
+            overflow: hidden;
+            padding: clamp(1rem, 1.9vw, 1.45rem);
+            border-radius: 28px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.94) 100%);
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            box-shadow: var(--profile-shadow-lg);
+        }
+
+        .profile-hero::before,
+        .profile-hero::after {
+            content: "";
+            position: absolute;
+            border-radius: 999px;
+            pointer-events: none;
+        }
+
+        .profile-hero::before {
+            width: 240px;
+            height: 240px;
+            right: -90px;
+            top: -100px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.18) 0%, rgba(37, 99, 235, 0) 72%);
+        }
+
+        .profile-hero::after {
+            width: 180px;
+            height: 180px;
+            left: -70px;
+            bottom: -90px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.14) 0%, rgba(59, 130, 246, 0) 72%);
+        }
+
+        .profile-hero-topbar {
+            position: relative;
+            z-index: 3;
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 0.85rem;
+        }
+
+        .profile-hero-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.7rem;
+            flex-wrap: wrap;
+        }
+
+        .profile-hero-back,
+        .profile-hero-logout {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            min-height: 44px;
+            padding: 0.75rem 1rem;
+            border-radius: 999px;
+            border: 1px solid rgba(37, 99, 235, 0.14);
+            background: rgba(255, 255, 255, 0.88);
+            color: var(--profile-primary);
+            text-decoration: none;
+            font-size: 0.92rem;
+            font-weight: 700;
+            transition: transform var(--profile-transition), box-shadow var(--profile-transition), border-color var(--profile-transition), background var(--profile-transition), color var(--profile-transition);
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+        }
+
+        .profile-hero-back:hover,
+        .profile-hero-logout:hover {
+            color: var(--profile-primary-strong);
+            border-color: rgba(37, 99, 235, 0.28);
+            background: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 16px 28px rgba(37, 99, 235, 0.12);
+        }
+
+        .profile-hero-body {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            justify-items: center;
+            gap: 0.75rem;
+            max-width: min(100%, 720px);
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .profile-avatar-shell {
+            position: relative;
+            width: 108px;
+            height: 108px;
+        }
+
+        .profile-avatar-image,
+        .profile-avatar-fallback {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 4px solid rgba(37, 99, 235, 0.18);
+            box-shadow: 0 16px 34px rgba(37, 99, 235, 0.16);
+            background: var(--profile-primary-soft);
+        }
+
+        .profile-avatar-image {
+            display: block;
+            object-fit: cover;
+        }
+
+        .profile-avatar-fallback {
+            display: grid;
+            place-items: center;
+            font-size: 2.75rem;
+            font-weight: 800;
+            color: var(--profile-primary);
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(255, 255, 255, 0.98));
+        }
+
+        .is-hidden {
+            display: none !important;
+        }
+
+        .profile-avatar-badge {
+            position: absolute;
+            right: -0.35rem;
+            bottom: 0.65rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.38rem 0.55rem;
+            border-radius: 999px;
+            background: #ffffff;
+            color: var(--profile-primary);
+            font-size: 0.72rem;
+            font-weight: 700;
+            box-shadow: 0 10px 22px rgba(37, 99, 235, 0.14);
+        }
+
+        .profile-avatar-badge::before {
+            content: "";
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
+        }
+
+        .profile-eyebrow {
+            margin: 0;
+            color: var(--profile-primary);
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        .profile-title {
+            margin: 0;
+            color: var(--profile-text);
+            font-size: clamp(1.8rem, 3.6vw, 2.45rem);
+            font-weight: 800;
+            letter-spacing: -0.04em;
+        }
+
+        .profile-role {
+            margin: 0;
+            color: var(--profile-text-muted);
+            font-size: 0.98rem;
+            font-weight: 600;
+        }
+
+        .profile-subtitle {
+            max-width: 560px;
+            margin: 0;
+            color: var(--profile-text-muted);
+            font-size: 0.98rem;
+            line-height: 1.6;
+        }
+
+        .profile-alerts {
+            display: grid;
+            gap: 0.85rem;
+        }
+
+        .profile-alert {
+            position: relative;
+            border: 1px solid transparent;
+            border-radius: 16px;
+            padding: 1rem 3rem 1rem 1rem;
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
+        }
+
+        .profile-alert.alert-success {
+            border-color: var(--profile-success-border);
+            background: var(--profile-success-bg);
+            color: var(--profile-success-text);
+        }
+
+        .profile-alert.alert-danger {
+            border-color: var(--profile-danger-border);
+            background: var(--profile-danger-bg);
+            color: var(--profile-danger-text);
+        }
+
+        .profile-alert.alert-warning {
+            border-color: rgba(245, 158, 11, 0.2);
+            background: #fffbeb;
+            color: #92400e;
+        }
+
+        .profile-alert.alert-info {
+            border-color: rgba(37, 99, 235, 0.16);
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .profile-alert .btn-close {
+            position: absolute;
+            top: 50%;
+            right: 0.9rem;
+            transform: translateY(-50%);
+            opacity: 0.65;
+        }
+
+        .profile-panels {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.25rem;
+            align-items: stretch;
+        }
+
+        .profile-card {
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            align-content: start;
+            min-height: 100%;
+            background: var(--profile-surface);
+            border: 1px solid rgba(226, 232, 240, 0.86);
+            border-radius: var(--profile-radius);
+            box-shadow: var(--profile-shadow);
+            transition: transform var(--profile-transition), box-shadow var(--profile-transition), border-color var(--profile-transition);
+        }
+
+        .profile-card::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto auto 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(135deg, #2563eb, #60a5fa);
+        }
+
+        .profile-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 32px rgba(37, 99, 235, 0.12);
+            border-color: rgba(37, 99, 235, 0.18);
+        }
+
+        .profile-card-header {
+            display: grid;
+            gap: 0.3rem;
+            padding: 1.45rem 1.45rem 1rem;
+        }
+
+        .profile-card-kicker {
+            margin: 0;
+            color: var(--profile-primary);
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+
+        .profile-card-title {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--profile-text);
+        }
+
+        .profile-card-description {
+            margin: 0;
+            color: var(--profile-text-muted);
+            font-size: 0.94rem;
+            line-height: 1.7;
+        }
+
+        .profile-card-body {
+            display: grid;
+            align-content: start;
+            padding: 0 1.45rem 1.45rem;
+        }
+
+        .profile-preview-panel {
+            display: grid;
+            grid-template-columns: minmax(72px, 84px) minmax(0, 1fr);
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin-bottom: 1.15rem;
+            border-radius: 14px;
+            background: linear-gradient(180deg, rgba(239, 246, 255, 0.9) 0%, rgba(248, 250, 252, 0.92) 100%);
+            border: 1px solid rgba(191, 219, 254, 0.8);
+        }
+
+        .profile-preview-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 18px;
+            overflow: hidden;
+            background: #ffffff;
+            box-shadow: 0 10px 22px rgba(37, 99, 235, 0.1);
+        }
+
+        .profile-preview-avatar img,
+        .profile-preview-avatar .profile-avatar-fallback {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 18px;
+            box-shadow: none;
+        }
+
+        .profile-preview-avatar .profile-avatar-fallback {
+            display: grid;
+            place-items: center;
+        }
+
+        .profile-preview-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            min-height: 28px;
+            padding: 0.25rem 0.65rem;
+            border-radius: 999px;
+            background: rgba(37, 99, 235, 0.08);
+            color: var(--profile-primary);
+            font-size: 0.76rem;
+            font-weight: 700;
+        }
+
+        .profile-preview-copy {
+            display: grid;
+            align-content: center;
+            min-width: 0;
+            gap: 0.55rem;
+        }
+
+        .profile-preview-copy p,
+        .profile-preview-copy small {
+            margin: 0;
+            color: var(--profile-text-muted);
+            line-height: 1.65;
+        }
+
+        .profile-form {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .form-group {
+            margin: 0;
+        }
+
+        .profile-form label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--profile-text);
+            font-size: 0.92rem;
+            font-weight: 700;
+        }
+
+        .profile-form .form-control {
+            min-height: 46px;
+            border-radius: 8px;
+            border: 1px solid var(--profile-border);
+            background: #ffffff;
+            color: var(--profile-text);
+            padding: 0.72rem 0.9rem;
+            font-size: 0.95rem;
+            transition: border-color var(--profile-transition), box-shadow var(--profile-transition), transform var(--profile-transition);
+        }
+
+        .profile-form .form-control:hover {
+            border-color: rgba(37, 99, 235, 0.28);
+        }
+
+        .profile-form .form-control:focus {
+            border-color: var(--profile-primary);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+        }
+
+        .profile-form .form-control::file-selector-button {
+            margin-right: 0.85rem;
+            border: none;
+            border-radius: 8px;
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--profile-primary);
+            padding: 0.7rem 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background var(--profile-transition), color var(--profile-transition);
+        }
+
+        .profile-form .form-control:hover::file-selector-button {
+            background: rgba(37, 99, 235, 0.16);
+            color: var(--profile-primary-strong);
+        }
+
+        .profile-field-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            margin-top: 0.55rem;
+            color: var(--profile-text-muted);
+            font-size: 0.84rem;
+        }
+
+        .profile-field-meta strong {
+            color: var(--profile-text);
+        }
+
+        .profile-password-field {
+            position: relative;
+        }
+
+        .profile-password-field .form-control {
+            padding-right: 3.25rem;
+        }
+
+        .profile-password-toggle {
+            position: absolute;
+            right: 0.6rem;
+            top: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 50%;
+            background: transparent;
+            color: var(--profile-text-muted);
+            transform: translateY(-50%);
+            transition: background var(--profile-transition), color var(--profile-transition);
+        }
+
+        .profile-password-toggle:hover {
+            background: rgba(37, 99, 235, 0.08);
+            color: var(--profile-primary);
+        }
+
+        .profile-password-toggle:focus-visible {
+            outline: 2px solid rgba(37, 99, 235, 0.25);
+            outline-offset: 2px;
+        }
+
+        .profile-strength {
+            display: grid;
+            gap: 0.5rem;
+            margin-top: 0.55rem;
+        }
+
+        .profile-strength-track {
+            position: relative;
+            width: 100%;
+            height: 8px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: #dbeafe;
+        }
+
+        .profile-strength-bar {
+            display: block;
+            width: 20%;
+            height: 100%;
+            border-radius: inherit;
+            background: #94a3b8;
+            transition: width var(--profile-transition), background var(--profile-transition);
+        }
+
+        .profile-strength-bar.is-weak {
+            background: #ef4444;
+        }
+
+        .profile-strength-bar.is-fair {
+            background: #f59e0b;
+        }
+
+        .profile-strength-bar.is-good {
+            background: #3b82f6;
+        }
+
+        .profile-strength-bar.is-strong {
+            background: #22c55e;
+        }
+
+        .profile-strength-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            color: var(--profile-text-muted);
+            font-size: 0.84rem;
+        }
+
+        .profile-match-state.is-match {
+            color: #15803d;
+        }
+
+        .profile-match-state.is-mismatch {
+            color: #dc2626;
+        }
+
+        .profile-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            width: 100%;
+            min-height: 46px;
+            padding: 0.85rem 1rem;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform var(--profile-transition), box-shadow var(--profile-transition), background var(--profile-transition), border-color var(--profile-transition), color var(--profile-transition);
+        }
+
+        .profile-btn:focus-visible {
+            outline: 2px solid rgba(37, 99, 235, 0.2);
+            outline-offset: 2px;
+        }
+
+        .profile-btn-primary {
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            color: #ffffff;
+            box-shadow: 0 12px 26px rgba(37, 99, 235, 0.22);
+        }
+
+        .profile-btn-primary:hover {
+            background: linear-gradient(135deg, #1d4ed8, #2563eb);
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 16px 30px rgba(37, 99, 235, 0.26);
+        }
+
+        .profile-btn-secondary {
+            background: #ffffff;
+            color: var(--profile-primary);
+            border-color: rgba(37, 99, 235, 0.18);
+            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05);
+        }
+
+        .profile-btn-secondary:hover {
+            color: var(--profile-primary-strong);
+            border-color: rgba(37, 99, 235, 0.26);
+            background: rgba(239, 246, 255, 0.82);
+            transform: translateY(-1px);
+        }
+
+        .profile-footer {
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .profile-footer .profile-btn {
+            width: auto;
+            min-width: 240px;
+            max-width: 320px;
+        }
+
+        @media (min-width: 992px) {
+            .profile-hero {
+                padding: 1.2rem 1.4rem 1.25rem;
+                border-radius: 24px;
+            }
+
+            .profile-hero-topbar {
+                position: absolute;
+                top: 1rem;
+                right: 1rem;
+                margin-bottom: 0;
+            }
+
+            .profile-hero-body {
+                max-width: none;
+                margin: 0;
+                padding-right: clamp(12rem, 28vw, 20rem);
+                grid-template-columns: auto minmax(0, 1fr);
+                grid-template-areas:
+                    "avatar eyebrow"
+                    "avatar title"
+                    "avatar role"
+                    "avatar subtitle";
+                justify-items: start;
+                align-items: center;
+                column-gap: 1.35rem;
+                row-gap: 0.3rem;
+                text-align: left;
+            }
+
+            .profile-avatar-shell {
+                grid-area: avatar;
+                width: 104px;
+                height: 104px;
+            }
+
+            .profile-eyebrow {
+                grid-area: eyebrow;
+            }
+
+            .profile-title {
+                grid-area: title;
+                font-size: clamp(2rem, 2.9vw, 2.55rem);
+            }
+
+            .profile-role {
+                grid-area: role;
+            }
+
+            .profile-subtitle {
+                grid-area: subtitle;
+                max-width: 52rem;
+            }
+
+            .profile-panels {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .profile-card-header {
+                padding: 1.25rem 1.25rem 0.9rem;
+            }
+
+            .profile-card-body {
+                padding: 0 1.25rem 1.25rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body.crm-theme.profile-page {
+                padding: 1rem 0.85rem 1.8rem;
+            }
+
+            .profile-hero {
+                padding: 1.25rem 1rem 1.5rem;
+                border-radius: 22px;
+            }
+
+            .profile-hero::before,
+            .profile-hero::after {
+                display: none;
+            }
+
+            .profile-hero-topbar {
+                justify-content: stretch;
+            }
+
+            .profile-hero-actions {
+                width: 100%;
+                flex-direction: column;
+            }
+
+            .profile-hero-back,
+            .profile-hero-logout {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .profile-preview-panel {
+                grid-template-columns: 1fr;
+                justify-items: center;
+                text-align: center;
+            }
+
+            .profile-field-meta,
+            .profile-strength-meta {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .profile-card-header,
+            .profile-card-body {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+
+            .profile-footer .profile-btn {
+                width: 100%;
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body class="crm-theme profile-page">
+    <div class="profile-page-shell mb-3">
+        <nav class="navbar navbar-dark bg-dark">
+            <div class="container-fluid px-0">
+                <a class="navbar-brand fw-semibold" href="/profile">Profile</a>
+                <div class="d-flex align-items-center gap-2 ms-auto">
+                    {% include "_global_user_menu.html" %}
+                </div>
+            </div>
+        </nav>
+    </div>
+    <main class="profile-page-shell">
+        <div class="profile-stack">
+            <section class="profile-hero">
+                <div class="profile-hero-topbar">
+                    <div class="profile-hero-actions">
+                        <a href="/dashboard" class="profile-hero-back">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Dashboard</span>
+                        </a>
+                        <a href="/logout" class="profile-hero-logout">
+                            <i class="fas fa-right-from-bracket"></i>
+                            <span>Logout</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="profile-hero-body">
+                    <div class="profile-avatar-shell">
+                        <img
+                            src="{{ '/profile-picture/' ~ user.username if user.profile_picture else 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==' }}"
+                            alt=""
+                            aria-hidden="true"
+                            class="profile-avatar-image{% if not user.profile_picture %} is-hidden{% endif %}"
+                            id="profileAvatarImage"
+                            data-original-src="{% if user.profile_picture %}/profile-picture/{{ user.username }}{% endif %}"
+                            onerror="this.classList.add('is-hidden'); if (this.nextElementSibling) { this.nextElementSibling.classList.remove('is-hidden'); }"
+                        >
+                        <div class="profile-avatar-fallback{% if user.profile_picture %} is-hidden{% endif %}" id="profileAvatarFallback">
+                            <span>{{ (user.username or 'User')|trim|first|upper }}</span>
+                        </div>
+                        <span class="profile-avatar-badge">Active</span>
+                    </div>
+                    <p class="profile-eyebrow">Profile Settings</p>
+                    <h1 class="profile-title">{{ user.username|upper }}</h1>
+                    <p class="profile-role">{{ user.role | replace('_', ' ') | title }}</p>
+                    <p class="profile-subtitle">Manage your account photo, security settings, and dashboard access from one clean workspace.</p>
+                </div>
+            </section>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="profile-alerts">
+                        {% for category, message in messages %}
+                            <div class="alert profile-alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <section class="profile-panels">
+                <article class="profile-card">
+                    <div class="profile-card-header">
+                        <p class="profile-card-kicker">Media</p>
+                        <h2 class="profile-card-title">Update Profile Picture</h2>
+                        <p class="profile-card-description">Keep your workspace polished with a sharp profile photo that appears across the dashboard.</p>
+                    </div>
+                    <div class="profile-card-body">
+                        <div class="profile-preview-panel">
+                            <div class="profile-preview-avatar">
+                                <img
+                                    src="{{ '/profile-picture/' ~ user.username if user.profile_picture else 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==' }}"
+                                    alt=""
+                                    aria-hidden="true"
+                                    class="profile-avatar-image{% if not user.profile_picture %} is-hidden{% endif %}"
+                                    id="profilePreviewImage"
+                                    data-original-src="{% if user.profile_picture %}/profile-picture/{{ user.username }}{% endif %}"
+                                    onerror="this.classList.add('is-hidden'); if (this.nextElementSibling) { this.nextElementSibling.classList.remove('is-hidden'); }"
+                                >
+                                <div class="profile-avatar-fallback{% if user.profile_picture %} is-hidden{% endif %}" id="profilePreviewFallback">
+                                    <span>{{ (user.username or 'User')|trim|first|upper }}</span>
+                                </div>
+                            </div>
+                            <div class="profile-preview-copy">
+                                <span class="profile-preview-badge">Instant preview before upload</span>
+                                <p>Your selected image will appear here immediately, so you can verify framing before saving.</p>
+                                <small>Best results: square image, high contrast, under 5 MB.</small>
+                            </div>
+                        </div>
+
+                        <form method="post" enctype="multipart/form-data" class="profile-form">
+                            <input type="hidden" name="action" value="upload_picture">
+                            <div class="form-group">
+                                <label for="profile_picture">Choose Picture</label>
+                                <input type="file" class="form-control" id="profile_picture" name="profile_picture" accept=".jpg,.jpeg,.png,.gif,.webp" required>
+                                <div class="profile-field-meta">
+                                    <span id="profileFileName"><strong>Selected:</strong> No file chosen</span>
+                                    <span>JPG, PNG, GIF, WEBP</span>
+                                </div>
+                            </div>
+                            <button type="submit" class="profile-btn profile-btn-primary">
+                                <i class="fas fa-upload"></i>
+                                <span>Upload Picture</span>
+                            </button>
+                        </form>
+                    </div>
+                </article>
+
+                <article class="profile-card">
+                    <div class="profile-card-header">
+                        <p class="profile-card-kicker">Security</p>
+                        <h2 class="profile-card-title">Change Password</h2>
+                        <p class="profile-card-description">Update your credentials with a stronger password and confirm it before saving.</p>
+                    </div>
+                    <div class="profile-card-body">
+                        <form method="post" class="profile-form">
+                            <input type="hidden" name="action" value="change_password">
+
+                            <div class="form-group">
+                                <label for="old_password">Current Password</label>
+                                <div class="profile-password-field">
+                                    <input type="password" class="form-control" id="old_password" name="old_password" autocomplete="current-password" required>
+                                    <button type="button" class="profile-password-toggle" data-password-toggle="old_password" aria-label="Show current password">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="new_password">New Password</label>
+                                <div class="profile-password-field">
+                                    <input type="password" class="form-control" id="new_password" name="new_password" autocomplete="new-password" required>
+                                    <button type="button" class="profile-password-toggle" data-password-toggle="new_password" aria-label="Show new password">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="profile-strength" aria-live="polite">
+                                    <div class="profile-strength-track">
+                                        <span class="profile-strength-bar" id="passwordStrengthBar"></span>
+                                    </div>
+                                    <div class="profile-strength-meta">
+                                        <span id="passwordStrengthLabel">Use 8+ characters with upper/lowercase letters, numbers, or symbols.</span>
+                                        <span id="passwordStrengthScore">Too weak</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="confirm_password">Confirm New Password</label>
+                                <div class="profile-password-field">
+                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" autocomplete="new-password" required>
+                                    <button type="button" class="profile-password-toggle" data-password-toggle="confirm_password" aria-label="Show confirmation password">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="profile-field-meta">
+                                    <span>Minimum 8 characters</span>
+                                    <span class="profile-match-state" id="passwordMatchState">Waiting for confirmation</span>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="profile-btn profile-btn-primary">
+                                <i class="fas fa-lock"></i>
+                                <span>Change Password</span>
+                            </button>
+                        </form>
+                    </div>
+                </article>
+            </section>
+
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function () {
+            const fileInput = document.getElementById("profile_picture");
+            const fileNameLabel = document.getElementById("profileFileName");
+            const avatarPairs = [
+                {
+                    image: document.getElementById("profileAvatarImage"),
+                    fallback: document.getElementById("profileAvatarFallback"),
+                },
+                {
+                    image: document.getElementById("profilePreviewImage"),
+                    fallback: document.getElementById("profilePreviewFallback"),
+                },
+            ];
+            let objectUrl = "";
+
+            function showFallback(pair) {
+                if (!pair) {
+                    return;
+                }
+                pair.image.classList.add("is-hidden");
+                pair.fallback.classList.remove("is-hidden");
+            }
+
+            function showImage(pair, src) {
+                if (!pair || !src) {
+                    showFallback(pair);
+                    return;
+                }
+                pair.image.src = src;
+                pair.image.classList.remove("is-hidden");
+                pair.fallback.classList.add("is-hidden");
+            }
+
+            avatarPairs.forEach(function (pair) {
+                if (!pair.image || !pair.fallback) {
+                    return;
+                }
+                pair.image.addEventListener("error", function () {
+                    showFallback(pair);
+                });
+                if (!pair.image.getAttribute("src")) {
+                    showFallback(pair);
+                }
+            });
+
+            if (fileInput) {
+                fileInput.addEventListener("change", function (event) {
+                    const file = event.target.files && event.target.files[0];
+                    if (objectUrl) {
+                        URL.revokeObjectURL(objectUrl);
+                        objectUrl = "";
+                    }
+
+                    if (!file) {
+                        fileNameLabel.innerHTML = "<strong>Selected:</strong> No file chosen";
+                        avatarPairs.forEach(function (pair) {
+                            const originalSrc = pair.image.dataset.originalSrc;
+                            if (originalSrc) {
+                                showImage(pair, originalSrc);
+                            } else {
+                                showFallback(pair);
+                            }
+                        });
+                        return;
+                    }
+
+                    fileNameLabel.innerHTML = "<strong>Selected:</strong> " + file.name;
+                    if (!file.type.startsWith("image/")) {
+                        return;
+                    }
+
+                    objectUrl = URL.createObjectURL(file);
+                    avatarPairs.forEach(function (pair) {
+                        showImage(pair, objectUrl);
+                    });
+                });
+            }
+
+            document.querySelectorAll("[data-password-toggle]").forEach(function (toggle) {
+                toggle.addEventListener("click", function () {
+                    const targetId = toggle.getAttribute("data-password-toggle");
+                    const field = document.getElementById(targetId);
+                    if (!field) {
+                        return;
+                    }
+                    const isPassword = field.type === "password";
+                    field.type = isPassword ? "text" : "password";
+                    const icon = toggle.querySelector("i");
+                    if (icon) {
+                        icon.classList.toggle("fa-eye", !isPassword);
+                        icon.classList.toggle("fa-eye-slash", isPassword);
+                    }
+                    toggle.setAttribute("aria-label", (isPassword ? "Hide" : "Show") + " password");
+                });
+            });
+
+            const newPasswordInput = document.getElementById("new_password");
+            const confirmPasswordInput = document.getElementById("confirm_password");
+            const strengthBar = document.getElementById("passwordStrengthBar");
+            const strengthLabel = document.getElementById("passwordStrengthLabel");
+            const strengthScore = document.getElementById("passwordStrengthScore");
+            const matchState = document.getElementById("passwordMatchState");
+
+            function passwordScore(value) {
+                let score = 0;
+                if (value.length >= 8) {
+                    score += 1;
+                }
+                if (/[a-z]/.test(value) && /[A-Z]/.test(value)) {
+                    score += 1;
+                }
+                if (/\d/.test(value)) {
+                    score += 1;
+                }
+                if (/[^A-Za-z0-9]/.test(value)) {
+                    score += 1;
+                }
+                if (value.length >= 12) {
+                    score += 1;
+                }
+                return score;
+            }
+
+            function updateStrength() {
+                const value = newPasswordInput ? newPasswordInput.value : "";
+                const score = passwordScore(value);
+                const width = value ? Math.max(score, 1) * 20 : 20;
+                strengthBar.style.width = width + "%";
+                strengthBar.className = "profile-strength-bar";
+
+                if (!value) {
+                    strengthLabel.textContent = "Use 8+ characters with upper/lowercase letters, numbers, or symbols.";
+                    strengthScore.textContent = "Too weak";
+                    return;
+                }
+
+                if (score <= 1) {
+                    strengthBar.classList.add("is-weak");
+                    strengthLabel.textContent = "Add more length and mix character types for better protection.";
+                    strengthScore.textContent = "Weak";
+                } else if (score === 2) {
+                    strengthBar.classList.add("is-fair");
+                    strengthLabel.textContent = "Decent start. Add symbols or more variety to improve it.";
+                    strengthScore.textContent = "Fair";
+                } else if (score === 3 || score === 4) {
+                    strengthBar.classList.add("is-good");
+                    strengthLabel.textContent = "Good password. A longer phrase will make it even stronger.";
+                    strengthScore.textContent = "Good";
+                } else {
+                    strengthBar.classList.add("is-strong");
+                    strengthLabel.textContent = "Strong password. This meets a solid security baseline.";
+                    strengthScore.textContent = "Strong";
+                }
+            }
+
+            function updateMatchState() {
+                if (!matchState || !confirmPasswordInput || !newPasswordInput) {
+                    return;
+                }
+                const newValue = newPasswordInput.value;
+                const confirmValue = confirmPasswordInput.value;
+
+                matchState.classList.remove("is-match", "is-mismatch");
+                if (!confirmValue) {
+                    matchState.textContent = "Waiting for confirmation";
+                    return;
+                }
+
+                if (newValue === confirmValue) {
+                    matchState.textContent = "Passwords match";
+                    matchState.classList.add("is-match");
+                } else {
+                    matchState.textContent = "Passwords do not match";
+                    matchState.classList.add("is-mismatch");
+                }
+            }
+
+            if (newPasswordInput) {
+                newPasswordInput.addEventListener("input", function () {
+                    updateStrength();
+                    updateMatchState();
+                });
+            }
+
+            if (confirmPasswordInput) {
+                confirmPasswordInput.addEventListener("input", updateMatchState);
+            }
+
+            updateStrength();
+            updateMatchState();
+        }());
+    </script>
+</body>
+</html>

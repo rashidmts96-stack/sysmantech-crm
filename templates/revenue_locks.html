@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revenue Lock System</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+<style>
+body { background: #f6f8fb; }
+.top-nav { border-bottom: 1px solid #1f2937; }
+.table-wrap { max-height: 460px; overflow: auto; }
+.table-wrap thead th { position: sticky; top: 0; z-index: 2; }
+</style>
+</head>
+<body class="crm-theme">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark top-nav">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-semibold" href="/revenue-dashboard">Revenue Management</a>
+    <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#revNav"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="revNav">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item"><a class="nav-link" href="/revenue-dashboard">Dashboard</a></li>
+        {% if can_manage_revenue %}
+        <li class="nav-item"><a class="nav-link" href="/revenue-entry">Revenue Entry</a></li>
+        <li class="nav-item"><a class="nav-link" href="/revenue-upload">Bulk Upload</a></li>
+        <li class="nav-item"><a class="nav-link" href="/revenue-reports">Reports</a></li>
+        <li class="nav-item"><a class="nav-link active" href="/revenue-locks">Lock System</a></li>
+        {% if session.role == "super_admin" %}
+        <li class="nav-item"><a class="nav-link" href="/revenue-target-settings">Target Settings</a></li>
+        {% endif %}
+        {% endif %}
+      </ul>
+      <div class="d-flex align-items-center gap-2 flex-wrap ms-lg-auto">
+        <a href="/dashboard" class="btn btn-outline-light btn-sm">Dashboard</a>
+        {% include "_global_user_menu.html" %}
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid py-3">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  {% for category, message in messages %}
+  <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+  {% endwith %}
+
+  {% if can_manage_revenue %}
+  <div class="card border-warning mb-3">
+    <div class="card-header bg-warning bg-opacity-25 fw-semibold">Lock / Unlock Period</div>
+    <div class="card-body">
+      <form method="POST" action="/lock-revenue-entry-period">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-4">
+            <label class="form-label mb-1">From Date</label>
+            <input type="date" name="lock_from_date" class="form-control form-control-sm" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label mb-1">To Date</label>
+            <input type="date" name="lock_to_date" class="form-control form-control-sm" required>
+          </div>
+          <div class="col-md-2">
+            <button type="submit" name="lock_action" value="lock" class="btn btn-warning btn-sm w-100">Lock</button>
+          </div>
+          <div class="col-md-2">
+            <button type="submit" name="lock_action" value="unlock" class="btn btn-outline-secondary btn-sm w-100">Unlock</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span class="fw-semibold">Locked Periods | Count: {{ (locked_periods|length) if locked_periods else 0 }}</span>
+      <span class="badge text-bg-dark">Rows</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-wrap">
+        <table class="table table-sm table-bordered mb-0">
+          <thead class="table-warning">
+            <tr><th>From</th><th>To</th><th>Locked By</th><th>Locked At</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            {% if locked_periods %}
+              {% for lp in locked_periods %}
+              <tr>
+                <td>{{ lp.from_date }}</td>
+                <td>{{ lp.to_date }}</td>
+                <td>{{ lp.locked_by or '-' }}</td>
+                <td>{{ lp.locked_at or '-' }}</td>
+                <td>
+                  <form method="POST" action="/lock-revenue-entry-period" class="d-inline">
+                    <input type="hidden" name="lock_from_date" value="{{ lp.from_date }}">
+                    <input type="hidden" name="lock_to_date" value="{{ lp.to_date }}">
+                    <button type="submit" name="lock_action" value="unlock" class="btn btn-outline-danger btn-sm">Unlock</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="5" class="text-center text-muted">No locked periods</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-warning">Lock System is available only for Admin / Super Admin.</div>
+  {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

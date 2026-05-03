@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ print_title }} - {{ job.job_number }}</title>
+  <link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+  <style>
+    :root {
+      --brand: #2e5ca8;
+      --brand-dark: #264c8c;
+      --ink: #16314f;
+      --muted: #607089;
+      --line: #d8e1ef;
+      --paper: #ffffff;
+      --surface: #f7faff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #d9dde5;
+      color: var(--ink);
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 12px 18px;
+      background: #1f2937;
+    }
+
+    .toolbar a,
+    .toolbar button {
+      border: 1px solid #d6deec;
+      background: #ffffff;
+      color: #18283d;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .toolbar a.whatsapp-btn {
+      background: #25d366;
+      border-color: #25d366;
+      color: #ffffff;
+    }
+
+    .sheet {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 8px auto;
+      background: var(--paper);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+      padding: 3.5mm 3.5mm 4mm;
+      overflow: hidden;
+    }
+
+    .sheet.compact {
+      font-size: 90%;
+    }
+
+    .sheet.create-layout {
+      font-size: 92%;
+    }
+
+    .header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: start;
+      background: linear-gradient(135deg, var(--brand-dark), var(--brand));
+      color: #ffffff;
+      padding: 14px 16px 12px;
+    }
+
+    .brand-name {
+      margin: 0 0 6px;
+      font-size: 22px;
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+
+    .branch-lines {
+      font-size: 10px;
+      line-height: 1.32;
+    }
+
+    .branch-lines div {
+      margin: 2px 0;
+    }
+
+    .doc-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      text-align: right;
+      min-width: 156px;
+      font-size: 10px;
+      line-height: 1.35;
+    }
+
+    .doc-badge {
+      display: inline-block;
+      margin-bottom: 6px;
+      padding: 6px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.12);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .doc-meta strong {
+      color: #ffffff;
+    }
+
+    .content {
+      padding: 10px 12px 0;
+    }
+
+    .headline {
+      margin: 6px 0 8px;
+      padding-bottom: 4px;
+      border-bottom: 2px solid var(--line);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--brand);
+    }
+
+    .section {
+      margin-top: 8px;
+    }
+
+    .section-title {
+      margin: 0 0 5px;
+      padding-bottom: 3px;
+      border-bottom: 2px solid var(--line);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: #2f6fff;
+      text-transform: uppercase;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #ffffff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th,
+    td {
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 5px 6px;
+      vertical-align: top;
+      word-break: break-word;
+    }
+
+    tr:last-child td,
+    tr:last-child th {
+      border-bottom: 0;
+    }
+
+    tr td:last-child,
+    tr th:last-child {
+      border-right: 0;
+    }
+
+    th {
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 8.5px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-align: left;
+    }
+
+    td {
+      font-size: 10px;
+      font-weight: 700;
+      color: #23344d;
+    }
+
+    .value-light {
+      font-weight: 600;
+    }
+
+    .full-note {
+      min-height: 28px;
+    }
+
+    .money {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .terms-box {
+      margin-top: 6px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface);
+      padding: 8px 10px;
+    }
+
+    .terms-box p {
+      margin: 0 0 2px;
+      font-size: 8.7px;
+      line-height: 1.28;
+      color: #31445f;
+    }
+
+    .signatures {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 8px;
+      padding: 0 6px;
+    }
+
+    .signature {
+      position: relative;
+      min-height: 34px;
+      padding-top: 20px;
+      text-align: center;
+      font-size: 9px;
+      color: #4a5f80;
+    }
+
+    .signature::before {
+      content: "";
+      position: absolute;
+      top: 16px;
+      left: 0;
+      right: 0;
+      border-top: 2px solid #9ab1da;
+    }
+
+    .footer-bar {
+      margin-top: 8px;
+      background: var(--brand-dark);
+      color: #dfeaff;
+      text-align: center;
+      padding: 5px 8px;
+      font-size: 8px;
+      letter-spacing: 0.03em;
+      font-weight: 700;
+    }
+
+    .create-layout .section {
+      margin-top: 6px;
+    }
+
+    .create-layout .terms-box p {
+      font-size: 7.8px;
+      line-height: 1.22;
+    }
+
+    .close-layout .section {
+      margin-top: 6px;
+    }
+
+    .close-layout .full-note {
+      min-height: 22px;
+    }
+
+    .header,
+    .panel,
+    .terms-box,
+    .signatures,
+    .footer-bar {
+      page-break-inside: avoid;
+    }
+
+    .quote-block {
+      margin-top: 8px;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+
+    @media print {
+      html,
+      body {
+        width: 210mm;
+        height: 297mm;
+        background: #ffffff;
+      }
+
+      body {
+        background: #ffffff;
+      }
+
+      .toolbar,
+      .toolbar * {
+        display: none !important;
+      }
+
+      .sheet {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 0;
+        padding: 3mm 3mm 3mm;
+        box-shadow: none;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .sheet {
+        width: auto;
+        min-height: auto;
+        margin: 0;
+      }
+
+      .doc-meta {
+        min-width: 140px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .header,
+      .signatures {
+        grid-template-columns: 1fr;
+      }
+
+      .doc-meta {
+        text-align: left;
+        align-items: flex-start;
+        min-width: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <a href="/job-details/{{ job.id }}">Back to Job</a>
+    <button type="button" onclick="window.print()">Print</button>
+    <a href="{{ build_whatsapp_chat_url(job.mobile or job.alt_no, 'Document: ' ~ ('Customer Job Copy' if print_mode == 'create' else 'Outward Challan') ~ '\nJob No: ' ~ (job.job_number or job.id) ~ '\nCustomer: ' ~ (job.customer_name or 'Customer') ~ '\nMobile: ' ~ (job.mobile or job.alt_no or '-')) }}" class="whatsapp-btn" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+    {% include "_global_user_menu.html" %}
+  </div>
+
+  <div class="sheet {% if print_mode == 'create' %}create-layout{% endif %} {% if print_mode == 'close' or (used_spares|length) > 4 %}compact{% endif %} {% if print_mode == 'close' %}close-layout{% endif %}">
+    <div class="header">
+      <div>
+        <h1 class="brand-name">{{ profile.company_name or 'SYSMANTECH' }}</h1>
+        <div class="branch-lines">
+          {% if profile.address_line1 %}<div>{{ profile.address_line1 }}</div>{% endif %}
+          {% if profile.address_line2 %}<div>{{ profile.address_line2 }}</div>{% endif %}
+          {% if profile.gst_no %}<div><strong>GST:</strong> {{ profile.gst_no }}</div>{% endif %}
+          <div>
+            <strong>Phone:</strong>
+            {% if profile.mobile1 %}{{ profile.mobile1 }}{% endif %}
+            {% if profile.mobile2 %}, {{ profile.mobile2 }}{% endif %}
+            {% if profile.mobile3 %}, {{ profile.mobile3 }}{% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="doc-meta">
+        <div class="doc-badge">{{ print_title }}</div>
+        <div><strong>Job No:</strong> {{ job.job_number }}</div>
+        {% if print_mode == 'create' %}
+        <div><strong>Date:</strong> {{ job.created_on or printed_at }}</div>
+        {% else %}
+        <div><strong>Closed On:</strong> {{ job.closed_on or printed_at }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="headline">{{ 'INWARD CHALLAN' if print_mode == 'create' else 'OUTWARD CHALLAN' }}</div>
+
+      <div class="section">
+        <div class="section-title">Customer &amp; Device Details</div>
+        <div class="panel">
+          <table>
+            <tr>
+              <th>Customer Name</th>
+              <th>Mobile</th>
+            </tr>
+            <tr>
+              <td>{{ job.customer_name or '-' }}</td>
+              <td>{{ job.mobile or '-' }}</td>
+            </tr>
+            {% if print_mode == 'create' %}
+            <tr>
+              <th>Alt No</th>
+              <th>Email</th>
+            </tr>
+            <tr>
+              <td>{{ job.alt_no or '-' }}</td>
+              <td>{{ job.email or '-' }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+              <th>Model</th>
+              <th>Serial No</th>
+            </tr>
+            <tr>
+              <td>{{ job.model or job.device or '-' }}</td>
+              <td>{{ job.serial_number or '-' }}</td>
+            </tr>
+            {% if print_mode == 'create' %}
+            <tr>
+              <th>Location</th>
+              <th>Pin Code</th>
+            </tr>
+            <tr>
+              <td>{{ job.location or '-' }}</td>
+              <td>{{ job.pin_code or '-' }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+              <th colspan="2">Address</th>
+            </tr>
+            <tr>
+              <td colspan="2" class="value-light">{{ job.address or job.location or '-' }}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Service Details</div>
+        <div class="panel">
+          <table>
+            <tr>
+              <th colspan="2">Complaint / Issue</th>
+            </tr>
+            <tr>
+              <td colspan="2" class="full-note">{{ job.complaint or '-' }}</td>
+            </tr>
+
+            {% if print_mode == 'create' %}
+            <tr>
+              <th>Received By</th>
+              <th>Estimate Amount (Rs.)</th>
+            </tr>
+            <tr>
+              <td>{{ job.received_by or '-' }}</td>
+              <td class="money">{{ '%.2f'|format((job.estimate_amount or 0)|float) }}</td>
+            </tr>
+            <tr>
+              <th colspan="2">Accessories Received</th>
+            </tr>
+            <tr>
+              <td colspan="2">{{ job.accessories_received or '-' }}</td>
+            </tr>
+            <tr>
+              <th colspan="2">Engineer Remarks</th>
+            </tr>
+            <tr>
+              <td colspan="2" class="full-note">{{ job.engineer_remarks or '-' }}</td>
+            </tr>
+            <tr>
+              <th>Warranty Status</th>
+              <th>Backup Required</th>
+            </tr>
+            <tr>
+              <td>{{ job.warranty_status or '-' }}</td>
+              <td>{{ job.backup_required or '-' }}</td>
+            </tr>
+            {% if job.assigned_engineer or job.call_type %}
+            <tr>
+              <th>Assigned Engineer</th>
+              <th>Call Type</th>
+            </tr>
+            <tr>
+              <td>{{ job.assigned_engineer or '-' }}</td>
+              <td>{{ job.call_type or '-' }}</td>
+            </tr>
+            {% endif %}
+            {% else %}
+            <tr>
+              <th>Assigned Engineer</th>
+              <th>Service Type</th>
+            </tr>
+            <tr>
+              <td>{{ job.assigned_engineer or '-' }}</td>
+              <td>{{ job.closure_service_type or '-' }}</td>
+            </tr>
+            <tr>
+              <th colspan="2">Engineer Remarks</th>
+            </tr>
+            <tr>
+              <td colspan="2" class="full-note">{{ job.engineer_remarks or '-' }}</td>
+            </tr>
+            {% endif %}
+          </table>
+        </div>
+      </div>
+
+      {% if print_mode == 'create' %}
+      <div class="section">
+        <div class="section-title">Terms &amp; Conditions</div>
+        <div class="terms-box">
+          {% for line in (profile.terms_text or '').split('\n') %}
+            {% if line.strip() %}
+            <p>{{ line }}</p>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <div class="section quote-block">
+        <div class="section-title">Billing Details</div>
+        <div class="panel">
+          <table>
+            <tr>
+              <th>Description</th>
+              <th style="width: 140px;" class="money">Amount (Rs.)</th>
+            </tr>
+            {% for spare in used_spares %}
+            <tr>
+              <td>{{ spare.spare_name or '-' }}</td>
+              <td class="money">{{ '%.2f'|format((spare.amount or 0)|float) }}</td>
+            </tr>
+            {% endfor %}
+            <tr>
+              <td>Service Charges</td>
+              <td class="money">{{ '%.2f'|format((service_charges or 0)|float) }}</td>
+            </tr>
+            <tr>
+              <td><strong>Total</strong></td>
+              <td class="money"><strong>{{ '%.2f'|format((bill_total_amount or 0)|float) }}</strong></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Mode of Payment</div>
+        <div class="panel">
+          <table>
+            <tr>
+              <th>Cash</th>
+              <th>UPI</th>
+            </tr>
+            <tr>
+              <td>{{ '%.2f'|format((job.payment_cash or 0)|float) }}</td>
+              <td>{{ '%.2f'|format((job.payment_upi or 0)|float) }}</td>
+            </tr>
+            <tr>
+              <th>Card</th>
+              <th>Total Paid</th>
+            </tr>
+            <tr>
+              <td>{{ '%.2f'|format((job.payment_card or 0)|float) }}</td>
+              <td>{{ '%.2f'|format(((job.payment_cash or 0)|float + (job.payment_upi or 0)|float + (job.payment_card or 0)|float)) }}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="signatures">
+        <div class="signature">Customer Signature</div>
+        <div class="signature">Technician Signature</div>
+        <div class="signature">Authorized Signature</div>
+      </div>
+
+      <div class="footer-bar">{{ profile.company_name or 'SYSMANTECH' }} | Thank you for choosing us</div>
+    </div>
+  </div>
+</body>
+</html>

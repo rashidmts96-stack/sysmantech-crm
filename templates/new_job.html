@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New Service Job</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+        <link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+    <style>
+        .required::after {
+            content: " *";
+            color: #dc3545;
+            font-size: 0.9em;
+        }
+        #customerInfo {
+            min-height: 100px;
+        }
+    </style>
+</head>
+<body class="crm-theme">
+
+<nav class="navbar navbar-dark bg-dark mb-3">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-semibold" href="/new-job">Create Service Job</a>
+        <div class="d-flex align-items-center gap-2 ms-auto">
+            {% include "_global_user_menu.html" %}
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid mt-4 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10 col-xl-8">
+
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <h4 class="mb-0">Create New Service Job</h4>
+                        <a href="/jobs" class="btn btn-light btn-sm">Home</a>
+                    </div>
+                </div>
+
+                <div class="card-body p-4">
+
+                    <!-- Flash messages -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" action="/new-job" enctype="multipart/form-data">
+
+                        <div class="row g-3">
+
+                            <!-- Customer Name + Mobile -->
+                            <div class="col-md-6">
+                                <label class="form-label required">Customer Name</label>
+                                <input type="text" id="customer_name" name="customer_name" class="form-control" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label required">Mobile Number</label>
+                                <input type="tel" id="mobile" name="mobile" class="form-control" pattern="[0-9]{10,}" minlength="10" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Alt No</label>
+                                <input type="tel" name="alt_no" class="form-control" pattern="[0-9]{10,}" minlength="10" placeholder="Optional">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Email</label>
+                                <input type="email" name="email" class="form-control" placeholder="Optional">
+                            </div>
+
+                            <!-- History preview -->
+                            <div class="col-12">
+                                <div id="customerInfo" class="alert alert-info mb-3" style="display:none;"></div>
+                            </div>
+
+                            <!-- Device Category -->
+                            <div class="col-md-6">
+                                <label class="form-label required">Device Category</label>
+                                {% if dropdowns.get('device_category') %}
+                                    <select name="device" class="form-select" id="deviceCategorySelect" required>
+                                        <option value="">— Select Device —</option>
+                                        {% for val in dropdowns['device_category'] %}
+                                            <option value="{{ val }}">{{ val }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% else %}
+                                    <input type="text" name="device" class="form-control" id="deviceCategorySelect" placeholder="Type device name" required>
+                                {% endif %}
+                            </div>
+
+                            <!-- Model -->
+                            <div class="col-md-6">
+                                <label class="form-label required">Model</label>
+                                {% if dropdowns.get('model') %}
+                                    <select name="model" class="form-select" required>
+                                        <option value="">— Select Model —</option>
+                                        {% for val in dropdowns['model'] %}
+                                            <option value="{{ val }}">{{ val }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% else %}
+                                    <input type="text" name="model" class="form-control" placeholder="e.g. iPhone 14 Pro, ThinkPad X1" required>
+                                {% endif %}
+                            </div>
+
+                            <!-- Serial Number -->
+                            <div class="col-md-6">
+                                <label class="form-label required">Serial Number</label>
+                                <input type="text" name="serial" class="form-control" placeholder="Enter serial number" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Location</label>
+                                <input type="text" name="location" class="form-control" placeholder="Optional">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Pin code</label>
+                                <input type="text" name="pin_code" class="form-control" placeholder="Optional">
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Address</label>
+                                <textarea name="address" class="form-control" rows="2" placeholder="Optional"></textarea>
+                            </div>
+
+                            <!-- Complaint -->
+                            <div class="col-md-6">
+                                <label class="form-label required">Complaint / Issue</label>
+                                {% if dropdowns.get('complaint') %}
+                                    <select name="complaint" class="form-select" required>
+                                        <option value="">— Select Issue —</option>
+                                        {% for val in dropdowns['complaint'] %}
+                                            <option value="{{ val }}">{{ val }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% else %}
+                                    <textarea name="complaint" class="form-control" rows="3" required
+                                              placeholder="Describe the problem..."></textarea>
+                                {% endif %}
+                            </div>
+
+                            <!-- Priority -->
+                            <div class="col-md-6">
+                                <label class="form-label">Priority</label>
+                                {% if dropdowns.get('priority') %}
+                                    <select name="priority" class="form-select" required>
+                                        <option value="">— Select Priority —</option>
+                                        {% for val in dropdowns['priority'] %}
+                                            <option value="{{ val }}">{{ val }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% else %}
+                                    <select name="priority" class="form-select" required>
+                                        <option value="Normal">Normal</option>
+                                        <option value="Urgent">Urgent</option>
+                                    </select>
+                                {% endif %}
+                            </div>
+
+                            <!-- Received By / Assigned Engineer -->
+                            <div class="col-md-6">
+                                <label class="form-label required">Received By</label>
+                                <input
+                                    type="text"
+                                    name="received_by"
+                                    id="receivedByInput"
+                                    class="form-control"
+                                    list="receivedByList"
+                                    value="{{ session.username }}"
+                                    autocomplete="off"
+                                    placeholder="Type name"
+                                    required
+                                >
+                                <datalist id="receivedByList"></datalist>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label required">Assigned Engineer</label>
+                                <input
+                                    type="text"
+                                    name="assigned_engineer"
+                                    id="assignedEngineerInput"
+                                    class="form-control"
+                                    list="assignedEngineerList"
+                                    value=""
+                                    autocomplete="off"
+                                    placeholder="Type engineer name"
+                                    required
+                                >
+                                <datalist id="assignedEngineerList"></datalist>
+                            </div>
+
+                            <!-- Estimate + Photo -->
+                            <div class="col-md-6">
+                                <label class="form-label">Estimate Amount (₹)</label>
+                                <input type="number" name="estimate_amount" class="form-control" step="0.01" placeholder="Optional">
+                            </div>
+
+
+
+                            <div class="col-md-6">
+                                <label class="form-label">Photos (optional)</label>
+                                <input type="file" name="photos" class="form-control" accept="image/*" multiple>
+                                <small class="text-muted">Upload up to 10 images.</small>
+                            </div>
+
+                            <!-- Accessories / Remarks -->
+                            <div class="col-md-6">
+                                <label class="form-label required">Accessories Received</label>
+                                <textarea name="accessories_received" class="form-control" rows="2" placeholder="E.g. Charger, Cable, Box" required></textarea>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label required">Engineer Remarks</label>
+                                <textarea name="engineer_remarks" class="form-control" rows="2" placeholder="Describe initial findings..." required></textarea>
+                            </div>
+
+                            <!-- Call Type / Service Mode -->
+                            <div class="col-md-6">
+                                <label class="form-label">Call Type / Service Mode</label>
+                                {% if dropdowns.get('call_type') %}
+                                    <select name="call_type" class="form-select" required>
+                                        <option value="">— Select Type —</option>
+                                        {% for val in dropdowns['call_type'] %}
+                                            <option value="{{ val }}">{{ val }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% else %}
+                                    <input type="text" name="call_type" class="form-control" placeholder="Carry In / Onsite / Pickup" required>
+                                {% endif %}
+                            </div>
+
+                            <!-- Complaint Type -->
+                            <div class="col-md-6">
+                                <label class="form-label">Complaint Type</label>
+                                {% if dropdowns.get('complaint_type') %}
+                                    <select name="complaint_type" class="form-select" required>
+                                        <option value="">— Select Complaint Type —</option>
+                                        {% for val in dropdowns['complaint_type'] %}
+                                            <option value="{{ val }}">{{ val }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% else %}
+                                    <input type="text" name="complaint_type" class="form-control" placeholder="e.g. Printer / HW-SW" required>
+                                {% endif %}
+                            </div>
+
+                            <!-- Warranty Status -->
+                            <div class="col-md-6">
+                                <label class="form-label">Warranty Status</label>
+                                {% if dropdowns.get('warranty_status') %}
+                                    <select name="warranty_status" class="form-select" required>
+                                        <option value="">— Select Warranty Status —</option>
+                                        {% for val in dropdowns['warranty_status'] %}
+                                            <option value="{{ val }}">{{ val }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% else %}
+                                    <input type="text" name="warranty_status" class="form-control" placeholder="e.g. Under Warranty" required>
+                                {% endif %}
+                            </div>
+
+                            <!-- Backup Required -->
+                            <div class="col-md-6" id="backupRequiredContainer">
+                                <label class="form-label">Backup Required</label>
+                                {% if dropdowns.get('backup_required') %}
+                                    <select name="backup_required" class="form-select" id="backupRequiredField">
+                                        <option value="">— Select Backup Option —</option>
+                                        {% for val in dropdowns['backup_required'] %}
+                                            <option value="{{ val }}">{{ val }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% else %}
+                                    <input type="text" name="backup_required" class="form-control" id="backupRequiredField" placeholder="e.g. Yes / No">
+                                {% endif %}
+                            </div>
+
+                            <!-- Branch (select list for admins, fixed branch for coordinators/engineers) -->
+                            <div class="col-md-6">
+                                <label class="form-label required">Branch</label>
+                                {% if role in ["super_admin", "admin"] %}
+                                    <input type="text" name="branch" class="form-control" id="branchInput" placeholder="Type branch name" autocomplete="off" required value="">
+                                                                        <div class="invalid-feedback" id="branchInvalidMsg" style="display:none;">Please select a valid branch (not ALL).</div>
+                                    <div id="branchSuggestions" class="list-group position-absolute w-100" style="z-index: 1000; display: none;"></div>
+                                    <script id="branchOptionsData" type="application/json">{{ branches|tojson }}</script>
+                                    <script>
+                                    (() => {
+                                        const branchData = document.getElementById('branchOptionsData');
+                                        const branches = branchData ? JSON.parse(branchData.textContent || '[]') : [];
+                                        const input = document.getElementById('branchInput');
+                                        const sugg = document.getElementById('branchSuggestions');
+                                        const invalidMsg = document.getElementById('branchInvalidMsg');
+
+                                        input.addEventListener('input', function() {
+                                            const val = this.value.trim().toLowerCase();
+                                            sugg.innerHTML = '';
+                                            if (!val) { sugg.style.display = 'none'; return; }
+                                            const matches = branches.filter(b => b.toLowerCase().includes(val));
+                                            if (matches.length === 0) { sugg.style.display = 'none'; return; }
+                                            matches.forEach(b => {
+                                                const item = document.createElement('button');
+                                                item.type = 'button';
+                                                item.className = 'list-group-item list-group-item-action';
+                                                item.textContent = b;
+                                                item.onclick = () => {
+                                                    input.value = b;
+                                                    sugg.style.display = 'none';
+                                                    input.blur();
+                                                };
+                                                sugg.appendChild(item);
+                                            });
+                                            sugg.style.display = 'block';
+                                        });
+
+                                        input.addEventListener('focus', function() { sugg.style.display = 'none'; });
+                                        document.addEventListener('click', function(e) {
+                                            if (!sugg.contains(e.target) && e.target !== input) sugg.style.display = 'none';
+                                        });
+
+                                        const form = input.closest('form');
+                                        if (form) {
+                                            form.addEventListener('submit', function(e) {
+                                                if (input.value.trim().toUpperCase() === 'ALL') {
+                                                    e.preventDefault();
+                                                    invalidMsg.style.display = '';
+                                                    input.classList.add('is-invalid');
+                                                    input.focus();
+                                                } else {
+                                                    invalidMsg.style.display = 'none';
+                                                    input.classList.remove('is-invalid');
+                                                }
+                                            });
+                                        }
+                                    })();
+                                    </script>
+                                {% else %}
+                                    <input type="text" class="form-control" value="{{ branch }}" readonly>
+                                    <input type="hidden" name="branch" value="{{ branch }}">
+                                {% endif %}
+                            </div>
+
+                            <!-- Submit button -->
+                            <div class="col-12 text-center mt-4">
+                                <button type="submit" class="btn btn-success btn-lg px-5 py-3 fw-bold">
+                                    Create Job
+                                </button>
+                            </div>
+
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script id="usersData" type="application/json">{{ users|tojson }}</script>
+<script>
+// Show/hide and require Backup Required only for Laptop, Desktop, Mobile, All-In-One-PC
+const deviceSelect = document.getElementById('deviceCategorySelect');
+const backupContainer = document.getElementById('backupRequiredContainer');
+const backupField = document.getElementById('backupRequiredField');
+function updateBackupRequired() {
+    if (!deviceSelect || !backupContainer || !backupField) return;
+    const val = deviceSelect.value ? deviceSelect.value.trim().toLowerCase() : '';
+    const show = ["laptop", "desktop", "mobile", "all-in-one-pc", "all in one pc", "all-in-one pc", "all in one-pc"].some(
+        d => val === d
+    );
+    if (show) {
+        backupContainer.style.display = '';
+        backupField.required = true;
+    } else {
+        backupContainer.style.display = 'none';
+        backupField.required = false;
+        backupField.value = '';
+    }
+}
+if (deviceSelect) {
+    deviceSelect.addEventListener('change', updateBackupRequired);
+    document.addEventListener('DOMContentLoaded', updateBackupRequired);
+    // Also run on page load in case of edit
+    setTimeout(updateBackupRequired, 100);
+}
+</script>
+<script>
+// Mobile number → customer history preview + auto-fill
+document.getElementById("mobile").addEventListener("input", function () {
+    const mobile = this.value.trim();
+    const infoDiv = document.getElementById("customerInfo");
+
+    function buildCustomerHistoryPreview(data) {
+        const fragment = document.createDocumentFragment();
+        const existingCustomerLabel = document.createElement("strong");
+        existingCustomerLabel.textContent = "Existing Customer";
+        fragment.appendChild(existingCustomerLabel);
+        fragment.appendChild(document.createElement("br"));
+
+        fragment.appendChild(document.createTextNode("Name: "));
+        const customerName = document.createElement("b");
+        customerName.textContent = data.customer || "";
+        fragment.appendChild(customerName);
+        fragment.appendChild(document.createElement("br"));
+
+        fragment.appendChild(document.createTextNode("Total previous jobs: "));
+        const totalJobs = document.createElement("b");
+        totalJobs.textContent = String(data.jobs || 0);
+        fragment.appendChild(totalJobs);
+        fragment.appendChild(document.createElement("br"));
+        fragment.appendChild(document.createElement("br"));
+
+        const recentJobsLabel = document.createElement("strong");
+        recentJobsLabel.textContent = "Recent jobs:";
+        fragment.appendChild(recentJobsLabel);
+        fragment.appendChild(document.createElement("br"));
+
+        (Array.isArray(data.recent) ? data.recent : []).forEach(job => {
+            const jobLine = document.createElement("div");
+            jobLine.textContent = `• ${job.job_number || ""} — ${job.device || ""} — ${job.status || ""}`;
+            fragment.appendChild(jobLine);
+        });
+
+        return fragment;
+    }
+
+    if (mobile.length < 6) {
+        infoDiv.style.display = "none";
+        return;
+    }
+
+    fetch(`/customer-history/${encodeURIComponent(mobile)}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.found) {
+                infoDiv.replaceChildren(buildCustomerHistoryPreview(data));
+                infoDiv.style.display = "block";
+
+                // Auto-fill name (you can add device/model auto-select if you want)
+                document.getElementById("customer_name").value = data.customer || '';
+            } else {
+                infoDiv.style.display = "none";
+            }
+        })
+        .catch(() => {
+            infoDiv.style.display = "none";
+        });
+});
+
+// Branch select filter (type to match)
+(function () {
+    const filterInput = document.getElementById("branchFilter");
+    const branchSelect = document.getElementById("branchSelect");
+
+    if (!filterInput || !branchSelect) return;
+
+    const originalOptions = Array.from(branchSelect.options).map(opt => ({
+        value: opt.value,
+        text: opt.text,
+        selected: opt.selected
+    }));
+
+    filterInput.addEventListener("input", () => {
+        const query = filterInput.value.trim().toLowerCase();
+
+        branchSelect.innerHTML = "";
+
+        originalOptions.forEach(opt => {
+            if (!query || opt.text.toLowerCase().includes(query)) {
+                const option = document.createElement("option");
+                option.value = opt.value;
+                option.text = opt.text;
+                if (opt.selected) option.selected = true;
+                branchSelect.appendChild(option);
+            }
+        });
+    });
+})();
+
+// Used spare dynamic rows (auto add new row on complete last row)
+(function () {
+    const container = document.getElementById("usedSparesContainer");
+    if (!container) return;
+
+    function createRow() {
+        const row = document.createElement("div");
+        row.className = "row g-2 used-spare-row mb-2";
+        row.innerHTML = `
+            <div class="col-md-7">
+                <input type="text" name="used_spare_name[]" class="form-control" placeholder="Spare Name">
+            </div>
+            <div class="col-md-4">
+                <input type="number" name="used_spare_amount[]" class="form-control" step="0.01" min="0" placeholder="Amount">
+            </div>
+            <div class="col-md-1 d-grid">
+                <button type="button" class="btn btn-outline-danger btn-sm remove-spare-row">X</button>
+            </div>
+        `;
+        container.appendChild(row);
+    }
+
+    function rowFilled(row) {
+        const nameInput = row.querySelector('input[name="used_spare_name[]"]');
+        const amountInput = row.querySelector('input[name="used_spare_amount[]"]');
+        return nameInput && amountInput && nameInput.value.trim() !== "" && amountInput.value.trim() !== "";
+    }
+
+    container.addEventListener("input", function () {
+        const rows = container.querySelectorAll(".used-spare-row");
+        const last = rows[rows.length - 1];
+        if (last && rowFilled(last)) {
+            createRow();
+        }
+    });
+
+    container.addEventListener("click", function (e) {
+        const btn = e.target.closest(".remove-spare-row");
+        if (!btn) return;
+        const rows = container.querySelectorAll(".used-spare-row");
+        if (rows.length <= 1) {
+            const row = btn.closest(".used-spare-row");
+            row.querySelector('input[name="used_spare_name[]"]').value = "";
+            row.querySelector('input[name="used_spare_amount[]"]').value = "";
+            return;
+        }
+        btn.closest(".used-spare-row").remove();
+    });
+})();
+
+// User name suggestions for Received By / Assigned Engineer.
+(function () {
+    const usersDataEl = document.getElementById("usersData");
+    const allUsers = usersDataEl ? JSON.parse(usersDataEl.textContent || "[]") : [];
+
+    function wireTypeahead(inputId, listId) {
+        const input = document.getElementById(inputId);
+        const datalist = document.getElementById(listId);
+        if (!input || !datalist) return;
+
+        function render() {
+            const q = input.value.trim().toLowerCase();
+            datalist.innerHTML = "";
+            if (!q) return;
+
+            const matches = allUsers
+                .filter((u) => (u || "").toLowerCase().includes(q))
+                .slice(0, 8);
+
+            matches.forEach((name) => {
+                const option = document.createElement("option");
+                option.value = name;
+                datalist.appendChild(option);
+            });
+        }
+
+        input.addEventListener("input", render);
+        input.addEventListener("focus", render);
+        input.addEventListener("blur", () => {
+            setTimeout(() => {
+                datalist.innerHTML = "";
+            }, 150);
+        });
+    }
+
+    wireTypeahead("receivedByInput", "receivedByList");
+    wireTypeahead("assignedEngineerInput", "assignedEngineerList");
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+</body>
+</html>

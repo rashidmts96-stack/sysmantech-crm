@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - CRM System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+    <style>
+        body {
+            font-size: 0.9rem;
+        }
+        .add-to-type-btn {
+            font-size: 0.85rem;
+        }
+        .card-header.bg-primary {
+            background-color: #0d6efd !important;
+        }
+        .text-uppercase {
+            letter-spacing: 0.5px;
+        }
+        .type-toggle {
+            text-decoration: none;
+            font-weight: 600;
+            color: #212529;
+            text-align: left;
+            width: 100%;
+            border: 0;
+            background: transparent;
+            padding: 0;
+        }
+        .type-toggle:focus {
+            box-shadow: none;
+        }
+        .type-meta {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        @media (max-width: 576px) {
+            body {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body class="crm-theme">
+
+<nav class="navbar navbar-dark bg-dark mb-3">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-semibold" href="/settings">Settings</a>
+        <div class="d-flex align-items-center gap-2 ms-auto">
+            {% include "_global_user_menu.html" %}
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid mt-4 mb-5">
+
+    <!-- Header + Back button -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">Settings</h3>
+        <div class="d-flex gap-2">
+            <a href="/admin-reports" class="btn btn-outline-primary">Reports</a>
+            <a href="/staff-management" class="btn btn-outline-dark">Staff Management</a>
+            <a href="/dashboard" class="btn btn-secondary">Dashboard</a>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Add Form -->
+    <div class="card shadow-sm mb-5">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Add New Dropdown Option</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="/add-option" id="main-add-form">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-5">
+                        <label for="type" class="form-label">Type</label>
+                        <input type="text" name="type" id="type" class="form-control" 
+                               placeholder="Type (example: call_type)" required>
+                        <div class="form-text text-muted mt-1">
+                            Use lowercase + underscore (no spaces)
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <label for="value" class="form-label">Value</label>
+                        <input type="text" name="value" id="value" class="form-control" 
+                               placeholder="Value (example: Carry In)" required>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-success w-100">Add</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Existing Options -->
+    <h4 class="mb-4">Existing Options</h4>
+
+    {% if grouped %}
+        {% for type, items in grouped.items() | sort(attribute='0') %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <button
+                        class="type-toggle"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#type-panel-{{ loop.index }}"
+                        aria-expanded="false"
+                        aria-controls="type-panel-{{ loop.index }}">
+                        <span class="text-uppercase">{{ type.replace('_', ' ') }}</span>
+                        <span class="type-meta ms-2">({{ items|length }} options)</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary add-to-type-btn ms-2"
+                            data-type="{{ type }}"
+                            onclick="fillTypeAndFocus(this.dataset.type)">
+                        + Add to this type
+                    </button>
+                </div>
+                <div id="type-panel-{{ loop.index }}" class="collapse">
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 80px;">ID</th>
+                                <th>Value</th>
+                                <th style="width: 160px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for o in items %}
+                                <tr>
+                                    <td>{{ o.id }}</td>
+                                    <td>{{ o.value }}</td>
+                                    <td class="d-flex gap-1">
+                                        <form method="POST" action="/move-option/{{ o.id }}/up" style="display:inline;">
+                                            <button type="submit" class="btn btn-outline-secondary btn-sm" title="Move Up">▲</button>
+                                        </form>
+                                        <form method="POST" action="/move-option/{{ o.id }}/down" style="display:inline;">
+                                            <button type="submit" class="btn btn-outline-secondary btn-sm" title="Move Down">▼</button>
+                                        </form>
+                                        <form method="POST" action="/delete-option/{{ o.id }}" style="display:inline;">
+                                            <button type="submit"
+                                                    class="btn btn-danger btn-sm"
+                                                    data-value="{{ o.value | e }}"
+                                                    data-typename="{{ type.replace('_', ' ') | e }}"
+                                                    onclick="return confirmDelete(this.dataset.value, this.dataset.typename);">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info text-center py-4">
+            <p class="mb-0">No dropdown options have been added yet.</p>
+        </div>
+    {% endif %}
+
+    <h4 class="mb-4 mt-5">User Management</h4>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <button
+                class="type-toggle"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#users-panel"
+                aria-expanded="false"
+                aria-controls="users-panel">
+                <span class="text-uppercase">Users</span>
+                <span class="type-meta ms-2">({{ users|length if users is defined else 0 }} records)</span>
+            </button>
+        </div>
+        <div id="users-panel" class="collapse">
+            <div class="card-body border-bottom">
+                {% if legacy_password_users %}
+                <div class="alert alert-warning" role="alert">
+                    <div class="fw-semibold">Password reset required for legacy accounts</div>
+                    <div class="small mt-1">These users still have non-hashed passwords stored from older data. They cannot log in until you open Edit and set a new password.</div>
+                    <div class="small mt-2">
+                        {% for legacy_user in legacy_password_users %}
+                        <span class="badge text-bg-warning me-1 mb-1">{{ legacy_user.username|upper }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                <form method="POST" action="/add-user">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label">Username</label>
+                            <input type="text" name="username" class="form-control" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Password</label>
+                            <input type="password" name="password" class="form-control" minlength="8" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Role</label>
+                            <select name="role" class="form-select" required>
+                                <option value="admin">admin</option>
+                                <option value="coordinator">coordinator</option>
+                                <option value="engineer">engineer</option>
+                                <option value="super_admin">super_admin</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-success w-100">Add</button>
+                        </div>
+                    </div>
+                </form>
+                <hr class="my-4">
+                <form method="POST" action="/bulk-upload-users" enctype="multipart/form-data">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-9">
+                            <label class="form-label">Bulk Upload Users</label>
+                            <input type="file" name="users_file" class="form-control" accept=".xlsx,.csv" required>
+                            <div class="form-text text-muted mt-1">
+                                Required: Username, Password, Role. Passwords are hashed on import.
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-outline-success w-100">Upload</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 80px;">ID</th>
+                            <th>Username</th>
+                            <th>Role</th>
+                            <th style="width: 230px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if users %}
+                            {% for u in users %}
+                            <tr>
+                                <td>{{ u.id }}</td>
+                                <td>
+                                    {{ u.username|upper }}
+                                    {% if u.requires_password_reset %}
+                                    <span class="badge text-bg-warning ms-1">Reset required</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ u.role }}</td>
+                                <td>
+                                    {% if u.role == 'super_admin' %}
+                                    <span class="badge bg-secondary">Locked</span>
+                                    {% else %}
+                                    <div class="d-flex gap-1">
+                                        <button
+                                            class="btn btn-warning btn-sm"
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#edit-user-{{ u.id }}"
+                                            aria-expanded="false"
+                                            aria-controls="edit-user-{{ u.id }}">
+                                            Edit
+                                        </button>
+                                        <form method="POST" action="/delete-user/{{ u.id }}" class="d-inline">
+                                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete user {{ u.username|upper | e }}?');">Delete</button>
+                                        </form>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% if u.role != 'super_admin' %}
+                            <tr class="collapse" id="edit-user-{{ u.id }}">
+                                <td colspan="4" class="bg-light">
+                                    <form method="POST" action="/edit-user/{{ u.id }}" class="row g-2 align-items-end">
+                                        <div class="col-md-4">
+                                            <label class="form-label mb-1">Username</label>
+                                            <input type="text" name="username" class="form-control form-control-sm" value="{{ u.username }}" required>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label mb-1">New Password</label>
+                                            <input type="password" name="password" class="form-control form-control-sm" minlength="8" placeholder="{% if u.requires_password_reset %}Enter new password to restore login{% else %}Leave blank to keep current password{% endif %}">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label mb-1">Role</label>
+                                            <select name="role" class="form-select form-select-sm" required>
+                                                <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>admin</option>
+                                                <option value="coordinator" {% if u.role == 'coordinator' %}selected{% endif %}>coordinator</option>
+                                                <option value="engineer" {% if u.role == 'engineer' %}selected{% endif %}>engineer</option>
+                                                <option value="super_admin" {% if u.role == 'super_admin' %}selected{% endif %}>super_admin</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2 d-flex gap-1">
+                                            <button type="submit" class="btn btn-success btn-sm w-100">Save</button>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="4" class="text-center text-muted">No users found</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <button
+                class="type-toggle"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#user-branches-panel"
+                aria-expanded="false"
+                aria-controls="user-branches-panel">
+                <span class="text-uppercase">User Branches</span>
+                <span class="type-meta ms-2">({{ user_branches|length if user_branches is defined else 0 }} records)</span>
+            </button>
+        </div>
+        <div id="user-branches-panel" class="collapse">
+            <div class="card-body border-bottom">
+                <form method="POST" action="/add-user-branch">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-5">
+                            <label class="form-label">Username</label>
+                            <input type="text" name="map_username" class="form-control" placeholder="Example: Shahid" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Branch</label>
+                            <input type="text" name="branch_name" class="form-control" list="settings-branch-list" placeholder="Select branch" required>
+                            <datalist id="settings-branch-list">
+                                {% for b in branch_list %}
+                                <option value="{{ b }}"></option>
+                                {% endfor %}
+                            </datalist>
+                        </div>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-success w-100">Add</button>
+                        </div>
+                    </div>
+                </form>
+                <hr class="my-4">
+                <form method="POST" action="/bulk-upload-user-branches" enctype="multipart/form-data">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-9">
+                            <label class="form-label">Bulk Upload User Branches</label>
+                            <input type="file" name="user_branch_file" class="form-control" accept=".xlsx,.csv" required>
+                            <div class="form-text text-muted mt-1">
+                                Supported files: .xlsx or .csv. Required column headers: Username, Branch.
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-outline-success w-100">Upload File</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 80px;">ID</th>
+                            <th>Username</th>
+                            <th>Branch</th>
+                            <th style="width: 120px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if user_branches %}
+                            {% for ub in user_branches %}
+                            <tr>
+                                <td>{{ ub.id }}</td>
+                                <td>{{ ub.username|upper }}</td>
+                                <td>{{ ub.branch_name }}</td>
+                                <td>
+                                    <form method="POST" action="/delete-user-branch/{{ ub.id }}" class="d-inline">
+                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete branch mapping for {{ ub.username|upper | e }}?');">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="4" class="text-center text-muted">No user-branch mappings found</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+    function fillTypeAndFocus(typeName) {
+        const typeInput = document.getElementById('type');
+        const valueInput = document.getElementById('value');
+
+        typeInput.value = typeName;
+        valueInput.value = '';
+        valueInput.focus();
+
+        // Smooth scroll to the form
+        document.getElementById('main-add-form').scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+        });
+    }
+
+    function confirmDelete(value, typeName) {
+        return confirm(`Are you sure you want to delete "${value}" from ${typeName}?`);
+    }
+
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+</body>
+</html>

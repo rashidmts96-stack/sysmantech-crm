@@ -1,0 +1,74 @@
+{% if global_nav_user and global_nav_user.is_authenticated %}
+<details class="crm-user-nav">
+    <summary class="crm-user-nav-toggle" aria-label="Open user menu">
+        <span class="crm-user-nav-avatar">
+            {% if global_nav_user.profile_picture_url %}
+            <img
+                src="{{ global_nav_user.profile_picture_url }}"
+                alt=""
+                aria-hidden="true"
+                class="crm-user-nav-image"
+                onerror="this.classList.add('is-hidden'); if (this.nextElementSibling) { this.nextElementSibling.classList.remove('is-hidden'); }"
+            >
+            <span class="crm-user-nav-fallback is-hidden">{{ global_nav_user.initial }}</span>
+            {% else %}
+            <span class="crm-user-nav-fallback">{{ global_nav_user.initial }}</span>
+            {% endif %}
+        </span>
+        <span class="crm-user-nav-name">{{ global_nav_user.display_name }}</span>
+        <span class="crm-user-nav-caret" aria-hidden="true"></span>
+    </summary>
+    <div class="crm-user-nav-menu">
+        <a class="crm-user-nav-item" href="/profile">Profile</a>
+        {% if global_nav_user.role in ['super_admin', 'admin'] %}
+        <a class="crm-user-nav-item" href="/admin-reports">Reports</a>
+        {% endif %}
+        {% if global_nav_user.role == 'super_admin' %}
+        <a class="crm-user-nav-item" href="/staff-management">Staff Management</a>
+        {% endif %}
+        {% if global_nav_user.show_settings %}
+        <a class="crm-user-nav-item" href="/settings">Settings</a>
+        {% endif %}
+        <div class="crm-user-nav-divider"></div>
+        <a class="crm-user-nav-item crm-user-nav-item-logout" href="/logout">Logout</a>
+    </div>
+</details>
+<script>
+(function () {
+    if (window.__crmUserNavInit) {
+        return;
+    }
+    window.__crmUserNavInit = true;
+
+    function closeUserMenus(exceptMenu) {
+        document.querySelectorAll('.crm-user-nav[open]').forEach(function (menu) {
+            if (menu !== exceptMenu) {
+                menu.removeAttribute('open');
+            }
+        });
+    }
+
+    document.addEventListener('click', function (event) {
+        var activeMenu = event.target.closest('.crm-user-nav');
+        closeUserMenus(activeMenu || null);
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            closeUserMenus(null);
+        }
+    });
+
+    document.addEventListener('toggle', function (event) {
+        var menu = event.target;
+        if (!(menu instanceof HTMLElement) || !menu.classList.contains('crm-user-nav')) {
+            return;
+        }
+        if (menu.hasAttribute('open')) {
+            closeUserMenus(menu);
+        }
+    }, true);
+})();
+</script>
+{% endif %}
+{% include "_global_brand_footer.html" %}

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Dashboard Filters - Service CRM</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+<style>
+.multi-menu {
+max-height: 260px;
+overflow-y: auto;
+min-width: 300px;
+}
+
+.multi-menu .form-check {
+position: relative;
+padding: 8px 10px 8px 34px;
+margin: 0;
+border-radius: 6px;
+cursor: pointer;
+}
+
+.multi-menu .form-check:hover {
+background: #f8f9fa;
+}
+
+.multi-menu .form-check-input {
+position: absolute;
+left: 10px;
+top: 50%;
+transform: translateY(-50%);
+margin: 0;
+float: none;
+}
+
+.filter-dropdown-btn {
+min-height: 42px;
+display: flex;
+align-items: center;
+justify-content: space-between;
+}
+</style>
+</head>
+
+<body class="crm-theme">
+
+<nav class="navbar navbar-dark bg-dark">
+<div class="container-fluid">
+<span class="navbar-brand">Dashboard Filters</span>
+<div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+<span class="text-white me-3">Branch : {{ branch }}</span>
+<a href="/dashboard" class="btn btn-outline-light btn-sm">Dashboard</a>
+{% include "_global_user_menu.html" %}
+</div>
+</div>
+</nav>
+
+<div class="container mt-4">
+<div class="card border-primary">
+<div class="card-header bg-primary text-white fw-semibold">Filter Options</div>
+<div class="card-body">
+<form method="GET" action="/dashboard-filters">
+<input type="hidden" name="apply" value="1">
+<div class="row g-4">
+<div class="col-lg-4 col-md-6">
+<label class="form-label fw-semibold">From Date</label>
+<input type="date" name="from_date" class="form-control" value="{{ from_date or '' }}">
+</div>
+
+<div class="col-lg-4 col-md-6">
+<label class="form-label fw-semibold">To Date</label>
+<input type="date" name="to_date" class="form-control" value="{{ to_date or '' }}">
+</div>
+
+<div class="col-lg-4 col-md-6">
+<label class="form-label fw-semibold">Quick Type</label>
+<div class="dropdown w-100" data-bs-auto-close="outside">
+<button class="btn btn-outline-secondary dropdown-toggle w-100 text-start filter-dropdown-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+<span class="text-truncate me-2">
+{% if 'all' in date_fields %}
+All
+{% elif date_fields|length == 1 and date_fields[0] == 'created' %}
+Created Calls
+{% elif date_fields|length == 1 and date_fields[0] == 'closed' %}
+Closed Calls
+{% elif date_fields|length > 1 %}
+Multiple
+{% else %}
+Quick Type
+{% endif %}
+</span>
+{% if 'all' not in date_fields and date_fields|length > 1 %}<span class="badge bg-primary ms-1">{{ date_fields|length }}</span>{% endif %}
+</button>
+<div class="dropdown-menu p-2 multi-menu w-100">
+<div class="form-check">
+<input class="form-check-input" type="checkbox" name="date_field" value="all" id="date_all" {% if 'all' in date_fields %}checked{% endif %}>
+<label class="form-check-label" for="date_all">All</label>
+</div>
+<div class="form-check">
+<input class="form-check-input" type="checkbox" name="date_field" value="created" id="date_created" {% if 'created' in date_fields %}checked{% endif %}>
+<label class="form-check-label" for="date_created">Created Calls</label>
+</div>
+<div class="form-check">
+<input class="form-check-input" type="checkbox" name="date_field" value="closed" id="date_closed" {% if 'closed' in date_fields %}checked{% endif %}>
+<label class="form-check-label" for="date_closed">Closed Calls</label>
+</div>
+</div>
+</div>
+</div>
+
+{% if session.role in ['super_admin', 'admin'] %}
+<div class="col-lg-4 col-md-6">
+<label class="form-label fw-semibold">Branch</label>
+<div class="dropdown w-100" data-bs-auto-close="outside">
+<button class="btn btn-outline-secondary dropdown-toggle w-100 text-start filter-dropdown-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+<span class="text-truncate me-2">
+{% if 'ALL' in filter_branches %}
+ALL
+{% elif filter_branches|length == 1 %}
+{{ filter_branches[0] }}
+{% elif filter_branches|length > 1 %}
+Multiple
+{% else %}
+Branch
+{% endif %}
+</span>
+{% if 'ALL' not in filter_branches and filter_branches|length > 1 %}<span class="badge bg-primary ms-1">{{ filter_branches|length }}</span>{% endif %}
+</button>
+<div class="dropdown-menu p-2 multi-menu w-100">
+{% for b in branch_options %}
+<div class="form-check">
+<input class="form-check-input" type="checkbox" name="filter_branch" value="{{ b }}" id="branch_{{ loop.index }}" {% if b in filter_branches %}checked{% endif %}>
+<label class="form-check-label" for="branch_{{ loop.index }}">{{ b }}</label>
+</div>
+{% endfor %}
+</div>
+</div>
+</div>
+{% endif %}
+
+<div class="col-lg-4 col-md-6">
+<label class="form-label fw-semibold">Job Card Status</label>
+<div class="dropdown w-100" data-bs-auto-close="outside">
+<button class="btn btn-outline-secondary dropdown-toggle w-100 text-start filter-dropdown-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+<span class="text-truncate me-2">
+{% if 'ALL' in filter_statuses %}
+ALL
+{% elif filter_statuses|length == 1 %}
+{{ filter_statuses[0] }}
+{% elif filter_statuses|length > 1 %}
+Multiple
+{% else %}
+Job Card Status
+{% endif %}
+</span>
+{% if 'ALL' not in filter_statuses and filter_statuses|length > 1 %}<span class="badge bg-primary ms-1">{{ filter_statuses|length }}</span>{% endif %}
+</button>
+<div class="dropdown-menu p-2 multi-menu w-100">
+<div class="form-check">
+<input class="form-check-input" type="checkbox" name="filter_status" value="ALL" id="status_all" {% if 'ALL' in filter_statuses %}checked{% endif %}>
+<label class="form-check-label" for="status_all">ALL</label>
+</div>
+{% for status_name in status_columns %}
+<div class="form-check">
+<input class="form-check-input" type="checkbox" name="filter_status" value="{{ status_name }}" id="status_{{ loop.index }}" {% if status_name in filter_statuses %}checked{% endif %}>
+<label class="form-check-label" for="status_{{ loop.index }}">{{ status_name }}</label>
+</div>
+{% endfor %}
+<div class="form-check">
+<input class="form-check-input" type="checkbox" name="filter_status" value="Closed" id="status_closed" {% if 'Closed' in filter_statuses %}checked{% endif %}>
+<label class="form-check-label" for="status_closed">Closed</label>
+</div>
+</div>
+</div>
+</div>
+
+<div class="col-lg-4 col-md-6">
+<label class="form-label fw-semibold">Closure Status</label>
+<div class="dropdown w-100" data-bs-auto-close="outside">
+<button class="btn btn-outline-secondary dropdown-toggle w-100 text-start filter-dropdown-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+<span class="text-truncate me-2">
+{% if 'ALL' in filter_closures %}
+ALL
+{% elif filter_closures|length == 1 %}
+{{ filter_closures[0] }}
+{% elif filter_closures|length > 1 %}
+Multiple
+{% else %}
+Closure Status
+{% endif %}
+</span>
+{% if 'ALL' not in filter_closures and filter_closures|length > 1 %}<span class="badge bg-primary ms-1">{{ filter_closures|length }}</span>{% endif %}
+</button>
+<div class="dropdown-menu p-2 multi-menu w-100">
+<div class="form-check">
+<input class="form-check-input" type="checkbox" name="filter_closure" value="ALL" id="closure_all" {% if 'ALL' in filter_closures %}checked{% endif %}>
+<label class="form-check-label" for="closure_all">ALL</label>
+</div>
+{% for c in closure_options %}
+<div class="form-check">
+<input class="form-check-input" type="checkbox" name="filter_closure" value="{{ c }}" id="closure_{{ loop.index }}" {% if c in filter_closures %}checked{% endif %}>
+<label class="form-check-label" for="closure_{{ loop.index }}">{{ c }}</label>
+</div>
+{% endfor %}
+</div>
+</div>
+</div>
+
+<div class="col-lg-4 col-md-6">
+<label class="form-label fw-semibold">Engineer</label>
+<div class="dropdown w-100" data-bs-auto-close="outside">
+<button class="btn btn-outline-secondary dropdown-toggle w-100 text-start filter-dropdown-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+<span class="text-truncate me-2">
+{% if 'ALL' in filter_engineers %}
+ALL
+{% elif filter_engineers|length == 1 %}
+{{ filter_engineers[0] }}
+{% elif filter_engineers|length > 1 %}
+Multiple
+{% else %}
+Engineer
+{% endif %}
+</span>
+{% if 'ALL' not in filter_engineers and filter_engineers|length > 1 %}<span class="badge bg-primary ms-1">{{ filter_engineers|length }}</span>{% endif %}
+</button>
+<div class="dropdown-menu p-2 multi-menu w-100">
+<div class="form-check">
+<input class="form-check-input" type="checkbox" name="filter_engineer" value="ALL" id="engineer_all" {% if 'ALL' in filter_engineers %}checked{% endif %}>
+<label class="form-check-label" for="engineer_all">ALL</label>
+</div>
+{% for eng in engineer_options %}
+<div class="form-check">
+<input class="form-check-input" type="checkbox" name="filter_engineer" value="{{ eng }}" id="eng_{{ loop.index }}" {% if eng in filter_engineers %}checked{% endif %}>
+<label class="form-check-label" for="eng_{{ loop.index }}">{{ eng }}</label>
+</div>
+{% endfor %}
+</div>
+</div>
+</div>
+
+<div class="col-12 d-flex align-items-end gap-2">
+<button type="submit" name="apply" value="1" class="btn btn-primary flex-grow-1">Apply Filters</button>
+<a href="/dashboard-filters" class="btn btn-outline-secondary flex-grow-1">Reset</a>
+</div>
+</div>
+</form>
+</div>
+</div>
+
+{% if apply_filters %}
+<div class="card mt-4">
+<div class="card-header d-flex justify-content-between align-items-center">
+<strong>Filtered Job List ({{ filtered_jobs|length }})</strong>
+<a href="{{ url_for('export_cases', view_name='total') }}{% if filter_query %}?{{ filter_query }}{% endif %}" class="btn btn-success btn-sm">Export Filtered</a>
+</div>
+<div class="card-body p-0">
+<div class="table-responsive">
+<table class="table table-bordered table-sm mb-0">
+<thead class="table-dark">
+<tr>
+<th>ID</th>
+<th>Job No</th>
+<th>Customer</th>
+<th>Mobile</th>
+<th>Branch</th>
+<th>Status</th>
+<th>Closure</th>
+<th>Engineer</th>
+<th>Created On</th>
+<th>Closed On</th>
+</tr>
+</thead>
+<tbody>
+{% if filtered_jobs %}
+{% for job in filtered_jobs %}
+<tr>
+<td>{{ job.id }}</td>
+<td>{{ job.job_number or '-' }}</td>
+<td>{{ job.customer_name or '-' }}</td>
+<td>{{ job.mobile or '-' }}</td>
+<td>{{ job.branch_name or '-' }}</td>
+<td>{{ job.status or '-' }}</td>
+<td>{{ job.closure_status or '-' }}</td>
+<td>
+{{ job.assigned_engineer or '-' }}
+{% if job.specialist_transfer_branch_name %}
+<div class="small text-muted mt-1">
+Specialist: {{ job.specialist_transfer_engineer or 'Pending' }} | {{ job.specialist_transfer_branch_name }}{% if job.specialist_transfer_status %} | {{ job.specialist_transfer_status }}{% endif %}
+</div>
+{% endif %}
+</td>
+<td>{{ job.created_on or '-' }}</td>
+<td>{{ job.closed_on or '-' }}</td>
+</tr>
+{% endfor %}
+{% else %}
+<tr>
+<td colspan="10" class="text-center py-3">No jobs found for selected filters.</td>
+</tr>
+{% endif %}
+</tbody>
+</table>
+</div>
+</div>
+</div>
+{% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+	document.querySelectorAll(".multi-menu .form-check").forEach(function (row) {
+		row.addEventListener("click", function (e) {
+			if (e.target.classList.contains("form-check-input") || e.target.classList.contains("form-check-label")) {
+				return;
+			}
+			var input = row.querySelector(".form-check-input");
+			if (input) {
+				input.checked = !input.checked;
+				input.dispatchEvent(new Event("change", { bubbles: true }));
+			}
+		});
+	});
+
+	function getGroupInputs(name) {
+		return Array.from(document.querySelectorAll('.multi-menu .form-check-input[name="' + name + '"]'));
+	}
+
+	function getAllInput(inputs) {
+		return inputs.find(function (el) {
+			return (el.value || "").toUpperCase() === "ALL";
+		});
+	}
+
+	function syncAllState(name) {
+		var inputs = getGroupInputs(name);
+		var allInput = getAllInput(inputs);
+		if (!allInput) {
+			return;
+		}
+
+		var others = inputs.filter(function (el) { return el !== allInput; });
+		if (allInput.checked) {
+			others.forEach(function (el) { el.checked = true; });
+			return;
+		}
+
+		var allOthersChecked = others.length > 0 && others.every(function (el) { return el.checked; });
+		allInput.checked = allOthersChecked;
+	}
+
+	["date_field", "filter_status", "filter_closure", "filter_engineer"].forEach(function (groupName) {
+		var inputs = getGroupInputs(groupName);
+		if (inputs.length === 0) {
+			return;
+		}
+
+		inputs.forEach(function (input) {
+			input.addEventListener("change", function () {
+				var groupInputs = getGroupInputs(groupName);
+				var allInput = getAllInput(groupInputs);
+				if (!allInput) {
+					return;
+				}
+
+				var isAll = ((input.value || "").toUpperCase() === "ALL");
+				var others = groupInputs.filter(function (el) { return el !== allInput; });
+
+				if (isAll) {
+					if (allInput.checked) {
+						others.forEach(function (el) { el.checked = true; });
+					} else {
+						others.forEach(function (el) { el.checked = false; });
+					}
+				} else {
+					if (!input.checked) {
+						allInput.checked = false;
+					} else {
+						var allOthersChecked = others.length > 0 && others.every(function (el) { return el.checked; });
+						allInput.checked = allOthersChecked;
+					}
+				}
+			});
+		});
+
+		// Initialize once for pre-selected query params.
+		syncAllState(groupName);
+	});
+});
+</script>
+</body>
+</html>

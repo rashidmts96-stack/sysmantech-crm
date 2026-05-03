@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cashflow Management</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+<style>
+body { background: #f6f8fb; }
+.top-nav { border-bottom: 1px solid #1f2937; }
+.metric-card { border-radius: 14px; border: 1px solid #e2e8f0; }
+.metric-card-warning {
+  border-color: #f59e0b;
+  background: linear-gradient(180deg, rgba(255, 251, 235, 0.98), rgba(255, 255, 255, 1));
+  box-shadow: 0 14px 28px rgba(245, 158, 11, 0.16);
+}
+.metric-label { font-size: .76rem; letter-spacing: .04em; text-transform: uppercase; color: #6b7280; }
+.metric-value { font-size: 1.4rem; font-weight: 700; line-height: 1.1; }
+.table-wrap { max-height: 60vh; overflow: auto; }
+.table-wrap thead th { position: sticky; top: 0; z-index: 2; }
+.section-card { border-radius: 18px; border: 1px solid #dce7f5; }
+.section-card .card-header { background: linear-gradient(180deg, rgba(239, 246, 255, 0.92), rgba(255, 255, 255, 0.98)); }
+.mini-note { color: #64748b; font-size: .9rem; }
+.cashflow-view-nav .nav-link {
+  border-radius: 999px;
+  border: 1px solid #dce7f5;
+  color: #1d4ed8;
+  font-weight: 600;
+  padding: .55rem 1rem;
+  background: #ffffff;
+}
+.cashflow-view-nav .nav-link:hover,
+.cashflow-view-nav .nav-link:focus {
+  border-color: rgba(37, 99, 235, 0.35);
+  color: #1d4ed8;
+}
+.cashflow-view-nav .nav-link.active {
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.18);
+}
+</style>
+</head>
+<body class="crm-theme">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark top-nav">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-semibold" href="/cashflow">Cashflow Management</a>
+    <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#cashNav"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="cashNav">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item"><a class="nav-link active" href="/cashflow">Cashflow</a></li>
+        <li class="nav-item"><a class="nav-link" href="/revenue-dashboard">Revenue</a></li>
+      </ul>
+      <div class="d-flex align-items-center gap-2 flex-wrap ms-lg-auto">
+        <a href="/dashboard" class="btn btn-outline-light btn-sm">Dashboard</a>
+        {% include "_global_user_menu.html" %}
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid py-3">
+  {% set active_view = request.args.get('view', 'summary') %}
+  {% if active_view not in ['summary', 'entries', 'transfer-request', 'transfer-review'] %}
+  {% set active_view = 'summary' %}
+  {% endif %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  {% for category, message in messages %}
+  <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+  {% endwith %}
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <form method="GET" action="/cashflow" class="row g-2 align-items-end">
+        <input type="hidden" name="view" value="{{ active_view }}">
+        <div class="col-md-2">
+          <label class="form-label mb-1">From Date</label>
+          <input type="date" name="from_date" class="form-control form-control-sm" value="{{ from_date }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label mb-1">To Date</label>
+          <input type="date" name="to_date" class="form-control form-control-sm" value="{{ to_date }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label mb-1">Branch</label>
+          <select name="filter_branch" class="form-select form-select-sm" {% if not has_global_scope %}disabled{% endif %}>
+            {% if has_global_scope %}<option value="">All</option>{% endif %}
+            {% for b in branch_options %}
+            <option value="{{ b }}" {% if filter_branch == b %}selected{% endif %}>{{ b }}</option>
+            {% endfor %}
+          </select>
+          {% if not has_global_scope %}<input type="hidden" name="filter_branch" value="{{ filter_branch }}">{% endif %}
+        </div>
+        <div class="col-md-5 d-flex gap-2 flex-wrap">
+          <button class="btn btn-primary btn-sm" type="submit">Apply</button>
+          <a class="btn btn-outline-info btn-sm" href="{{ url_for('cashflow_page', from_date=today_date, to_date=today_date, filter_branch=filter_branch or '', view=active_view) }}">Today</a>
+          <a class="btn btn-outline-success btn-sm" href="{{ url_for('cashflow_export_page', from_date=from_date or '', to_date=to_date or '', filter_branch=filter_branch or '') }}">Export CSV</a>
+          <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('cashflow_page', view=active_view) }}">Clear</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% set transfer_balance_view = active_view in ['transfer-request', 'transfer-review'] %}
+  {% set primary_cash_label = 'Transfer Cash Balance' if transfer_balance_view else 'Cash Balance' %}
+  {% set primary_cash_value = total_available_cash if transfer_balance_view else total_gross_cash %}
+  {% set secondary_cash_label = 'Gross Cash' if transfer_balance_view else 'Transfer Cash Balance' %}
+  {% set secondary_cash_value = total_gross_cash if transfer_balance_view else total_available_cash %}
+
+  {% if active_view in ['summary', 'entries', 'transfer-review'] %}
+  <div class="row g-3 mb-3">
+    <div class="col-sm-6 col-xl">
+      <div class="card metric-card h-100"><div class="card-body"><div class="metric-label">Cash</div><div class="metric-value text-success">{{ '%.2f'|format(total_gross_cash or 0) }}</div></div></div>
+    </div>
+    <div class="col-sm-6 col-xl">
+      <div class="card metric-card h-100"><div class="card-body"><div class="metric-label">Card</div><div class="metric-value text-primary">{{ '%.2f'|format(total_card or 0) }}</div></div></div>
+    </div>
+    <div class="col-sm-6 col-xl">
+      <div class="card metric-card h-100"><div class="card-body"><div class="metric-label">UPI</div><div class="metric-value text-warning">{{ '%.2f'|format(total_upi or 0) }}</div></div></div>
+    </div>
+    <div class="col-sm-6 col-xl">
+      <div class="card metric-card h-100"><div class="card-body"><div class="metric-label">Transfer Cash Balance</div><div class="metric-value text-danger">{{ '%.2f'|format(total_available_cash or 0) }}</div></div></div>
+    </div>
+    <div class="col-sm-6 col-xl">
+      <div class="card metric-card h-100{% if pending_transfer_total and pending_transfer_total > 0 %} metric-card-warning{% endif %}"><div class="card-body"><div class="metric-label">Pending Transfer</div><div class="metric-value {% if pending_transfer_total and pending_transfer_total > 0 %}text-warning{% else %}text-secondary{% endif %}">{{ '%.2f'|format(pending_transfer_total or 0) }}</div></div></div>
+    </div>
+  </div>
+  {% else %}
+  <div class="row g-3 mb-3">
+    <div class="col-sm-6 col-xl-2">
+      <div class="card metric-card h-100"><div class="card-body"><div class="metric-label">{{ primary_cash_label }}</div><div class="metric-value text-success">{{ '%.2f'|format(primary_cash_value or 0) }}</div></div></div>
+    </div>
+    <div class="col-sm-6 col-xl-2">
+      <div class="card metric-card h-100"><div class="card-body"><div class="metric-label">Card</div><div class="metric-value text-primary">{{ '%.2f'|format(total_card or 0) }}</div></div></div>
+    </div>
+    <div class="col-sm-6 col-xl-2">
+      <div class="card metric-card h-100"><div class="card-body"><div class="metric-label">UPI</div><div class="metric-value text-warning">{{ '%.2f'|format(total_upi or 0) }}</div></div></div>
+    </div>
+    <div class="col-sm-6 col-xl-2">
+      <div class="card metric-card h-100"><div class="card-body"><div class="metric-label">Collection</div><div class="metric-value text-dark">{{ '%.2f'|format(total_collected or 0) }}</div></div></div>
+    </div>
+    <div class="col-sm-6 col-xl-2">
+      <div class="card metric-card h-100"><div class="card-body"><div class="metric-label">{{ secondary_cash_label }}</div><div class="metric-value text-danger">{{ '%.2f'|format(secondary_cash_value or 0) }}</div></div></div>
+    </div>
+    <div class="col-sm-6 col-xl-2">
+      <div class="card metric-card h-100{% if pending_transfer_total and pending_transfer_total > 0 %} metric-card-warning{% endif %}"><div class="card-body"><div class="metric-label">Pending Transfer</div><div class="metric-value {% if pending_transfer_total and pending_transfer_total > 0 %}text-warning{% else %}text-secondary{% endif %}">{{ '%.2f'|format(pending_transfer_total or 0) }}</div></div></div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% set pending_state = namespace(count=0) %}
+  {% for transfer_row in transfer_rows %}
+    {% if transfer_row.status == 'Pending' %}
+      {% set pending_state.count = pending_state.count + 1 %}
+    {% endif %}
+  {% endfor %}
+  {% if pending_transfer_total and pending_transfer_total > 0 %}
+  <div class="alert alert-warning d-flex justify-content-between align-items-center gap-3 flex-wrap" role="alert">
+    <div>
+      <strong>Pending transfer warning.</strong>
+      {{ pending_state.count }} request{% if pending_state.count != 1 %}s are{% else %} is{% endif %} still pending in this filtered view.
+      Pending amount: {{ '%.2f'|format(pending_transfer_total or 0) }}.
+    </div>
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('cashflow_page', from_date=from_date or '', to_date=to_date or '', filter_branch=filter_branch or '', view='transfer-review') }}">Open Transfer Review</a>
+  </div>
+  {% endif %}
+
+  <ul class="nav nav-pills cashflow-view-nav flex-wrap gap-2 mb-3">
+    <li class="nav-item"><a class="nav-link{% if active_view == 'summary' %} active{% endif %}" href="{{ url_for('cashflow_page', from_date=from_date or '', to_date=to_date or '', filter_branch=filter_branch or '', view='summary') }}">Summary</a></li>
+    <li class="nav-item"><a class="nav-link{% if active_view == 'entries' %} active{% endif %}" href="{{ url_for('cashflow_page', from_date=from_date or '', to_date=to_date or '', filter_branch=filter_branch or '', view='entries') }}">Collections History</a></li>
+    <li class="nav-item"><a class="nav-link{% if active_view == 'transfer-request' %} active{% endif %}" href="{{ url_for('cashflow_page', from_date=from_date or '', to_date=to_date or '', filter_branch=filter_branch or '', view='transfer-request') }}">Transfer Request</a></li>
+    <li class="nav-item"><a class="nav-link{% if active_view == 'transfer-review' %} active{% endif %}" href="{{ url_for('cashflow_page', from_date=from_date or '', to_date=to_date or '', filter_branch=filter_branch or '', view='transfer-review') }}">Transfer Review</a></li>
+  </ul>
+
+  {% if active_view == 'transfer-request' %}
+  <div class="row g-3 mb-3">
+    <div class="col-12">
+      <div class="card section-card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>Fund Transfer Request</strong>
+          <span class="mini-note">Branch-side users can raise requests. Branch approval or admin approval reduces branch cash.</span>
+        </div>
+        <div class="card-body">
+          {% if can_request_transfer %}
+          <form method="POST" action="/cashflow" class="row g-2">
+            <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+            <input type="hidden" name="form_action" value="request_transfer">
+            <input type="hidden" name="return_to" value="{{ request.full_path.rstrip('?') }}">
+            <div class="col-md-4">
+              <label class="form-label">Request Date</label>
+              <input type="date" name="request_date" class="form-control" value="{{ today_date }}" required>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Branch</label>
+              {% if has_global_scope %}
+              <input type="text" name="branch_name" class="form-control" list="cashflow-branches" value="{{ filter_branch or '' }}" required>
+              {% else %}
+              <input type="text" name="branch_name" class="form-control" value="{{ filter_branch }}" readonly>
+              {% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Amount</label>
+              <input type="number" step="0.01" min="0" name="amount" class="form-control" required>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Transfer To</label>
+              <input type="text" name="transfer_to" class="form-control" placeholder="Head office / bank / recipient">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Note</label>
+              <input type="text" name="requested_notes" class="form-control" placeholder="Optional note">
+            </div>
+            <div class="col-12 d-grid">
+              <button type="submit" class="btn btn-warning">Create Transfer Request</button>
+            </div>
+          </form>
+          {% else %}
+          <div class="alert alert-info mb-0">Transfer requests are available only for branch users, admin, and super admin.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if has_global_scope and can_request_transfer %}
+    <div class="col-12">
+      <div class="card section-card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>Branch Cash Transfer Report</strong>
+          <span class="mini-note">Admin and super admin can track pending transfer requests here and raise direct requests for any remaining requestable cash.</span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-wrap">
+            <table class="table table-sm table-bordered table-hover mb-0">
+              <thead class="table-dark">
+                <tr>
+                  <th>Branch Name</th>
+                  <th>Cash</th>
+                  <th>Pending Request</th>
+                  <th>Request</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if transfer_request_branch_rows %}
+                  {% for r in transfer_request_branch_rows %}
+                  <tr>
+                    <td>{{ r.branch_name }}</td>
+                    <td>{{ '%.2f'|format(r.available_cash or 0) }}</td>
+                    <td>{{ '%.2f'|format(r.pending_transfer_total or 0) }}</td>
+                    <td class="text-center">
+                      {% if r.requestable_cash and r.requestable_cash > 0 %}
+                      <form method="POST" action="/cashflow" class="d-inline">
+                        <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+                        <input type="hidden" name="form_action" value="request_transfer">
+                        <input type="hidden" name="return_to" value="{{ request.full_path.rstrip('?') }}">
+                        <input type="hidden" name="request_date" value="{{ to_date or today_date }}">
+                        <input type="hidden" name="branch_name" value="{{ r.branch_name }}">
+                        <input type="hidden" name="amount" value="{{ '%.2f'|format(r.requestable_cash or 0) }}">
+                        <input type="hidden" name="requested_notes" value="Direct transfer request from admin branch cash report">
+                        <button type="submit" class="btn btn-sm btn-warning">Request {{ '%.2f'|format(r.requestable_cash or 0) }}</button>
+                      </form>
+                      {% elif r.pending_transfer_total and r.pending_transfer_total > 0 %}
+                      <span class="badge bg-warning text-dark">Pending {{ '%.2f'|format(r.pending_transfer_total or 0) }}</span>
+                      {% else %}
+                      <span class="text-muted">No requestable cash</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr><td colspan="4" class="text-center text-muted">No branches currently have transfer cash or pending requests</td></tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <datalist id="cashflow-branches">
+    {% for b in branch_options %}
+    <option value="{{ b }}"></option>
+    {% endfor %}
+  </datalist>
+
+  {% if active_view == 'summary' %}
+  <div class="card section-card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <strong>Branch Summary</strong>
+      <span class="mini-note">Simple branch-wise service charge report for the selected period.</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-wrap">
+        <table class="table table-sm table-bordered table-hover mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th>Branch Name</th>
+              <th>Cash</th>
+              <th>Card</th>
+              <th>UPI</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if branch_summary_rows %}
+              {% for r in branch_summary_rows %}
+              <tr>
+                <td>{{ r.branch_name }}</td>
+                <td>{{ '%.2f'|format(r.gross_cash_total or 0) }}</td>
+                <td>{{ '%.2f'|format(r.card_total or 0) }}</td>
+                <td>{{ '%.2f'|format(r.upi_total or 0) }}</td>
+                <td>{{ '%.2f'|format(r.total_collected or 0) }}</td>
+              </tr>
+              {% endfor %}
+              <tr class="table-secondary fw-bold">
+                <td>Total</td>
+                <td>{{ '%.2f'|format(total_gross_cash or 0) }}</td>
+                <td>{{ '%.2f'|format(total_card or 0) }}</td>
+                <td>{{ '%.2f'|format(total_upi or 0) }}</td>
+                <td>{{ '%.2f'|format(total_collected or 0) }}</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="5" class="text-center text-muted">No cashflow records for selected filters</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if active_view == 'entries' %}
+  <div class="card section-card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <strong>Collections History</strong>
+      <span class="mini-note">Shows only job-close payment collections inside your branch scope.</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-wrap">
+        <table class="table table-sm table-bordered table-hover mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th>Date</th>
+              <th>Branch</th>
+              <th>Cash</th>
+              <th>Card</th>
+              <th>UPI</th>
+              <th>Total</th>
+              <th>Remarks</th>
+              <th>Updated By</th>
+              <th>Last Modified</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if rows %}
+              {% for r in rows %}
+              <tr>
+                <td>{{ r.entry_date }}</td>
+                <td>{{ r.branch_name }}</td>
+                <td>{{ '%.2f'|format(r.cash_amount or 0) }}</td>
+                <td>{{ '%.2f'|format(r.card_amount or 0) }}</td>
+                <td>{{ '%.2f'|format(r.upi_amount or 0) }}</td>
+                <td>{{ '%.2f'|format(r.total_amount or 0) }}</td>
+                <td>{{ r.remarks or '-' }}</td>
+                <td>{{ r.created_by or '-' }}</td>
+                <td>{{ r.updated_on or '-' }}</td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="9" class="text-center text-muted">No entries available</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if active_view == 'transfer-review' %}
+  <div class="card section-card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <strong>Transfer Requests</strong>
+      <span class="mini-note">Branch-side approvers can review requests within their branch scope. Admin and super admin can also review. Approved requests deduct from branch cash.</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-wrap">
+        <table class="table table-sm table-bordered table-hover mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th>Date</th>
+              <th>Branch</th>
+              <th>Amount</th>
+              <th>Transfer To</th>
+              <th>Status</th>
+              <th>Requested By</th>
+              <th>Notes</th>
+              <th>Reviewed</th>
+              <th>Reference</th>
+              {% if can_approve_transfer %}<th>Action</th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% if transfer_rows %}
+              {% for r in transfer_rows %}
+              <tr>
+                <td>{{ r.request_date }}</td>
+                <td>{{ r.branch_name }}</td>
+                <td>{{ '%.2f'|format(r.amount or 0) }}</td>
+                <td>{{ r.transfer_to or '-' }}</td>
+                <td>
+                  {% if r.status == 'Approved' %}
+                  <span class="badge text-bg-success">Approved</span>
+                  {% elif r.status == 'Rejected' %}
+                  <span class="badge text-bg-danger">Rejected</span>
+                  {% elif r.status == 'Cancelled' %}
+                  <span class="badge text-bg-secondary">Cancelled</span>
+                  {% else %}
+                  <span class="badge text-bg-warning">Pending</span>
+                  {% endif %}
+                </td>
+                <td>{{ r.requested_by or '-' }}<div class="small text-muted">{{ r.requested_on or '-' }}</div></td>
+                <td>{{ r.requested_notes or r.review_notes or '-' }}</td>
+                <td>{{ r.reviewed_by or '-' }}<div class="small text-muted">{{ r.reviewed_on or '-' }}</div></td>
+                <td>{{ r.transfer_reference or '-' }}</td>
+                {% if can_approve_transfer %}
+                <td>
+                  {% if r.status == 'Pending' %}
+                  {% set is_own_request = ((r.requested_by or '')|lower) == ((session.get('username') or '')|lower) %}
+                  {% set can_review_pending = can_approve_transfer and not is_own_request %}
+                  {% set can_cancel_pending = can_cancel_transfer %}
+                  {% if can_review_pending or can_cancel_pending %}
+                  <form method="POST" action="/cashflow" class="d-grid gap-1">
+                    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+                    <input type="hidden" name="form_action" value="review_transfer">
+                    <input type="hidden" name="transfer_id" value="{{ r.id }}">
+                    <input type="hidden" name="return_to" value="{{ request.full_path.rstrip('?') }}">
+                    {% if can_review_pending %}
+                    <input type="text" name="transfer_reference" class="form-control form-control-sm" placeholder="Ref no">
+                    <input type="text" name="approval_amount_verification" class="form-control form-control-sm" inputmode="decimal" placeholder="Type {{ '%.2f'|format(r.amount or 0) }} to approve">
+                    {% endif %}
+                    <input type="text" name="review_notes" class="form-control form-control-sm" placeholder="{% if can_review_pending %}Review note{% else %}Cancellation note{% endif %}">
+                    {% if can_review_pending %}
+                    <div class="small text-muted">Type the exact amount to approve this request.</div>
+                    {% elif is_own_request %}
+                    <div class="small text-muted">Admins can cancel their own pending requests.</div>
+                    {% endif %}
+                    <div class="d-flex gap-1">
+                      {% if can_review_pending %}
+                      <button type="submit" name="review_action" value="approve" class="btn btn-success btn-sm">Verify &amp; Approve</button>
+                      <button type="submit" name="review_action" value="reject" class="btn btn-outline-danger btn-sm">Reject</button>
+                      {% endif %}
+                      {% if can_cancel_pending %}
+                      <button type="submit" name="review_action" value="cancel" class="btn btn-outline-secondary btn-sm" onclick="return confirm('Cancel this pending transfer request?');">Cancel</button>
+                      {% endif %}
+                    </div>
+                  </form>
+                  {% elif is_own_request %}
+                  <span class="text-muted small">Own request</span>
+                  {% endif %}
+                  {% else %}
+                  <span class="text-muted small">Reviewed</span>
+                  {% endif %}
+                </td>
+                {% endif %}
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="{% if can_approve_transfer %}10{% else %}9{% endif %}" class="text-center text-muted">No transfer requests found</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

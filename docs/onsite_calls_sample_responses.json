@@ -1,0 +1,111 @@
+{
+  "createPublic": {
+    "success": true,
+    "message": "Onsite request submitted successfully. Request ID: 41",
+    "call_id": 41,
+    "status": "New Lead",
+    "source": "Customer"
+  },
+  "createInternal": {
+    "success": true,
+    "message": "Onsite call created successfully. Call ID: 42",
+    "call_id": 42
+  },
+  "engineers": {
+    "success": true,
+    "items": [
+      {
+        "id": 7,
+        "username": "engineer_kochi"
+      },
+      {
+        "id": 12,
+        "username": "engineer_tvm"
+      }
+    ]
+  },
+  "list": {
+    "success": true,
+    "items": [
+      {
+        "id": 42,
+        "customer_name": "Shyam Kumar",
+        "phone": "9876543210",
+        "phone_call_url": "tel:9876543210",
+        "location": "Edappally",
+        "district": "Ernakulam",
+        "complaint_type": "Laptop",
+        "preferred_service": "Onsite",
+        "priority": "Urgent",
+        "priority_badge_class": "text-bg-danger",
+        "preferred_datetime_value": "2026-04-08T10:30",
+        "preferred_datetime_display": "08/04/2026 10:30",
+        "device_model": "Dell Latitude 5420",
+        "complaint_description": "Laptop is not powering on.",
+        "status": "Assigned",
+        "status_badge_class": "text-bg-info",
+        "source": "Admin",
+        "assigned_branch_id": 3,
+        "assigned_branch_name": "ERNAKULAM",
+        "assigned_engineer_id": 7,
+        "assigned_engineer_name": "engineer_kochi",
+        "assigned_time_display": "07/04/2026 11:00",
+        "created_by": "admin",
+        "created_at_display": "07/04/2026 10:55",
+        "updated_at_display": "07/04/2026 11:00"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "per_page": 20,
+      "total_count": 1,
+      "total_pages": 1
+    },
+    "counts": {
+      "New Lead": 0,
+      "Open": 0,
+      "Assigned": 1,
+      "In Progress": 0,
+      "Completed": 0,
+      "Failed": 0,
+      "ALL": 1
+    }
+  },
+  "reports": {
+    "success": true,
+    "daily_rows": [
+      {
+        "day": "2026-04-07",
+        "count": 6
+      }
+    ],
+    "outcome_rows": [
+      {
+        "status": "Completed",
+        "count": 4
+      },
+      {
+        "status": "Failed",
+        "count": 1
+      }
+    ],
+    "engineer_rows": [
+      {
+        "engineer_name": "engineer_kochi",
+        "count": 3
+      }
+    ],
+    "branch_rows": [
+      {
+        "branch_name": "ERNAKULAM",
+        "count": 4
+      }
+    ],
+    "complaint_rows": [
+      {
+        "complaint_type": "Laptop",
+        "count": 3
+      }
+    ]
+  }
+}

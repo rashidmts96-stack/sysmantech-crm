@@ -1,0 +1,115 @@
+<div class="crm-global-footer" aria-hidden="false">
+    <a class="crm-global-footer-link" href="/dashboard" aria-label="Go to dashboard">SYSCARE CRM &ndash; Powered by SYSMANTECH</a>
+</div>
+<script>
+(function () {
+    if (window.__crmCsrfInit) {
+        return;
+    }
+    window.__crmCsrfInit = true;
+
+    var csrfFieldName = {{ csrf_field_name|tojson }};
+    var csrfToken = {{ csrf_token()|tojson }};
+
+    function isUnsafeMethod(method) {
+        var normalizedMethod = String(method || "GET").toUpperCase();
+        return normalizedMethod === "POST" || normalizedMethod === "PUT" || normalizedMethod === "PATCH" || normalizedMethod === "DELETE";
+    }
+
+    function isSameOriginUrl(rawUrl) {
+        try {
+            var resolvedUrl = new URL(rawUrl || window.location.href, window.location.href);
+            return resolvedUrl.origin === window.location.origin;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function ensureFormToken(form) {
+        if (!(form instanceof HTMLFormElement)) {
+            return;
+        }
+        if (!isUnsafeMethod(form.method)) {
+            return;
+        }
+        if (!isSameOriginUrl(form.getAttribute("action") || window.location.href)) {
+            return;
+        }
+
+        var selector = 'input[name="' + csrfFieldName + '"]';
+        var tokenInput = form.querySelector(selector);
+        if (!tokenInput) {
+            tokenInput = document.createElement("input");
+            tokenInput.type = "hidden";
+            tokenInput.name = csrfFieldName;
+            form.appendChild(tokenInput);
+        }
+        tokenInput.value = csrfToken;
+    }
+
+    function ensureAllFormTokens() {
+        document.querySelectorAll("form").forEach(ensureFormToken);
+    }
+
+    function buildHeaders(headers) {
+        var finalHeaders = new Headers(headers || {});
+        if (!finalHeaders.has("X-CSRF-Token")) {
+            finalHeaders.set("X-CSRF-Token", csrfToken);
+        }
+        return finalHeaders;
+    }
+
+    document.addEventListener("submit", function (event) {
+        ensureFormToken(event.target);
+    }, true);
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", ensureAllFormTokens);
+    } else {
+        ensureAllFormTokens();
+    }
+
+    if (window.fetch) {
+        var originalFetch = window.fetch.bind(window);
+        window.fetch = function (input, init) {
+            var request = input instanceof Request ? input : null;
+            var method = (init && init.method) || (request && request.method) || "GET";
+            var requestUrl = request ? request.url : input;
+
+            if (!isUnsafeMethod(method) || !isSameOriginUrl(requestUrl)) {
+                return originalFetch(input, init);
+            }
+
+            var nextInit = init ? Object.assign({}, init) : {};
+            nextInit.headers = buildHeaders((init && init.headers) || (request && request.headers));
+
+            if (request && !init) {
+                return originalFetch(new Request(request, { headers: nextInit.headers }));
+            }
+
+            return originalFetch(input, nextInit);
+        };
+    }
+
+    if (window.XMLHttpRequest) {
+        var originalOpen = XMLHttpRequest.prototype.open;
+        var originalSend = XMLHttpRequest.prototype.send;
+
+        XMLHttpRequest.prototype.open = function (method, url) {
+            this.__crmCsrfMethod = method;
+            this.__crmCsrfUrl = url;
+            return originalOpen.apply(this, arguments);
+        };
+
+        XMLHttpRequest.prototype.send = function () {
+            if (isUnsafeMethod(this.__crmCsrfMethod) && isSameOriginUrl(this.__crmCsrfUrl)) {
+                try {
+                    this.setRequestHeader("X-CSRF-Token", csrfToken);
+                } catch (error) {
+                }
+            }
+            return originalSend.apply(this, arguments);
+        };
+    }
+})();
+</script>
