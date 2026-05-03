@@ -712,6 +712,207 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 	font-size: 0.78rem;
 }
 
+.dashboard-mobile-hero,
+.dashboard-mobile-dock {
+	display: none;
+}
+
+.dashboard-mobile-hero {
+	margin-bottom: 1rem;
+}
+
+.dashboard-mobile-card {
+	position: relative;
+	overflow: hidden;
+	padding: 1rem;
+	border-radius: 24px;
+	background:
+		radial-gradient(circle at top right, rgba(255, 255, 255, 0.2), transparent 34%),
+		linear-gradient(145deg, #0f172a 0%, #18365e 52%, #2b6fff 100%);
+	box-shadow: 0 18px 38px rgba(15, 23, 42, 0.18);
+	color: #ffffff;
+}
+
+.dashboard-mobile-card::after {
+	content: "";
+	position: absolute;
+	inset: auto -18% -42% auto;
+	width: 180px;
+	height: 180px;
+	border-radius: 50%;
+	background: radial-gradient(circle, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 72%);
+	pointer-events: none;
+}
+
+.dashboard-mobile-card > * {
+	position: relative;
+	z-index: 1;
+}
+
+.dashboard-mobile-kicker {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45rem;
+	padding: 0.32rem 0.7rem;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.12);
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	font-size: 0.68rem;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.dashboard-mobile-topline {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 0.8rem;
+	margin-top: 0.95rem;
+}
+
+.dashboard-mobile-title {
+	margin: 0;
+	font-size: 1.7rem;
+	font-weight: 800;
+	letter-spacing: -0.03em;
+}
+
+.dashboard-mobile-subtitle {
+	margin-top: 0.28rem;
+	color: rgba(255, 255, 255, 0.76);
+	font-size: 0.9rem;
+	line-height: 1.45;
+}
+
+.dashboard-mobile-new {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.4rem;
+	min-height: 42px;
+	padding: 0.7rem 0.95rem;
+	border-radius: 16px;
+	background: rgba(255, 255, 255, 0.96);
+	box-shadow: 0 14px 30px rgba(12, 26, 55, 0.16);
+	color: var(--crm-blue-deep);
+	font-size: 0.84rem;
+	font-weight: 800;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.dashboard-mobile-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.55rem;
+	margin-top: 0.95rem;
+}
+
+.dashboard-mobile-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.42rem;
+	min-height: 34px;
+	padding: 0.42rem 0.72rem;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	color: #ffffff;
+	font-size: 0.76rem;
+	font-weight: 700;
+	text-decoration: none;
+}
+
+.dashboard-mobile-pill.is-alert {
+	background: rgba(255, 244, 244, 0.14);
+	border-color: rgba(255, 229, 229, 0.26);
+}
+
+.dashboard-mobile-shortcuts {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 0.7rem;
+	margin-top: 0.85rem;
+}
+
+.dashboard-mobile-shortcut {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: center;
+	gap: 0.35rem;
+	min-height: 86px;
+	padding: 0.9rem 0.85rem;
+	border-radius: 20px;
+	background: rgba(255, 255, 255, 0.88);
+	border: 1px solid rgba(215, 225, 239, 0.9);
+	box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+	color: var(--crm-ink);
+	text-decoration: none;
+}
+
+.dashboard-mobile-shortcut i {
+	font-size: 1.05rem;
+	color: var(--crm-blue);
+}
+
+.dashboard-mobile-shortcut strong {
+	font-size: 0.8rem;
+	line-height: 1.1;
+}
+
+.dashboard-mobile-shortcut span {
+	color: var(--crm-muted);
+	font-size: 0.72rem;
+	line-height: 1.2;
+}
+
+.dashboard-mobile-dock {
+	position: fixed;
+	left: 12px;
+	right: 12px;
+	bottom: 10px;
+	padding: 0.5rem;
+	border-radius: 24px;
+	background: rgba(15, 23, 42, 0.92);
+	box-shadow: 0 22px 42px rgba(15, 23, 42, 0.26);
+	backdrop-filter: blur(18px);
+	grid-template-columns: repeat(5, minmax(0, 1fr));
+	gap: 0.35rem;
+	z-index: 1400;
+}
+
+.dashboard-mobile-dock-link {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.28rem;
+	min-height: 58px;
+	padding: 0.45rem 0.2rem;
+	border-radius: 18px;
+	color: rgba(255, 255, 255, 0.78);
+	font-size: 0.68rem;
+	font-weight: 700;
+	text-decoration: none;
+}
+
+.dashboard-mobile-dock-link i {
+	font-size: 1rem;
+}
+
+.dashboard-mobile-dock-link.is-active {
+	background: rgba(255, 255, 255, 0.12);
+	color: #ffffff;
+}
+
+.dashboard-mobile-dock-link.is-primary {
+	background: linear-gradient(135deg, #1d4ed8 0%, #2b6fff 100%);
+	box-shadow: 0 14px 28px rgba(43, 111, 255, 0.28);
+	color: #ffffff;
+}
+
 /* KPI Cards Section */
 .kpi-section {
 	margin-bottom: 2rem;
@@ -1436,11 +1637,22 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 }
 
 @media (max-width: 768px) {
+	body.crm-theme {
+		padding-bottom: 94px;
+	}
+
+	body.crm-theme .crm-global-footer {
+		display: none;
+	}
+
 	.dashboard-container {
 		padding: 1rem 0.75rem;
 	}
 
 	.navbar-custom {
+		position: sticky;
+		top: 0.7rem;
+		z-index: 1200;
 		padding: 0.5rem 1rem;
 		flex-wrap: wrap;
 		align-items: flex-start;
@@ -1467,6 +1679,15 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 
 	.dashboard-toolbar {
 		padding: 0.7rem;
+	}
+
+	.dashboard-mobile-hero,
+	.dashboard-mobile-dock {
+		display: block;
+	}
+
+	.dashboard-mobile-dock {
+		display: grid;
 	}
 
 	.dashboard-toolbar-form,
@@ -1533,7 +1754,7 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 	}
 
 	.kpi-grid {
-		grid-template-columns: 1fr;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 1rem;
 	}
 
@@ -1595,6 +1816,10 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 }
 
 @media (max-width: 576px) {
+	.dashboard-mobile-shortcuts {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
 	.revenue-summary {
 		grid-template-columns: 1fr;
 	}
@@ -1612,6 +1837,29 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 	.chart-card,
 	.report-card-section {
 		padding: 1rem;
+	}
+}
+
+@media (max-width: 430px) {
+	.dashboard-mobile-card {
+		padding: 0.95rem;
+		border-radius: 22px;
+	}
+
+	.dashboard-mobile-topline {
+		flex-direction: column;
+	}
+
+	.dashboard-mobile-new {
+		width: 100%;
+	}
+
+	.kpi-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.dashboard-mobile-dock-link {
+		font-size: 0.62rem;
 	}
 }
 </style>
@@ -1666,6 +1914,52 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 	{% set onsite_alert_count = onsite_dashboard_alert_count or 0 %}
 	{% set onsite_alert_badge = '99+' if onsite_alert_count > 99 else onsite_alert_count %}
 	{% set onsite_alert_label = onsite_dashboard_alert_label or 'onsite call' %}
+
+	<div class="dashboard-mobile-hero" aria-label="Mobile dashboard shortcuts">
+		<div class="dashboard-mobile-card">
+			<div class="dashboard-mobile-kicker"><i class="fas fa-mobile-screen-button"></i> Mobile Workspace</div>
+			<div class="dashboard-mobile-topline">
+				<div>
+					<h1 class="dashboard-mobile-title">Dashboard</h1>
+					<div class="dashboard-mobile-subtitle">Faster daily actions for {{ scope_label or branch or 'your branch' }}.</div>
+				</div>
+				<a href="/new-job" class="dashboard-mobile-new">
+					<i class="fas fa-plus"></i> New Job
+				</a>
+			</div>
+			<div class="dashboard-mobile-meta">
+				<span class="dashboard-mobile-pill"><i class="fas fa-building"></i> {% if can_switch_dashboard_branch and selected_dashboard_branch != 'ALL' %}{{ selected_dashboard_branch }}{% else %}{{ scope_label or branch }}{% endif %}</span>
+				<span class="dashboard-mobile-pill"><i class="fas fa-calendar-days"></i> {{ from_label }} &rarr; {{ to_label }}</span>
+				{% if onsite_alert_count %}
+				<a href="{{ onsite_dashboard_url or '/onsite-calls' }}" class="dashboard-mobile-pill is-alert">
+					<i class="fas fa-bell"></i> {{ onsite_alert_badge }} urgent
+				</a>
+				{% endif %}
+			</div>
+		</div>
+		<div class="dashboard-mobile-shortcuts">
+			<a href="/jobs" class="dashboard-mobile-shortcut">
+				<i class="fas fa-briefcase"></i>
+				<strong>Jobs</strong>
+				<span>Track active cards</span>
+			</a>
+			<a href="/quotations" class="dashboard-mobile-shortcut">
+				<i class="fas fa-file-invoice"></i>
+				<strong>Quotes</strong>
+				<span>Open quotations fast</span>
+			</a>
+			<a href="{{ onsite_dashboard_url or '/onsite-calls' }}" class="dashboard-mobile-shortcut">
+				<i class="fas fa-user-clock"></i>
+				<strong>Onsite</strong>
+				<span>Team follow-up queue</span>
+			</a>
+			<a href="/cashflow" class="dashboard-mobile-shortcut">
+				<i class="fas fa-wallet"></i>
+				<strong>Cashflow</strong>
+				<span>Daily collections view</span>
+			</a>
+		</div>
+	</div>
 
 	<!-- Dashboard Toolbar -->
 	<div class="dashboard-toolbar">
@@ -2228,6 +2522,29 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 	<script id="dashboardPageData" type="application/json">{{ dashboard_page_data|tojson }}</script>
 
 </div>
+
+<nav class="dashboard-mobile-dock" aria-label="Mobile dashboard navigation">
+	<a href="/dashboard" class="dashboard-mobile-dock-link is-active">
+		<i class="fas fa-house"></i>
+		<span>Home</span>
+	</a>
+	<a href="/jobs" class="dashboard-mobile-dock-link">
+		<i class="fas fa-briefcase"></i>
+		<span>Jobs</span>
+	</a>
+	<a href="/new-job" class="dashboard-mobile-dock-link is-primary">
+		<i class="fas fa-plus"></i>
+		<span>New</span>
+	</a>
+	<a href="/quotations" class="dashboard-mobile-dock-link">
+		<i class="fas fa-file-invoice"></i>
+		<span>Quotes</span>
+	</a>
+	<a href="/profile" class="dashboard-mobile-dock-link">
+		<i class="fas fa-user"></i>
+		<span>Profile</span>
+	</a>
+</nav>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>

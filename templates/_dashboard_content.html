@@ -9,6 +9,52 @@
 {% set onsite_alert_badge = '99+' if onsite_alert_count > 99 else onsite_alert_count %}
 {% set onsite_alert_label = onsite_dashboard_alert_label or 'onsite call' %}
 
+<div class="dashboard-mobile-hero" aria-label="Mobile dashboard shortcuts">
+	<div class="dashboard-mobile-card">
+		<div class="dashboard-mobile-kicker"><i class="fas fa-mobile-screen-button"></i> Mobile Workspace</div>
+		<div class="dashboard-mobile-topline">
+			<div>
+				<h1 class="dashboard-mobile-title">Dashboard</h1>
+				<div class="dashboard-mobile-subtitle">Faster daily actions for {{ scope_label or branch or 'your branch' }}.</div>
+			</div>
+			<a href="/new-job" class="dashboard-mobile-new">
+				<i class="fas fa-plus"></i> New Job
+			</a>
+		</div>
+		<div class="dashboard-mobile-meta">
+			<span class="dashboard-mobile-pill"><i class="fas fa-building"></i> {% if can_switch_dashboard_branch and selected_dashboard_branch != 'ALL' %}{{ selected_dashboard_branch }}{% else %}{{ scope_label or branch }}{% endif %}</span>
+			<span class="dashboard-mobile-pill"><i class="fas fa-calendar-days"></i> {{ from_label }} &rarr; {{ to_label }}</span>
+			{% if onsite_alert_count %}
+			<a href="{{ onsite_dashboard_url or '/onsite-calls' }}" class="dashboard-mobile-pill is-alert">
+				<i class="fas fa-bell"></i> {{ onsite_alert_badge }} urgent
+			</a>
+			{% endif %}
+		</div>
+	</div>
+	<div class="dashboard-mobile-shortcuts">
+		<a href="/jobs" class="dashboard-mobile-shortcut">
+			<i class="fas fa-briefcase"></i>
+			<strong>Jobs</strong>
+			<span>Track active cards</span>
+		</a>
+		<a href="/quotations" class="dashboard-mobile-shortcut">
+			<i class="fas fa-file-invoice"></i>
+			<strong>Quotes</strong>
+			<span>Open quotations fast</span>
+		</a>
+		<a href="{{ onsite_dashboard_url or '/onsite-calls' }}" class="dashboard-mobile-shortcut">
+			<i class="fas fa-user-clock"></i>
+			<strong>Onsite</strong>
+			<span>Team follow-up queue</span>
+		</a>
+		<a href="/cashflow" class="dashboard-mobile-shortcut">
+			<i class="fas fa-wallet"></i>
+			<strong>Cashflow</strong>
+			<span>Daily collections view</span>
+		</a>
+	</div>
+</div>
+
 <div class="dashboard-toolbar">
 	<form method="GET" action="/dashboard" class="dashboard-toolbar-form" id="dashboardToolbarForm">
 		<input type="hidden" name="from_date" value="{{ from_date or '' }}">
