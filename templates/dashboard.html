@@ -833,6 +833,13 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 	animation: dashboardMobileUrgentPulse 1.2s ease-in-out infinite;
 }
 
+.dashboard-mobile-pill-secondary {
+	background: rgba(255, 255, 255, 0.92);
+	border-color: rgba(255, 255, 255, 0.3);
+	color: var(--crm-blue-deep);
+	box-shadow: 0 10px 24px rgba(12, 26, 55, 0.14);
+}
+
 @keyframes dashboardMobileUrgentPulse {
 	0%,
 	100% {
@@ -1961,6 +1968,15 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 				<a href="{{ onsite_dashboard_url or '/onsite-calls' }}" class="dashboard-mobile-pill is-alert">
 					<i class="fas fa-bell"></i> {{ onsite_alert_badge }} {{ onsite_alert_label }}
 				</a>
+				<button type="button" class="dashboard-mobile-pill dashboard-mobile-pill-secondary" data-onsite-alert-enable hidden>
+					<i class="fas fa-bell"></i> Enable Alerts
+				</button>
+			</div>
+			{% else %}
+			<div class="dashboard-mobile-meta">
+				<button type="button" class="dashboard-mobile-pill dashboard-mobile-pill-secondary" data-onsite-alert-enable hidden>
+					<i class="fas fa-bell"></i> Enable Alerts
+				</button>
 			</div>
 			{% endif %}
 		</div>
@@ -2591,7 +2607,7 @@ document.addEventListener("DOMContentLoaded", function () {
 	var dashboardBranchOptions = dashboardBranchMenu ? Array.prototype.slice.call(dashboardBranchMenu.querySelectorAll("[data-dashboard-branch-option]")) : [];
 	var onsiteToolbarLink = null;
 	var onsiteToolbarMenuLink = null;
-	var onsiteNotificationButton = null;
+	var onsiteNotificationButtons = [];
 	var onsiteAlertPollTimer = null;
 	var onsiteAlertPollInFlight = false;
 	var onsiteAlertAudioContext = null;
@@ -2614,57 +2630,69 @@ document.addEventListener("DOMContentLoaded", function () {
 		var lookupRoot = root || document;
 		onsiteToolbarLink = lookupRoot.querySelector("[data-onsite-toolbar-link]") || document.querySelector("[data-onsite-toolbar-link]");
 		onsiteToolbarMenuLink = lookupRoot.querySelector("[data-onsite-toolbar-menu-link]") || document.querySelector("[data-onsite-toolbar-menu-link]");
-		onsiteNotificationButton = lookupRoot.querySelector("[data-onsite-alert-enable]") || document.querySelector("[data-onsite-alert-enable]");
 		ensureOnsiteNotificationButton();
+	}
+
+	function bindOnsiteNotificationButtons() {
+		onsiteNotificationButtons = Array.prototype.slice.call(document.querySelectorAll("[data-onsite-alert-enable]"));
+		onsiteNotificationButtons.forEach(function (button) {
+			if (button.dataset.onsiteAlertBound === "true") {
+				return;
+			}
+			button.dataset.onsiteAlertBound = "true";
+			button.addEventListener("click", function () {
+				requestOnsiteNotificationPermission(true);
+			});
+		});
 	}
 
 	function ensureOnsiteNotificationButton() {
 		var toolbarRight = document.querySelector(".toolbar-right");
 		if (!toolbarRight || !supportsBrowserNotifications()) {
-			if (onsiteNotificationButton) {
-				onsiteNotificationButton.remove();
-				onsiteNotificationButton = null;
-			}
+			Array.prototype.slice.call(document.querySelectorAll(".toolbar-right [data-onsite-alert-enable]")).forEach(function (button) {
+				button.remove();
+			});
+			bindOnsiteNotificationButtons();
 			return;
 		}
 
-		if (!onsiteNotificationButton) {
-			onsiteNotificationButton = document.createElement("button");
-			onsiteNotificationButton.type = "button";
-			onsiteNotificationButton.className = "toolbar-btn toolbar-btn-reset";
-			onsiteNotificationButton.setAttribute("data-onsite-alert-enable", "true");
-			onsiteNotificationButton.innerHTML = '<i class="fas fa-bell"></i> Enable Alerts';
-			onsiteNotificationButton.addEventListener("click", function () {
-				requestOnsiteNotificationPermission(true);
-			});
-			toolbarRight.insertBefore(onsiteNotificationButton, onsiteToolbarLink || toolbarRight.firstChild);
+		if (!toolbarRight.querySelector("[data-onsite-alert-enable]")) {
+			var desktopButton = document.createElement("button");
+			desktopButton.type = "button";
+			desktopButton.className = "toolbar-btn toolbar-btn-reset";
+			desktopButton.setAttribute("data-onsite-alert-enable", "true");
+			desktopButton.innerHTML = '<i class="fas fa-bell"></i> Enable Alerts';
+			toolbarRight.insertBefore(desktopButton, onsiteToolbarLink || toolbarRight.firstChild);
 		}
 
+		bindOnsiteNotificationButtons();
 		updateOnsiteNotificationButton();
 	}
 
 	function updateOnsiteNotificationButton() {
-		if (!onsiteNotificationButton) {
+		if (!onsiteNotificationButtons.length) {
 			return;
 		}
 
 		var permission = supportsBrowserNotifications() ? Notification.permission : "denied";
-		if (permission === "granted") {
-			onsiteNotificationButton.hidden = true;
-			return;
-		}
+		onsiteNotificationButtons.forEach(function (button) {
+			if (permission === "granted") {
+				button.hidden = true;
+				return;
+			}
 
-		onsiteNotificationButton.hidden = false;
-		onsiteNotificationButton.disabled = false;
-		if (permission === "denied") {
-			onsiteNotificationButton.innerHTML = '<i class="fas fa-bell-slash"></i> Alerts Blocked';
-			onsiteNotificationButton.disabled = true;
-			onsiteNotificationButton.title = "Browser notification permission is blocked for this site.";
-			return;
-		}
+			button.hidden = false;
+			button.disabled = false;
+			if (permission === "denied") {
+				button.innerHTML = '<i class="fas fa-bell-slash"></i> Alerts Blocked';
+				button.disabled = true;
+				button.title = "Browser notification permission is blocked for this site.";
+				return;
+			}
 
-		onsiteNotificationButton.innerHTML = '<i class="fas fa-bell"></i> Enable Alerts';
-		onsiteNotificationButton.removeAttribute("title");
+			button.innerHTML = '<i class="fas fa-bell"></i> Enable Alerts';
+			button.removeAttribute("title");
+		});
 	}
 
 	function primeOnsiteAlertAudio() {
