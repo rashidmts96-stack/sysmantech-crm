@@ -1894,7 +1894,7 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 </style>
 </head>
 
-<body class="crm-theme" data-dashboard-url="/dashboard" data-dashboard-branch-url="/dashboard/branch-scope" data-dashboard-branch-options-url="/dashboard/branch-options" data-dashboard-onsite-alert-url="/dashboard/onsite-alert" data-csrf-token="{{ csrf_token() }}" data-open-report="{{ open_report or '' }}">
+<body class="crm-theme" data-dashboard-url="/dashboard" data-dashboard-branch-url="/dashboard/branch-scope" data-dashboard-branch-options-url="/dashboard/branch-options" data-dashboard-onsite-alert-url="/dashboard/onsite-alert" data-dashboard-onsite-alert-count="{{ onsite_dashboard_alert_count or 0 }}" data-dashboard-onsite-alert-label="{{ onsite_dashboard_alert_label or 'Onsite Call or Lead' }}" data-dashboard-onsite-alert-target="{{ onsite_dashboard_url or '/onsite-calls' }}" data-csrf-token="{{ csrf_token() }}" data-open-report="{{ open_report or '' }}">
 
 {% set toolbar_username = (dashboard_user.username if dashboard_user and dashboard_user.username else (session.get('username') or 'User')) %}
 {% set toolbar_profile_picture_url = ('/profile-picture/' ~ toolbar_username) if dashboard_user and dashboard_user.profile_picture else '' %}
@@ -2591,13 +2591,216 @@ document.addEventListener("DOMContentLoaded", function () {
 	var dashboardBranchOptions = dashboardBranchMenu ? Array.prototype.slice.call(dashboardBranchMenu.querySelectorAll("[data-dashboard-branch-option]")) : [];
 	var onsiteToolbarLink = null;
 	var onsiteToolbarMenuLink = null;
+	var onsiteNotificationButton = null;
 	var onsiteAlertPollTimer = null;
 	var onsiteAlertPollInFlight = false;
+	var onsiteAlertAudioContext = null;
+	var onsiteAlertAudioReady = false;
+	var onsiteAlertInitialCount = Number(body.getAttribute("data-dashboard-onsite-alert-count") || "0") || 0;
+	var onsiteAlertLastCount = onsiteAlertInitialCount;
+	var onsiteAlertLastKnownLabel = body.getAttribute("data-dashboard-onsite-alert-label") || "Onsite Call or Lead";
+	var onsiteAlertLastKnownUrl = body.getAttribute("data-dashboard-onsite-alert-target") || "/onsite-calls";
+	var onsiteAlertPermissionPrompted = false;
+
+	function supportsBrowserNotifications() {
+		return "Notification" in window;
+	}
+
+	function supportsServiceWorkerNotifications() {
+		return "serviceWorker" in navigator;
+	}
 
 	function refreshOnsiteAlertTargets(root) {
 		var lookupRoot = root || document;
 		onsiteToolbarLink = lookupRoot.querySelector("[data-onsite-toolbar-link]") || document.querySelector("[data-onsite-toolbar-link]");
 		onsiteToolbarMenuLink = lookupRoot.querySelector("[data-onsite-toolbar-menu-link]") || document.querySelector("[data-onsite-toolbar-menu-link]");
+		onsiteNotificationButton = lookupRoot.querySelector("[data-onsite-alert-enable]") || document.querySelector("[data-onsite-alert-enable]");
+		ensureOnsiteNotificationButton();
+	}
+
+	function ensureOnsiteNotificationButton() {
+		var toolbarRight = document.querySelector(".toolbar-right");
+		if (!toolbarRight || !supportsBrowserNotifications()) {
+			if (onsiteNotificationButton) {
+				onsiteNotificationButton.remove();
+				onsiteNotificationButton = null;
+			}
+			return;
+		}
+
+		if (!onsiteNotificationButton) {
+			onsiteNotificationButton = document.createElement("button");
+			onsiteNotificationButton.type = "button";
+			onsiteNotificationButton.className = "toolbar-btn toolbar-btn-reset";
+			onsiteNotificationButton.setAttribute("data-onsite-alert-enable", "true");
+			onsiteNotificationButton.innerHTML = '<i class="fas fa-bell"></i> Enable Alerts';
+			onsiteNotificationButton.addEventListener("click", function () {
+				requestOnsiteNotificationPermission(true);
+			});
+			toolbarRight.insertBefore(onsiteNotificationButton, onsiteToolbarLink || toolbarRight.firstChild);
+		}
+
+		updateOnsiteNotificationButton();
+	}
+
+	function updateOnsiteNotificationButton() {
+		if (!onsiteNotificationButton) {
+			return;
+		}
+
+		var permission = supportsBrowserNotifications() ? Notification.permission : "denied";
+		if (permission === "granted") {
+			onsiteNotificationButton.hidden = true;
+			return;
+		}
+
+		onsiteNotificationButton.hidden = false;
+		onsiteNotificationButton.disabled = false;
+		if (permission === "denied") {
+			onsiteNotificationButton.innerHTML = '<i class="fas fa-bell-slash"></i> Alerts Blocked';
+			onsiteNotificationButton.disabled = true;
+			onsiteNotificationButton.title = "Browser notification permission is blocked for this site.";
+			return;
+		}
+
+		onsiteNotificationButton.innerHTML = '<i class="fas fa-bell"></i> Enable Alerts';
+		onsiteNotificationButton.removeAttribute("title");
+	}
+
+	function primeOnsiteAlertAudio() {
+		if (onsiteAlertAudioReady || !("AudioContext" in window || "webkitAudioContext" in window)) {
+			return;
+		}
+
+		var Context = window.AudioContext || window.webkitAudioContext;
+		if (!onsiteAlertAudioContext) {
+			onsiteAlertAudioContext = new Context();
+		}
+
+		var resumeResult = typeof onsiteAlertAudioContext.resume === "function" ? onsiteAlertAudioContext.resume() : null;
+		Promise.resolve(resumeResult).catch(function () {
+			return null;
+		}).finally(function () {
+			onsiteAlertAudioReady = onsiteAlertAudioContext.state === "running";
+		});
+	}
+
+	function registerOnsiteAlertInteractionHooks() {
+		["click", "touchstart", "keydown"].forEach(function (eventName) {
+			document.addEventListener(eventName, primeOnsiteAlertAudio, { passive: true });
+		});
+	}
+
+	function requestOnsiteNotificationPermission(triggeredByUser) {
+		if (!supportsBrowserNotifications()) {
+			return Promise.resolve("denied");
+		}
+
+		if (Notification.permission !== "default") {
+			updateOnsiteNotificationButton();
+			return Promise.resolve(Notification.permission);
+		}
+
+		if (!triggeredByUser && onsiteAlertPermissionPrompted) {
+			return Promise.resolve(Notification.permission);
+		}
+
+		onsiteAlertPermissionPrompted = true;
+		return Notification.requestPermission().then(function (permission) {
+			updateOnsiteNotificationButton();
+			return permission;
+		}).catch(function () {
+			updateOnsiteNotificationButton();
+			return Notification.permission;
+		});
+	}
+
+	function playOnsiteAlertSound() {
+		if (!onsiteAlertAudioReady || !onsiteAlertAudioContext) {
+			return;
+		}
+
+		var beepSchedule = [0, 0.18];
+		beepSchedule.forEach(function (offsetSeconds) {
+			var oscillator = onsiteAlertAudioContext.createOscillator();
+			var gainNode = onsiteAlertAudioContext.createGain();
+			var startAt = onsiteAlertAudioContext.currentTime + offsetSeconds;
+			var stopAt = startAt + 0.12;
+
+			oscillator.type = "sine";
+			oscillator.frequency.setValueAtTime(880, startAt);
+			gainNode.gain.setValueAtTime(0.0001, startAt);
+			gainNode.gain.exponentialRampToValueAtTime(0.12, startAt + 0.02);
+			gainNode.gain.exponentialRampToValueAtTime(0.0001, stopAt);
+
+			oscillator.connect(gainNode);
+			gainNode.connect(onsiteAlertAudioContext.destination);
+			oscillator.start(startAt);
+			oscillator.stop(stopAt);
+		});
+	}
+
+	function triggerOnsiteVibration() {
+		if ("vibrate" in navigator) {
+			navigator.vibrate([180, 120, 180]);
+		}
+	}
+
+	function showOnsiteSystemNotification(count, label, url) {
+		if (!supportsBrowserNotifications() || Notification.permission !== "granted") {
+			return;
+		}
+
+		var notificationTitle = count > 1 ? count + " " + label + "s pending" : "1 " + label + " pending";
+		var notificationOptions = {
+			body: count > 1 ? "Multiple onsite items need immediate attention." : "An onsite item needs immediate attention.",
+			tag: "crm-onsite-alert",
+			renotify: true,
+			requireInteraction: false,
+			icon: "/static/icons/icon-192.png",
+			badge: "/static/icons/icon-192.png",
+			vibrate: [180, 120, 180],
+			data: {
+				url: url || "/onsite-calls"
+			}
+		};
+
+		if (supportsServiceWorkerNotifications()) {
+			navigator.serviceWorker.ready.then(function (registration) {
+				if (registration && typeof registration.showNotification === "function") {
+					registration.showNotification(notificationTitle, notificationOptions);
+					return;
+				}
+				new Notification(notificationTitle, notificationOptions);
+			}).catch(function () {
+				new Notification(notificationTitle, notificationOptions);
+			});
+			return;
+		}
+
+		new Notification(notificationTitle, notificationOptions);
+	}
+
+	function triggerOnsiteAlertFeedback(count, label, url) {
+		playOnsiteAlertSound();
+		triggerOnsiteVibration();
+
+		if (document.hidden || !document.hasFocus()) {
+			showOnsiteSystemNotification(count, label, url);
+		}
+	}
+
+	function maybeNotifyOnsiteAlert(count, label, url) {
+		var previousCount = onsiteAlertLastCount;
+		onsiteAlertLastCount = count;
+		onsiteAlertLastKnownLabel = label || onsiteAlertLastKnownLabel;
+		onsiteAlertLastKnownUrl = url || onsiteAlertLastKnownUrl;
+
+		if (count <= 0 || count <= previousCount) {
+			return;
+		}
+
+		triggerOnsiteAlertFeedback(count, onsiteAlertLastKnownLabel, onsiteAlertLastKnownUrl);
 	}
 
 	function formatOnsiteAlertBadge(count) {
@@ -2666,6 +2869,8 @@ document.addEventListener("DOMContentLoaded", function () {
 			label: label,
 			url: url
 		});
+		updateOnsiteNotificationButton();
+		maybeNotifyOnsiteAlert(count, label, url);
 	}
 
 	function pollOnsiteAlert() {
@@ -2706,6 +2911,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		if (!onsiteToolbarLink || onsiteAlertPollTimer) {
 			return;
 		}
+		registerOnsiteAlertInteractionHooks();
 		pollOnsiteAlert();
 		onsiteAlertPollTimer = window.setInterval(pollOnsiteAlert, 5000);
 		document.addEventListener("visibilitychange", function () {

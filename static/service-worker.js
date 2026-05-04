@@ -1,4 +1,4 @@
-const STATIC_CACHE = "sysmantech-static-v1";
+const STATIC_CACHE = "sysmantech-static-v2";
 const STATIC_ASSETS = [
     "/manifest.webmanifest",
     "/static/css/pwa-ios.css",
@@ -74,6 +74,35 @@ self.addEventListener("fetch", (event) => {
                 });
                 return networkResponse;
             });
+        })
+    );
+});
+
+self.addEventListener("notificationclick", (event) => {
+    event.notification.close();
+
+    const fallbackUrl = "/onsite-calls";
+    const targetUrl = (event.notification && event.notification.data && event.notification.data.url) || fallbackUrl;
+
+    event.waitUntil(
+        clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+            for (const client of clientList) {
+                if (!client || !client.url) {
+                    continue;
+                }
+
+                const clientUrl = new URL(client.url);
+                const destinationUrl = new URL(targetUrl, self.location.origin);
+                if (clientUrl.pathname === destinationUrl.pathname && "focus" in client) {
+                    return client.focus();
+                }
+            }
+
+            if (clients.openWindow) {
+                return clients.openWindow(targetUrl);
+            }
+
+            return null;
         })
     );
 });
