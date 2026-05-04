@@ -294,6 +294,8 @@ _add_csrf_protected_endpoints(
     "add_staff_member",
     "edit_staff_member",
     "delete_staff_member",
+    "delete_revenue_entry",
+    "bulk_delete_revenue_entries",
 )
 
 
@@ -4757,6 +4759,81 @@ def _get_revenue_view_context(args, can_manage_revenue, session_branch, include_
         _safe_close(cursor, db)
 
 
+def _get_revenue_reports_redirect_target():
+    return_to = (request.form.get("return_to") or "").strip()
+    if return_to.startswith("/revenue-reports"):
+        return return_to
+    return _get_safe_referrer_path() or "/revenue-reports"
+
+
+def _delete_revenue_entries(cursor, entry_ids, session_branch, has_global_scope):
+    normalized_ids = []
+    seen_ids = set()
+    for raw_entry_id in entry_ids or ():
+        entry_text = str(raw_entry_id or "").strip()
+        if not entry_text.isdigit():
+            continue
+        entry_id = int(entry_text)
+        if entry_id <= 0 or entry_id in seen_ids:
+            continue
+        normalized_ids.append(entry_id)
+        seen_ids.add(entry_id)
+
+    if not normalized_ids:
+        return {"requested": 0, "found": 0, "deleted": 0, "locked": 0, "missing": 0}
+
+    placeholders = ", ".join(["%s"] * len(normalized_ids))
+    select_sql = f"""
+        SELECT bre.id,
+               bre.entry_date,
+               EXISTS(
+                   SELECT 1
+                   FROM revenue_entry_period_locks AS lock_period
+                   WHERE lock_period.from_date <= bre.entry_date
+                     AND lock_period.to_date >= bre.entry_date
+               ) AS is_locked
+        FROM branch_revenue_entries AS bre
+        WHERE bre.id IN ({placeholders})
+    """
+    select_params = list(normalized_ids)
+    if not has_global_scope:
+        select_sql += " AND bre.branch_name=%s"
+        select_params.append(session_branch)
+
+    cursor.execute(select_sql, tuple(select_params))
+    matching_rows = cursor.fetchall() or []
+
+    found_ids = {int(row.get("id") or 0) for row in matching_rows if int(row.get("id") or 0) > 0}
+    deletable_ids = []
+    locked_count = 0
+    for row in matching_rows:
+        if int(row.get("is_locked") or 0) > 0:
+            locked_count += 1
+            continue
+        entry_id = int(row.get("id") or 0)
+        if entry_id > 0:
+            deletable_ids.append(entry_id)
+
+    deleted_count = 0
+    if deletable_ids:
+        delete_placeholders = ", ".join(["%s"] * len(deletable_ids))
+        delete_sql = f"DELETE FROM branch_revenue_entries WHERE id IN ({delete_placeholders})"
+        delete_params = list(deletable_ids)
+        if not has_global_scope:
+            delete_sql += " AND branch_name=%s"
+            delete_params.append(session_branch)
+        cursor.execute(delete_sql, tuple(delete_params))
+        deleted_count = max(int(cursor.rowcount or 0), 0)
+
+    return {
+        "requested": len(normalized_ids),
+        "found": len(found_ids),
+        "deleted": deleted_count,
+        "locked": locked_count,
+        "missing": max(len(normalized_ids) - len(found_ids), 0),
+    }
+
+
 def _get_cashflow_view_context(args, role, session_branch):
     today = business_now_naive().date()
     first_day = today.replace(day=1)
@@ -6037,7 +6114,6 @@ def lock_revenue_entry_period():
 
 @app.route("/delete-revenue-entry/<int:entry_id>", methods=["POST"])
 def delete_revenue_entry(entry_id):
-
     if "username" not in session:
         return redirect("/login")
 
@@ -6046,49 +6122,82 @@ def delete_revenue_entry(entry_id):
 
     session_branch = (session.get("branch") or "").strip()
     has_global_scope = session_branch.upper() == "ALL"
+    redirect_target = _get_revenue_reports_redirect_target()
+
+    db = None
+    cursor = None
 
     try:
         db = get_db()
         cursor = db.cursor(dictionary=True)
-        # Check if entry date is locked
-        select_sql = "SELECT entry_date, branch_name FROM branch_revenue_entries WHERE id=%s"
-        select_params = [entry_id]
-        if not has_global_scope:
-            select_sql += " AND branch_name=%s"
-            select_params.append(session_branch)
-        cursor.execute(select_sql, tuple(select_params))
-        entry_row = cursor.fetchone()
-        if entry_row:
-            entry_date_val = entry_row.get("entry_date")
-            cursor.execute(
-                "SELECT COUNT(*) FROM revenue_entry_period_locks WHERE from_date <= %s AND to_date >= %s",
-                (entry_date_val, entry_date_val),
-            )
-            lock_cnt = cursor.fetchone() or {}
-            lock_cnt = int(lock_cnt.get("COUNT(*)", 0))
-            if lock_cnt > 0:
-                flash("Cannot delete: this entry belongs to a locked period.", "danger")
-                cursor.close()
-                db.close()
-                return redirect(request.referrer or "/revenue-reports")
-        elif not has_global_scope:
+        result = _delete_revenue_entries(cursor, [entry_id], session_branch, has_global_scope)
+        if result["missing"] > 0:
             flash("Revenue entry not found", "danger")
-            return redirect(request.referrer or "/revenue-reports")
-
-        delete_sql = "DELETE FROM branch_revenue_entries WHERE id=%s"
-        delete_params = [entry_id]
-        if not has_global_scope:
-            delete_sql += " AND branch_name=%s"
-            delete_params.append(session_branch)
-        cursor.execute(delete_sql, tuple(delete_params))
+            db.rollback()
+            return redirect(redirect_target)
+        if result["locked"] > 0:
+            flash("Cannot delete: this entry belongs to a locked period.", "danger")
+            db.rollback()
+            return redirect(redirect_target)
         db.commit()
         flash("Revenue entry deleted", "success")
     except Error as e:
+        if db:
+            db.rollback()
         _flash_internal_error("Failed to delete revenue entry", e)
     finally:
         _safe_close(cursor, db)
 
-    return redirect(request.referrer or "/revenue-reports")
+    return redirect(redirect_target)
+
+
+@app.route("/revenue-reports/bulk-delete", methods=["POST"])
+def bulk_delete_revenue_entries():
+    if "username" not in session:
+        return redirect("/login")
+
+    if session.get("role") not in ["super_admin", "admin"]:
+        return "Access Denied"
+
+    selected_entry_ids = request.form.getlist("entry_ids")
+    if not selected_entry_ids:
+        flash("Select at least one revenue entry to delete.", "warning")
+        return redirect(_get_revenue_reports_redirect_target())
+
+    session_branch = (session.get("branch") or "").strip()
+    has_global_scope = session_branch.upper() == "ALL"
+    redirect_target = _get_revenue_reports_redirect_target()
+
+    db = None
+    cursor = None
+    try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        result = _delete_revenue_entries(cursor, selected_entry_ids, session_branch, has_global_scope)
+        db.commit()
+
+        if result["deleted"] > 0:
+            flash(f"{result['deleted']} revenue entr{'y' if result['deleted'] == 1 else 'ies'} deleted.", "success")
+        if result["locked"] > 0:
+            flash(
+                f"{result['locked']} selected entr{'y was' if result['locked'] == 1 else 'ies were'} skipped because the period is locked.",
+                "warning",
+            )
+        if result["missing"] > 0:
+            flash(
+                f"{result['missing']} selected entr{'y was' if result['missing'] == 1 else 'ies were'} not found or outside your branch scope.",
+                "warning",
+            )
+        if result["deleted"] == 0 and result["locked"] == 0 and result["missing"] == 0:
+            flash("No valid revenue entries were selected.", "warning")
+    except Error as e:
+        if db:
+            db.rollback()
+        _flash_internal_error("Failed to bulk delete revenue entries", e)
+    finally:
+        _safe_close(cursor, db)
+
+    return redirect(redirect_target)
 
 
 @app.route("/quotations")
