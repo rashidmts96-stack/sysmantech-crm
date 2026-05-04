@@ -840,6 +840,58 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 	box-shadow: 0 10px 24px rgba(12, 26, 55, 0.14);
 }
 
+.onsite-alert-toast {
+	position: fixed;
+	right: 1rem;
+	bottom: 5.5rem;
+	z-index: 2200;
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	max-width: min(92vw, 360px);
+	padding: 0.95rem 1rem;
+	border-radius: 18px;
+	background: linear-gradient(135deg, rgba(185, 28, 28, 0.97) 0%, rgba(249, 115, 22, 0.96) 100%);
+	box-shadow: 0 18px 42px rgba(185, 28, 28, 0.28);
+	color: #ffffff;
+	opacity: 0;
+	transform: translateY(16px);
+	pointer-events: none;
+	transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.onsite-alert-toast.is-visible {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.onsite-alert-toast-copy strong {
+	display: block;
+	font-size: 0.96rem;
+	font-weight: 800;
+}
+
+.onsite-alert-toast-copy span {
+	display: block;
+	font-size: 0.82rem;
+	opacity: 0.92;
+}
+
+.onsite-alert-toast-action {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 38px;
+	padding: 0.6rem 0.8rem;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.18);
+	color: #ffffff;
+	font-size: 0.78rem;
+	font-weight: 800;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
 @keyframes dashboardMobileUrgentPulse {
 	0%,
 	100% {
@@ -2613,10 +2665,13 @@ document.addEventListener("DOMContentLoaded", function () {
 	var onsiteAlertAudioContext = null;
 	var onsiteAlertAudioReady = false;
 	var onsiteAlertInitialCount = Number(body.getAttribute("data-dashboard-onsite-alert-count") || "0") || 0;
-	var onsiteAlertLastCount = onsiteAlertInitialCount;
+	var onsiteAlertLastCount = 0;
 	var onsiteAlertLastKnownLabel = body.getAttribute("data-dashboard-onsite-alert-label") || "Onsite Call or Lead";
 	var onsiteAlertLastKnownUrl = body.getAttribute("data-dashboard-onsite-alert-target") || "/onsite-calls";
 	var onsiteAlertPermissionPrompted = false;
+	var onsiteAlertToastTimer = null;
+	var onsiteAlertToastNode = null;
+	var onsiteAlertStorageKey = "crm-onsite-alert-last-signature";
 
 	function supportsBrowserNotifications() {
 		return "Notification" in window;
@@ -2749,6 +2804,10 @@ document.addEventListener("DOMContentLoaded", function () {
 		onsiteAlertPermissionPrompted = true;
 		return Notification.requestPermission().then(function (permission) {
 			updateOnsiteNotificationButton();
+			if (permission === "granted" && onsiteAlertLastCount > 0) {
+				triggerOnsiteAlertFeedback(onsiteAlertLastCount, onsiteAlertLastKnownLabel, onsiteAlertLastKnownUrl);
+				rememberOnsiteAlertSignature(buildOnsiteAlertSignature(onsiteAlertLastCount, onsiteAlertLastKnownLabel, onsiteAlertLastKnownUrl));
+			}
 			return permission;
 		}).catch(function () {
 			updateOnsiteNotificationButton();
@@ -2791,6 +2850,62 @@ document.addEventListener("DOMContentLoaded", function () {
 		}
 	}
 
+	function buildOnsiteAlertSignature(count, label, url) {
+		return [String(count || 0), String(label || ""), String(url || "")].join("|");
+	}
+
+	function getRememberedOnsiteAlertSignature() {
+		try {
+			return window.sessionStorage ? (sessionStorage.getItem(onsiteAlertStorageKey) || "") : "";
+		} catch (error) {
+			return "";
+		}
+	}
+
+	function rememberOnsiteAlertSignature(signature) {
+		try {
+			if (!window.sessionStorage) {
+				return;
+			}
+			if (signature) {
+				sessionStorage.setItem(onsiteAlertStorageKey, signature);
+			} else {
+				sessionStorage.removeItem(onsiteAlertStorageKey);
+			}
+		} catch (error) {
+		}
+	}
+
+	function showOnsiteAlertToast(count, label, url) {
+		if (!onsiteAlertToastNode) {
+			onsiteAlertToastNode = document.createElement("div");
+			onsiteAlertToastNode.className = "onsite-alert-toast";
+			onsiteAlertToastNode.innerHTML = '<div class="onsite-alert-toast-copy"><strong></strong><span></span></div><a class="onsite-alert-toast-action" href="#">Open</a>';
+			document.body.appendChild(onsiteAlertToastNode);
+		}
+
+		var titleNode = onsiteAlertToastNode.querySelector("strong");
+		var bodyNode = onsiteAlertToastNode.querySelector("span");
+		var actionNode = onsiteAlertToastNode.querySelector(".onsite-alert-toast-action");
+		if (titleNode) {
+			titleNode.textContent = count > 1 ? count + " " + label + "s pending" : "1 " + label + " pending";
+		}
+		if (bodyNode) {
+			bodyNode.textContent = "Immediate attention required.";
+		}
+		if (actionNode) {
+			actionNode.href = url || "/onsite-calls";
+		}
+
+		onsiteAlertToastNode.classList.add("is-visible");
+		window.clearTimeout(onsiteAlertToastTimer);
+		onsiteAlertToastTimer = window.setTimeout(function () {
+			if (onsiteAlertToastNode) {
+				onsiteAlertToastNode.classList.remove("is-visible");
+			}
+		}, 5200);
+	}
+
 	function showOnsiteSystemNotification(count, label, url) {
 		if (!supportsBrowserNotifications() || Notification.permission !== "granted") {
 			return;
@@ -2829,22 +2944,27 @@ document.addEventListener("DOMContentLoaded", function () {
 	function triggerOnsiteAlertFeedback(count, label, url) {
 		playOnsiteAlertSound();
 		triggerOnsiteVibration();
-
-		if (document.hidden || !document.hasFocus()) {
-			showOnsiteSystemNotification(count, label, url);
-		}
+		showOnsiteAlertToast(count, label, url);
+		showOnsiteSystemNotification(count, label, url);
 	}
 
 	function maybeNotifyOnsiteAlert(count, label, url) {
-		var previousCount = onsiteAlertLastCount;
 		onsiteAlertLastCount = count;
 		onsiteAlertLastKnownLabel = label || onsiteAlertLastKnownLabel;
 		onsiteAlertLastKnownUrl = url || onsiteAlertLastKnownUrl;
+		var signature = buildOnsiteAlertSignature(count, onsiteAlertLastKnownLabel, onsiteAlertLastKnownUrl);
+		var rememberedSignature = getRememberedOnsiteAlertSignature();
 
-		if (count <= 0 || count <= previousCount) {
+		if (count <= 0) {
+			rememberOnsiteAlertSignature("");
 			return;
 		}
 
+		if (signature === rememberedSignature) {
+			return;
+		}
+
+		rememberOnsiteAlertSignature(signature);
 		triggerOnsiteAlertFeedback(count, onsiteAlertLastKnownLabel, onsiteAlertLastKnownUrl);
 	}
 
