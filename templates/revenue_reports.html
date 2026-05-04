@@ -112,11 +112,6 @@ body { background: #f6f8fb; }
         <table class="table table-sm table-bordered table-hover mb-0">
           <thead class="table-dark">
             <tr>
-              {% if can_manage_revenue %}
-              <th class="text-center" style="width: 42px;">
-                <input type="checkbox" class="form-check-input" id="selectAllRevenueEntries" aria-label="Select all revenue entries">
-              </th>
-              {% endif %}
               <th>Date</th>
               <th>Branch</th>
               <th>Sales Profit</th>
@@ -125,25 +120,18 @@ body { background: #f6f8fb; }
               <th>Zone</th>
               <th>Updated By</th>
               <th>Last Modified</th>
-              {% if can_manage_revenue %}<th>Action</th>{% endif %}
+              {% if can_manage_revenue %}
+              <th>Action</th>
+              <th class="text-center" style="width: 42px;">
+                <input type="checkbox" class="form-check-input" id="selectAllRevenueEntries" aria-label="Select all revenue entries">
+              </th>
+              {% endif %}
             </tr>
           </thead>
           <tbody>
             {% if rows %}
               {% for r in rows %}
               <tr>
-                {% if can_manage_revenue %}
-                <td class="text-center">
-                  <input
-                    type="checkbox"
-                    class="form-check-input revenue-entry-checkbox"
-                    name="entry_ids"
-                    value="{{ r.id }}"
-                    form="bulkDeleteForm"
-                    aria-label="Select revenue entry for {{ r.branch_name }} on {{ r.entry_date }}"
-                  >
-                </td>
-                {% endif %}
                 <td>{{ r.entry_date }}</td>
                 <td>{{ r.branch_name }}</td>
                 <td>{{ '%.2f'|format(r.sales_profit or 0) }}</td>
@@ -160,6 +148,16 @@ body { background: #f6f8fb; }
                     <input type="hidden" name="return_to" value="{{ return_to }}">
                     <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this revenue entry?');">Delete</button>
                   </form>
+                </td>
+                <td class="text-center">
+                  <input
+                    type="checkbox"
+                    class="form-check-input revenue-entry-checkbox"
+                    name="entry_ids"
+                    value="{{ r.id }}"
+                    form="bulkDeleteForm"
+                    aria-label="Select revenue entry for {{ r.branch_name }} on {{ r.entry_date }}"
+                  >
                 </td>
                 {% endif %}
               </tr>
