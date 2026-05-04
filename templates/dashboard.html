@@ -1968,13 +1968,13 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 				<a href="{{ onsite_dashboard_url or '/onsite-calls' }}" class="dashboard-mobile-pill is-alert">
 					<i class="fas fa-bell"></i> {{ onsite_alert_badge }} {{ onsite_alert_label }}
 				</a>
-				<button type="button" class="dashboard-mobile-pill dashboard-mobile-pill-secondary" data-onsite-alert-enable hidden>
+				<button type="button" class="dashboard-mobile-pill dashboard-mobile-pill-secondary" data-onsite-alert-enable onclick="if (window.__crmEnableOnsiteAlerts) { window.__crmEnableOnsiteAlerts(); } else if ('Notification' in window && Notification.requestPermission) { Notification.requestPermission(); } return false;">
 					<i class="fas fa-bell"></i> Enable Alerts
 				</button>
 			</div>
 			{% else %}
 			<div class="dashboard-mobile-meta">
-				<button type="button" class="dashboard-mobile-pill dashboard-mobile-pill-secondary" data-onsite-alert-enable hidden>
+				<button type="button" class="dashboard-mobile-pill dashboard-mobile-pill-secondary" data-onsite-alert-enable onclick="if (window.__crmEnableOnsiteAlerts) { window.__crmEnableOnsiteAlerts(); } else if ('Notification' in window && Notification.requestPermission) { Notification.requestPermission(); } return false;">
 					<i class="fas fa-bell"></i> Enable Alerts
 				</button>
 			</div>
@@ -2755,6 +2755,10 @@ document.addEventListener("DOMContentLoaded", function () {
 			return Notification.permission;
 		});
 	}
+
+	window.__crmEnableOnsiteAlerts = function () {
+		requestOnsiteNotificationPermission(true);
+	};
 
 	function playOnsiteAlertSound() {
 		if (!onsiteAlertAudioReady || !onsiteAlertAudioContext) {
