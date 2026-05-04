@@ -2648,11 +2648,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	function ensureOnsiteNotificationButton() {
 		var toolbarRight = document.querySelector(".toolbar-right");
-		if (!toolbarRight || !supportsBrowserNotifications()) {
+		if (!toolbarRight) {
+			bindOnsiteNotificationButtons();
+			updateOnsiteNotificationButton();
+			return;
+		}
+
+		if (!supportsBrowserNotifications()) {
 			Array.prototype.slice.call(document.querySelectorAll(".toolbar-right [data-onsite-alert-enable]")).forEach(function (button) {
 				button.remove();
 			});
 			bindOnsiteNotificationButtons();
+			updateOnsiteNotificationButton();
 			return;
 		}
 
@@ -2674,7 +2681,7 @@ document.addEventListener("DOMContentLoaded", function () {
 			return;
 		}
 
-		var permission = supportsBrowserNotifications() ? Notification.permission : "denied";
+		var permission = supportsBrowserNotifications() ? Notification.permission : "unsupported";
 		onsiteNotificationButtons.forEach(function (button) {
 			if (permission === "granted") {
 				button.hidden = true;
@@ -2683,6 +2690,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
 			button.hidden = false;
 			button.disabled = false;
+			if (permission === "unsupported") {
+				button.innerHTML = '<i class="fas fa-bell-slash"></i> Alerts Not Supported';
+				button.disabled = true;
+				button.title = "This mobile browser does not support web notifications.";
+				return;
+			}
 			if (permission === "denied") {
 				button.innerHTML = '<i class="fas fa-bell-slash"></i> Alerts Blocked';
 				button.disabled = true;
