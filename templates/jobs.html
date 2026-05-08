@@ -141,11 +141,18 @@ placeholder="Search Name / Mobile / Alt No / Job No / Serial / Model">
 
 <th>#</th>
 <th>Job No</th>
-<th>Status</th>
 <th>Customer</th>
 <th>Mobile</th>
-<th class="d-none d-lg-table-cell">Model</th>
-<th class="d-none d-lg-table-cell">Serial</th>
+<th>Device</th>
+<th>Model</th>
+<th>Serial Number</th>
+<th>Complaint</th>
+<th>Status</th>
+<th>Branch Name</th>
+<th>Priority</th>
+<th>Call Type</th>
+<th>Complaint Type</th>
+<th>Assigned Engineer</th>
 {% if (current_view or 'active') in ['all', 'closed'] %}
 <th>Closure Result</th>
 {% if (current_view or 'active') == 'all' %}
@@ -158,9 +165,6 @@ placeholder="Search Name / Mobile / Alt No / Job No / Serial / Model">
 <th>Age</th>
 <th class="d-none">Age Group</th>
 <th>Created On</th>
-<th class="d-none d-md-table-cell">Branch</th>
-<th class="d-none">Device</th>
-<th class="d-none">Complaint Type</th>
 <th class="d-none">Warranty</th>
 <th class="d-none">Backup</th>
 
@@ -196,6 +200,12 @@ Specialist: {{ job.specialist_transfer_branch_name }}{% if job.specialist_transf
 </div>
 {% endif %}
 </td>
+<td>{{ job.customer_name or '-' }}</td>
+<td>{{ job.mobile or '-' }}</td>
+<td>{{ job.device or '-' }}</td>
+<td>{{ job.model or '-' }}</td>
+<td>{{ job.serial_number or '-' }}</td>
+<td>{{ job.complaint or '-' }}</td>
 <td>
 {% if session.role in ["super_admin", "admin", "coordinator"] and can_manage_job_row and (job.closure_status is not defined or not job.closure_status) and job.status != 'Closed' %}
 <form method="POST" action="/update-status">
@@ -223,10 +233,24 @@ Specialist: {{ job.specialist_transfer_branch_name }}{% if job.specialist_transf
 {% endif %}
 
 </td>
-<td>{{ job.customer_name }}</td>
-<td>{{ job.mobile }}</td>
-<td class="d-none d-lg-table-cell">{{ job.model }}</td>
-<td class="d-none d-lg-table-cell">{{ job.serial_number }}</td>
+<td>{{ job.branch_name or '-' }}</td>
+<td>{{ job.priority or '-' }}</td>
+<td>{{ job.call_type or '-' }}</td>
+<td>{{ job.complaint_type or '-' }}</td>
+<td>
+{{ job.assigned_engineer or '-' }}
+{% if job.specialist_transfer_branch_name %}
+<div class="jobs-specialist-note {% if job.specialist_transfer_is_active %}jobs-specialist-note-active{% endif %}">
+Specialist: {{ job.specialist_transfer_branch_name }}{% if job.specialist_transfer_engineer %} | {{ job.specialist_transfer_engineer }}{% endif %}
+</div>
+<div class="jobs-specialist-note">
+{{ job.specialist_transfer_status or 'Transferred' }}
+{% if not job.specialist_transfer_is_active and job.specialist_service_total %}
+| Share: {{ '%.2f'|format(job.specialist_service_total|float) }}
+{% endif %}
+</div>
+{% endif %}
+</td>
 {% if (current_view or 'active') in ['all', 'closed'] %}
 <td>
     {% set closure_text = (job.closure_status or '')|trim %}
@@ -263,9 +287,6 @@ Specialist: {{ job.specialist_transfer_branch_name }}{% if job.specialist_transf
 <td>{{ job.age_days if job.age_days is not none else '-' }}</td>
 <td class="d-none">{{ job.age_group or '-' }}</td>
 <td>{{ job.created_on or '-' }}</td>
-<td class="d-none d-md-table-cell">{{ job.branch_name }}</td>
-<td class="d-none">{{ job.device }}</td>
-<td class="d-none">{{ job.complaint_type }}</td>
 <td class="d-none">{{ job.warranty_status }}</td>
 <td class="d-none">{{ job.backup_required }}</td>
 
