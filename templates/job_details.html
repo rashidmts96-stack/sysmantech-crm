@@ -63,8 +63,7 @@ data-continue-close-case="{{ 'true' if continue_close_case else 'false' }}">
 <div class="card">
 <div class="card-header">
 <h5>Job Summary</h5>
-</div>
-<div class="card-body p-0">
+</div> p-0">
 
 {% if transfer_summary.has_active_transfer and not job_permissions.can_manage_core %}
 <div class="alert alert-info py-2">
