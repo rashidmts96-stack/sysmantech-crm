@@ -23,6 +23,36 @@
 .job-transfer-table th {
 	vertical-align: middle;
 }
+
+/* Responsive adjustments for job summary */
+.card-body.p-0 .onsite-detail-grid {
+	gap: 12px;
+	padding: 16px;
+}
+
+@media (max-width: 576px) {
+	.card-body.p-0 .onsite-detail-grid {
+		grid-template-columns: 1fr !important;
+		padding: 12px;
+		gap: 10px;
+	}
+	
+	.onsite-detail-span-2 {
+		grid-column: 1 / -1;
+	}
+}
+
+@media (min-width: 577px) and (max-width: 768px) {
+	.card-body.p-0 .onsite-detail-grid {
+		grid-template-columns: repeat(2, 1fr) !important;
+	}
+}
+
+@media (min-width: 769px) {
+	.card-body.p-0 .onsite-detail-grid {
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+	}
+}
 </style>
 </head>
 
@@ -63,19 +93,20 @@ data-continue-close-case="{{ 'true' if continue_close_case else 'false' }}">
 <div class="card">
 <div class="card-header">
 <h5>Job Summary</h5>
-</div> p-0">
+</div>
+<div class="card-body p-0">
 
 {% if transfer_summary.has_active_transfer and not job_permissions.can_manage_core %}
-<div class="alert alert-info py-2">
+<div class="alert alert-info py-2 m-0 rounded-0">
 This case is visible to your branch because it is currently in specialist service at {{ transfer_summary.active_transfer.to_branch_name }}. Customer-facing edits and closure remain with {{ job.branch_name }}.
 </div>
 {% endif %}
 
-<div class="onsite-panel">
+<div class="onsite-panel" style="margin: 0; border-radius: 0; border: none; box-shadow: none; background: transparent;">
     <div class="onsite-section-header">
         <div>
-            <h2 class="onsite-section-title">Call Summary</h2>
-            <p class="onsite-section-subtitle">Primary customer and issue details.</p>
+            <h2 class="onsite-section-title" style="font-size: 1.2rem;">Call Summary</h2>
+            <p class="onsite-section-subtitle" style="font-size: 0.85rem;">Primary customer and issue details.</p>
         </div>
     </div>
     <div class="onsite-detail-grid">
@@ -181,8 +212,7 @@ This case is visible to your branch because it is currently in specialist servic
             <p class="onsite-muted">Branch</p>
             <strong>{{ job.branch_name }}</strong>
         </div>
-    <p><strong>Branch:</strong> {{ job.branch_name }}</p>
-</div>
+    </div>
 </div>
 
 {% if job.accessories_received %}
