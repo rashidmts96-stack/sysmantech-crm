@@ -733,6 +733,18 @@ class OnsiteCallService:
     def can_delete(self, actor):
         return actor["role"] in ADMIN_ROLES
 
+    def can_edit(self, actor, call_like):
+        if self._call_value(call_like, "has_closure_record"):
+            return False
+        current_status = str(self._call_value(call_like, "status") or "").strip()
+        if current_status in FINAL_STATUSES:
+            return False
+        if actor["role"] in ADMIN_ROLES:
+            return True
+        if self._is_assigned_engineer(actor, call_like):
+            return True
+        return self._can_coordinator_manage_branch_call(actor, call_like)
+
     def can_close(self, actor, call_like):
         return bool(self.close_status_choices(actor, call_like))
 
@@ -1633,6 +1645,57 @@ class OnsiteCallService:
         self.invalidate_cache()
         return call_id, []
 
+    def update_call_details(self, actor, payload):
+        try:
+            call_id = int(payload.get("call_id") or 0)
+        except (TypeError, ValueError):
+            return None, ["Call is required"]
+        if not call_id:
+            return None, ["Call is required"]
+
+        validated = self._validate_payload(payload, public_mode=False)
+        if not validated["is_valid"]:
+            return None, validated["errors"]
+
+        with self.session_scope() as db_session:
+            row = self._call_in_scope(db_session, call_id, actor, lock_row=True)
+            if not row:
+                return None, ["Call not found or access denied"]
+
+            closure_record = db_session.execute(
+                select(OnsiteCallClosure).where(OnsiteCallClosure.call_id == call_id).limit(1)
+            ).scalar_one_or_none()
+            closure_data = self._serialize_closure(db_session, closure_record)
+            call_data = self._serialize_call_row(row, closure_data)
+            if not self.can_edit(actor, call_data):
+                return None, ["You do not have permission to edit this case"]
+
+            onsite_call = db_session.get(OnsiteCall, call_id, with_for_update=True)
+            previous_call_type = str(onsite_call.call_type or "Onsite").strip() or "Onsite"
+            previous_status = str(onsite_call.status or "").strip()
+
+            for field_name, field_value in validated["values"].items():
+                setattr(onsite_call, field_name, field_value)
+
+            new_call_type = str(validated["values"].get("call_type") or previous_call_type).strip() or previous_call_type
+            if previous_call_type != new_call_type:
+                if new_call_type == "Lead" and previous_status == "Open":
+                    onsite_call.status = "New Lead"
+                elif previous_call_type == "Lead" and new_call_type == "Onsite" and previous_status == "New Lead":
+                    onsite_call.status = "Assigned" if onsite_call.assigned_engineer_id else "Open"
+
+            onsite_call.updated_at = business_now_naive()
+            self._log(
+                db_session,
+                call_id,
+                "Details Updated",
+                f"Call details updated by {actor['username']}",
+                actor["username"],
+            )
+
+        self.invalidate_cache()
+        return call_id, []
+
     def _engineer_name_by_id(self, db_session: Session, engineer_id: int):
         if self._users_table is None:
             return ""
@@ -2179,7 +2242,7 @@ def create_onsite_calls_blueprint(app, config):
         flash("Login required", "danger")
         return redirect(default_path)
 
-    def render_form_context(public_mode, form_values=None, errors=None):
+    def render_form_context(public_mode, form_values=None, errors=None, extra_context=None):
         actor = service.actor()
         branch_options = service.branch_options(actor)
         active_branch = ""
@@ -2196,7 +2259,7 @@ def create_onsite_calls_blueprint(app, config):
             engineer_options = service.engineer_options(actor, active_branch)
             if not selected_engineer_name:
                 selected_engineer_name = service.engineer_name_by_id((form_values or {}).get("assigned_engineer_id") or 0)
-        return {
+        context = {
             "public_mode": public_mode,
             "form_values": form_values or {},
             "errors": errors or [],
@@ -2214,6 +2277,9 @@ def create_onsite_calls_blueprint(app, config):
             "public_request_id": public_request_id,
             "page_title": "Onsite Service Request" if public_mode else "Create Call or Lead",
         }
+        if extra_context:
+            context.update(extra_context)
+        return context
 
     def status_sections_with_counts(counts):
         return [
@@ -2231,6 +2297,56 @@ def create_onsite_calls_blueprint(app, config):
         if auth_response is not None:
             return auth_response
         return render_template("onsite_call_form.html", **render_form_context(False))
+
+    @blueprint.route("/onsite-calls/<int:call_id>/edit", methods=["GET"])
+    def onsite_call_edit_page(call_id):
+        auth_response = require_login()
+        if auth_response is not None:
+            return auth_response
+        actor = service.actor()
+        detail = service.get_call_detail(actor, call_id)
+        if detail is None:
+            flash("Call not found or access denied", "danger")
+            return redirect("/onsite-calls")
+        if not service.can_edit(actor, detail["call"]):
+            flash("You do not have permission to edit this case", "danger")
+            return redirect(f"/onsite-calls/{call_id}")
+
+        form_values = {
+            "call_id": detail["call"]["id"],
+            "call_type": detail["call"].get("call_type", "Onsite"),
+            "customer_name": detail["call"].get("customer_name", ""),
+            "phone": detail["call"].get("phone", ""),
+            "location": detail["call"].get("location", ""),
+            "district": detail["call"].get("district", ""),
+            "complaint_type": detail["call"].get("complaint_type", ""),
+            "preferred_service": detail["call"].get("preferred_service", ""),
+            "priority": detail["call"].get("priority", ""),
+            "preferred_datetime": detail["call"].get("preferred_datetime_value", ""),
+            "device_model": detail["call"].get("device_model", ""),
+            "lead_source": detail["call"].get("lead_source", ""),
+            "complaint_description": detail["call"].get("complaint_description", ""),
+            "branch_name": detail["call"].get("assigned_branch_name", ""),
+            "assigned_engineer_id": detail["call"].get("assigned_engineer_id", ""),
+            "assigned_engineer_name": detail["call"].get("assigned_engineer_name", ""),
+        }
+        return_url = safe_redirect_target(f"/onsite-calls/{call_id}")
+        return render_template(
+            "onsite_call_form.html",
+            **render_form_context(
+                False,
+                form_values,
+                [],
+                {
+                    "page_title": "Edit Call or Lead",
+                    "form_mode": "edit",
+                    "edit_call_id": call_id,
+                    "form_action": "/api/onsite-call/update",
+                    "submit_button_label": "Save Changes",
+                    "cancel_url": return_url,
+                },
+            ),
+        )
 
     @blueprint.route("/api/onsite-call/create-public", methods=["POST"])
     def onsite_call_create_public():
@@ -2270,6 +2386,34 @@ def create_onsite_calls_blueprint(app, config):
         return json_or_redirect(
             True,
             f"{created_label} created successfully. Call ID: {call_id}",
+            f"/onsite-calls/{call_id}",
+            {"call_id": call_id},
+        )
+
+    @blueprint.route("/api/onsite-call/update", methods=["POST"])
+    def onsite_call_update_internal():
+        auth_response = require_login()
+        if auth_response is not None:
+            return auth_response
+        payload = payload_from_request()
+        actor = service.actor()
+        call_id, errors = service.update_call_details(actor, payload)
+        if errors:
+            if wants_json_response():
+                return jsonify({"success": False, "message": errors[0], "errors": errors}), 400
+            redirect_call_id = int(payload.get("call_id") or 0) if str(payload.get("call_id") or "").isdigit() else 0
+            extra_context = {
+                "page_title": "Edit Call or Lead",
+                "form_mode": "edit",
+                "edit_call_id": redirect_call_id,
+                "form_action": "/api/onsite-call/update",
+                "submit_button_label": "Save Changes",
+                "cancel_url": safe_redirect_target(f"/onsite-calls/{redirect_call_id}" if redirect_call_id else "/onsite-calls"),
+            }
+            return render_template("onsite_call_form.html", **render_form_context(False, payload, errors, extra_context)), 400
+        return json_or_redirect(
+            True,
+            f"Call ID {call_id} updated successfully",
             f"/onsite-calls/{call_id}",
             {"call_id": call_id},
         )
@@ -2707,6 +2851,7 @@ def create_onsite_calls_blueprint(app, config):
         csrf_registrar(
             "onsite_calls.onsite_call_create_public",
             "onsite_calls.onsite_call_create_internal",
+            "onsite_calls.onsite_call_update_internal",
             "onsite_calls.onsite_call_assign",
             "onsite_calls.onsite_call_update_status",
             "onsite_calls.onsite_call_add_note",

@@ -21,12 +21,12 @@
         <section class="onsite-hero{% if public_mode and public_request_registered and public_request_id %} onsite-hero-success{% endif %}">
             <div class="onsite-hero-inner">
                 <span class="onsite-pill">{{ "Sysmantech Support" if public_mode else "Onsite Call Management" }}</span>
-                <h1>{{ "Request an Onsite Service Visit" if public_mode else "Create a New Onsite Call or Lead" }}</h1>
+                <h1>{{ "Request an Onsite Service Visit" if public_mode else ("Edit Onsite Call or Lead" if form_mode == 'edit' else "Create a New Onsite Call or Lead") }}</h1>
                 <p>
                     {% if public_mode %}
                     Reliable Tech Support by Sysmantech — Fast, Professional, and Right at Your Doorstep.
                     {% else %}
-                    Staff can register onsite calls for their own branch, while admins can also create and share leads to other branches from the same screen.
+                    {{ "Update the case details below and save the changes." if form_mode == 'edit' else "Staff can register onsite calls for their own branch, while admins can also create and share leads to other branches from the same screen." }}
                     {% endif %}
                 </p>
                 {% if not public_mode %}
@@ -103,8 +103,12 @@
                 {% endif %}
             </div>
 
-            <form method="post" action="{{ '/api/onsite-call/create-public' if public_mode else '/api/onsite-call/create' }}" class="onsite-form-grid" enctype="multipart/form-data" data-onsite-create-form>
+            <form method="post" action="{{ form_action if form_action is defined else ('/api/onsite-call/create-public' if public_mode else '/api/onsite-call/create') }}" class="onsite-form-grid" enctype="multipart/form-data" data-onsite-create-form>
                 <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+                {% if form_mode == 'edit' and edit_call_id %}
+                <input type="hidden" name="call_id" value="{{ edit_call_id }}">
+                <input type="hidden" name="return_url" value="{{ cancel_url if cancel_url is defined else ('/onsite-calls/' ~ edit_call_id) }}">
+                {% endif %}
                 {% if not public_mode %}
                 <div>
                     <label class="onsite-form-label" for="call_type">Entry Type</label>
@@ -181,7 +185,7 @@
                     <input class="onsite-input" type="text" id="device_model" name="device_model" maxlength="255" value="{{ form_values.get('device_model', '') }}">
                 </div>
 
-                {% if not public_mode %}
+                {% if not public_mode and form_mode != 'edit' %}
                 <div>
                     <label class="onsite-form-label" for="branch_name">Assign Branch</label>
                     <select class="onsite-select" id="branch_name" name="branch_name" required>
@@ -234,15 +238,15 @@
                     <label class="onsite-form-label" for="complaint_description">Complaint Description</label>
                     <textarea class="onsite-textarea" id="complaint_description" name="complaint_description" required>{{ form_values.get('complaint_description', '') }}</textarea>
                 </div>
-                <div class="onsite-field-full" data-onsite-mode-field="Onsite">
+                <div class="onsite-field-full" data-onsite-mode-field="Onsite"{% if form_mode == 'edit' %} hidden{% endif %}>
                     <label class="onsite-form-label" for="complaint_media">Complaint / Device Images or Videos</label>
                     <input class="onsite-input onsite-upload-input" type="file" id="complaint_media" name="complaint_media" accept=".jpg,.jpeg,.png,.gif,.webp,.mp4,.mov,.webm,.ogv,image/*,video/*" multiple>
                     <div class="onsite-field-note">Upload up to 3 images or videos, 10 MB each. Media is automatically deleted 30 days after the case is Completed, Failed, or Cancelled.</div>
                 </div>
                 <div class="onsite-field-full onsite-inline-actions">
-                    <button class="onsite-btn" type="submit"><span data-onsite-submit-label>{{ "Submit Request" if public_mode else ("Create Lead" if selected_call_type == 'Lead' else "Create Onsite Call") }}</span></button>
+                    <button class="onsite-btn" type="submit"><span data-onsite-submit-label>{{ submit_button_label if submit_button_label is defined else ("Submit Request" if public_mode else ("Create Lead" if selected_call_type == 'Lead' else "Create Onsite Call")) }}</span></button>
                     {% if not public_mode %}
-                    <a class="onsite-btn onsite-btn-secondary" href="/onsite-calls">Cancel</a>
+                    <a class="onsite-btn onsite-btn-secondary" href="{{ cancel_url if cancel_url is defined else '/onsite-calls' }}">Cancel</a>
                     {% endif %}
                 </div>
             </form>
