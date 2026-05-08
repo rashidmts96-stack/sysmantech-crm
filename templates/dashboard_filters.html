@@ -260,13 +260,13 @@ Engineer
 <thead class="table-dark">
 <tr>
 <th>Job No</th>
+<th>Status</th>
 <th>Customer Name</th>
 <th>Mobile</th>
 <th>Device</th>
 <th>Model</th>
 <th>Serial Number</th>
 <th>Complaint</th>
-<th>Status</th>
 <th>Branch Name</th>
 <th>Priority</th>
 <th>Call Type</th>
@@ -283,13 +283,13 @@ Engineer
 {% for job in filtered_jobs %}
 <tr>
 <td>{{ job.job_number or '-' }}</td>
+<td>{{ job.status or '-' }}</td>
 <td>{{ job.customer_name or '-' }}</td>
 <td>{{ job.mobile or '-' }}</td>
 <td>{{ job.device or '-' }}</td>
 <td>{{ job.model or '-' }}</td>
 <td>{{ job.serial_number or '-' }}</td>
 <td>{{ job.complaint or '-' }}</td>
-<td>{{ job.status or '-' }}</td>
 <td>{{ job.branch_name or '-' }}</td>
 <td>{{ job.priority or '-' }}</td>
 <td>{{ job.call_type or '-' }}</td>

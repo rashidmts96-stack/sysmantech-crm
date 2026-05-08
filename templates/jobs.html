@@ -159,13 +159,13 @@ placeholder="Search Name / Mobile / Alt No / Job No / Serial / Model">
 
 <th>#</th>
 <th>Job No</th>
+<th>Status</th>
 <th>Customer</th>
 <th>Mobile</th>
 <th>Device</th>
 <th>Model</th>
 <th>Serial Number</th>
 <th>Complaint</th>
-<th>Status</th>
 <th>Branch Name</th>
 <th>Priority</th>
 <th>Call Type</th>
@@ -218,12 +218,6 @@ Specialist: {{ job.specialist_transfer_branch_name }}{% if job.specialist_transf
 </div>
 {% endif %}
 </td>
-<td>{{ job.customer_name or '-' }}</td>
-<td>{{ job.mobile or '-' }}</td>
-<td>{{ job.device or '-' }}</td>
-<td>{{ job.model or '-' }}</td>
-<td>{{ job.serial_number or '-' }}</td>
-<td>{{ job.complaint or '-' }}</td>
 <td>
 {% if session.role in ["super_admin", "admin", "coordinator"] and can_manage_job_row and (job.closure_status is not defined or not job.closure_status) and job.status != 'Closed' %}
 <form method="POST" action="/update-status">
@@ -251,6 +245,12 @@ Specialist: {{ job.specialist_transfer_branch_name }}{% if job.specialist_transf
 {% endif %}
 
 </td>
+<td>{{ job.customer_name or '-' }}</td>
+<td>{{ job.mobile or '-' }}</td>
+<td>{{ job.device or '-' }}</td>
+<td>{{ job.model or '-' }}</td>
+<td>{{ job.serial_number or '-' }}</td>
+<td>{{ job.complaint or '-' }}</td>
 <td>{{ job.branch_name or '-' }}</td>
 <td>{{ job.priority or '-' }}</td>
 <td>{{ job.call_type or '-' }}</td>
