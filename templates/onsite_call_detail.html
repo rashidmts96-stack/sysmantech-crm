@@ -67,6 +67,10 @@
                         <p class="onsite-muted">Complaint Type</p>
                         <strong>{{ detail.call.complaint_type }}</strong>
                     </div>
+                    <div class="onsite-detail-span-2">
+                        <p class="onsite-muted">Complaint</p>
+                        <strong>{{ detail.call.complaint_description or 'Not provided' }}</strong>
+                    </div>
                     {% if detail.call.is_lead %}
                     <div>
                         <p class="onsite-muted">Lead Source</p>
