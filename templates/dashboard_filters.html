@@ -259,29 +259,41 @@ Engineer
 <table class="table table-bordered table-sm mb-0">
 <thead class="table-dark">
 <tr>
-<th>ID</th>
 <th>Job No</th>
-<th>Customer</th>
+<th>Customer Name</th>
 <th>Mobile</th>
-<th>Branch</th>
+<th>Device</th>
+<th>Model</th>
+<th>Serial Number</th>
+<th>Complaint</th>
 <th>Status</th>
-<th>Closure</th>
-<th>Engineer</th>
+<th>Branch Name</th>
+<th>Priority</th>
+<th>Call Type</th>
+<th>Complaint Type</th>
+<th>Assigned Engineer</th>
 <th>Created On</th>
-<th>Closed On</th>
+<th>Age</th>
+<th class="d-none">Closure</th>
+<th class="d-none">Closed On</th>
 </tr>
 </thead>
 <tbody>
 {% if filtered_jobs %}
 {% for job in filtered_jobs %}
 <tr>
-<td>{{ job.id }}</td>
 <td>{{ job.job_number or '-' }}</td>
 <td>{{ job.customer_name or '-' }}</td>
 <td>{{ job.mobile or '-' }}</td>
-<td>{{ job.branch_name or '-' }}</td>
+<td>{{ job.device or '-' }}</td>
+<td>{{ job.model or '-' }}</td>
+<td>{{ job.serial_number or '-' }}</td>
+<td>{{ job.complaint or '-' }}</td>
 <td>{{ job.status or '-' }}</td>
-<td>{{ job.closure_status or '-' }}</td>
+<td>{{ job.branch_name or '-' }}</td>
+<td>{{ job.priority or '-' }}</td>
+<td>{{ job.call_type or '-' }}</td>
+<td>{{ job.complaint_type or '-' }}</td>
 <td>
 {{ job.assigned_engineer or '-' }}
 {% if job.specialist_transfer_branch_name %}
@@ -291,12 +303,14 @@ Specialist: {{ job.specialist_transfer_engineer or 'Pending' }} | {{ job.special
 {% endif %}
 </td>
 <td>{{ job.created_on or '-' }}</td>
-<td>{{ job.closed_on or '-' }}</td>
+<td>{{ job.age or '-' }}</td>
+<td class="d-none">{{ job.closure_status or '-' }}</td>
+<td class="d-none">{{ job.closed_on or '-' }}</td>
 </tr>
 {% endfor %}
 {% else %}
 <tr>
-<td colspan="10" class="text-center py-3">No jobs found for selected filters.</td>
+<td colspan="18" class="text-center py-3">No jobs found for selected filters.</td>
 </tr>
 {% endif %}
 </tbody>

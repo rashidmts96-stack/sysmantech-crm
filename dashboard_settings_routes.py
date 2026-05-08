@@ -489,8 +489,9 @@ def register_dashboard_settings_routes(app, deps):
 
                 cursor.execute(
                     f"""
-                    SELECT id, job_number, customer_name, mobile, branch_name, status,
-                           closure_status, assigned_engineer, service_charges, created_at, closure_date
+                    SELECT id, job_number, customer_name, mobile, device, model, serial_number,
+                           complaint, status, branch_name, priority, call_type, complaint_type,
+                           assigned_engineer, closure_status, service_charges, created_at, closure_date
                     FROM jobs
                     WHERE {where_sql}
                     ORDER BY id DESC
@@ -501,8 +502,15 @@ def register_dashboard_settings_routes(app, deps):
                 decorate_job_rows_with_transfer_summary(cursor, filtered_jobs)
 
                 for row in filtered_jobs:
-                    row["created_on"] = format_datetime_display(row.get("created_at"))
+                    created_at = normalize_display_datetime(row.get("created_at"))
+                    age_days = None
+                    if created_at:
+                        age_days = (business_now_naive().date() - created_at.date()).days
+                        if age_days < 0:
+                            age_days = 0
+                    row["created_on"] = format_datetime_display(created_at)
                     row["closed_on"] = format_datetime_display(row.get("closure_date"))
+                    row["age"] = age_days if age_days is not None else "-"
 
                 query_data = {
                     "from_date": from_date,
