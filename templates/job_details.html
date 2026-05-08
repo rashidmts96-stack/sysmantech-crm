@@ -5,6 +5,7 @@
 <title>Job Details - {{ job.job_number }}</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="{{ url_for('static', filename='css/dashboard-theme.css') }}" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/onsite-calls.css') }}" rel="stylesheet">
 {% include "_pwa_head.html" %}
 <style>
 .job-transfer-card {
@@ -63,7 +64,7 @@ data-continue-close-case="{{ 'true' if continue_close_case else 'false' }}">
 <div class="card-header">
 <h5>Job Summary</h5>
 </div>
-<div class="card-body">
+<div class="card-body p-0">
 
 {% if transfer_summary.has_active_transfer and not job_permissions.can_manage_core %}
 <div class="alert alert-info py-2">
@@ -71,59 +72,117 @@ This case is visible to your branch because it is currently in specialist servic
 </div>
 {% endif %}
 
-<div class="row">
-<div class="col-sm-6">
-<p><strong>Job Number:</strong> {{ job.job_number }}</p>
-<p><strong>Customer:</strong> {{ job.customer_name }}</p>
-<p><strong>Mobile:</strong> <a href="tel:{{ (job.mobile or '')|replace(' ', '')|replace('-', '') }}">{{ job.mobile }}</a></p>
-{% if job.alt_no %}
-<p><strong>Alt Mobile:</strong> <a href="tel:{{ job.alt_no|replace(' ', '')|replace('-', '') }}">{{ job.alt_no }}</a></p>
-{% endif %}
-<p><strong>Email:</strong> {{ job.email or 'N/A' }}</p>
-</div>
-<div class="col-sm-6">
-<p><strong>Device:</strong> {{ job.device }}</p>
-<p><strong>Model:</strong> {{ job.model }}</p>
-<p><strong>Serial:</strong> {{ job.serial_number }}</p>
-<p><strong>Status:</strong> {{ job.status }}</p>
-<p><strong>Age:</strong> {{ job.age_days }} days ({{ job.age_group }})</p>
-<p><strong>Created:</strong> {{ job.created_on }}</p>
-{% if job.closed_on %}
-<p><strong>Closed On:</strong> {{ job.closed_on }}</p>
-{% endif %}
-{% if job.get('closure_service_type') %}
-<p><strong>Service Type:</strong> {{ job.closure_service_type }}</p>
-{% endif %}
-</div>
-</div>
-
-<hr>
-
-<div class="row">
-<div class="col-sm-6">
-<p><strong>Complaint:</strong> {{ job.complaint }}</p>
-<p><strong>Complaint Type:</strong> {{ job.complaint_type or 'N/A' }}</p>
-<p><strong>Warranty:</strong> {{ job.warranty_status or 'N/A' }}</p>
-</div>
-<div class="col-sm-6">
-<p><strong>Backup Required:</strong> {{ job.backup_required or 'N/A' }}</p>
-<p><strong>Priority:</strong> {{ job.priority or 'N/A' }}</p>
-<p><strong>Call Type:</strong> {{ job.call_type or 'N/A' }}</p>
-</div>
-</div>
-
-<hr>
-
-<div class="row">
-<div class="col-sm-6">
-<p><strong>Received By:</strong> {{ job.received_by or 'N/A' }}</p>
-<p><strong>Assigned Engineer:</strong> {{ job.assigned_engineer or 'N/A' }}</p>
-</div>
-<div class="col-sm-6">
-<p><strong>Estimate Amount:</strong> {{ job.estimate_amount or 'N/A' }}</p>
-<p><strong>Service Charges:</strong> {{ '%.2f'|format(service_charges|float) }}</p>
-<p><strong>Branch:</strong> {{ job.branch_name }}</p>
-</div>
+<div class="onsite-panel">
+    <div class="onsite-section-header">
+        <div>
+            <h2 class="onsite-section-title">Call Summary</h2>
+            <p class="onsite-section-subtitle">Primary customer and issue details.</p>
+        </div>
+    </div>
+    <div class="onsite-detail-grid">
+        <div>
+            <p class="onsite-muted">Job Number</p>
+            <strong>{{ job.job_number }}</strong>
+        </div>
+        <div>
+            <p class="onsite-muted">Customer</p>
+            <strong>{{ job.customer_name }}</strong>
+        </div>
+        <div>
+            <p class="onsite-muted">Mobile</p>
+            <strong><a href="tel:{{ (job.mobile or '')|replace(' ', '')|replace('-', '') }}">{{ job.mobile }}</a></strong>
+        </div>
+        <div>
+            <p class="onsite-muted">Email</p>
+            <strong>{{ job.email or 'N/A' }}</strong>
+        </div>
+        {% if job.alt_no %}
+        <div>
+            <p class="onsite-muted">Alt Mobile</p>
+            <strong><a href="tel:{{ job.alt_no|replace(' ', '')|replace('-', '') }}">{{ job.alt_no }}</a></strong>
+        </div>
+        {% endif %}
+        <div>
+            <p class="onsite-muted">Device</p>
+            <strong>{{ job.device }}</strong>
+        </div>
+        <div>
+            <p class="onsite-muted">Model</p>
+            <strong>{{ job.model }}</strong>
+        </div>
+        <div>
+            <p class="onsite-muted">Serial</p>
+            <strong>{{ job.serial_number }}</strong>
+        </div>
+        <div>
+            <p class="onsite-muted">Status</p>
+            <strong>{{ job.status }}</strong>
+        </div>
+        <div>
+            <p class="onsite-muted">Age</p>
+            <strong>{{ job.age_days }} days ({{ job.age_group }})</strong>
+        </div>
+        <div>
+            <p class="onsite-muted">Created</p>
+            <strong>{{ job.created_on }}</strong>
+        </div>
+        {% if job.closed_on %}
+        <div>
+            <p class="onsite-muted">Closed On</p>
+            <strong>{{ job.closed_on }}</strong>
+        </div>
+        {% endif %}
+        {% if job.get('closure_service_type') %}
+        <div>
+            <p class="onsite-muted">Service Type</p>
+            <strong>{{ job.closure_service_type }}</strong>
+        </div>
+        {% endif %}
+        <div class="onsite-detail-span-2">
+            <p class="onsite-muted">Complaint</p>
+            <strong>{{ job.complaint }}</strong>
+        </div>
+        <div>
+            <p class="onsite-muted">Complaint Type</p>
+            <strong>{{ job.complaint_type or 'N/A' }}</strong>
+        </div>
+        <div>
+            <p class="onsite-muted">Warranty</p>
+            <strong>{{ job.warranty_status or 'N/A' }}</strong>
+        </div>
+        <div>
+            <p class="onsite-muted">Backup Required</p>
+            <strong>{{ job.backup_required or 'N/A' }}</strong>
+        </div>
+        <div>
+            <p class="onsite-muted">Priority</p>
+            <strong>{{ job.priority or 'N/A' }}</strong>
+        </div>
+        <div>
+            <p class="onsite-muted">Call Type</p>
+            <strong>{{ job.call_type or 'N/A' }}</strong>
+        </div>
+        <div>
+            <p class="onsite-muted">Received By</p>
+            <strong>{{ job.received_by or 'N/A' }}</strong>
+        </div>
+        <div>
+            <p class="onsite-muted">Assigned Engineer</p>
+            <strong>{{ job.assigned_engineer or 'N/A' }}</strong>
+        </div>
+        <div>
+            <p class="onsite-muted">Estimate Amount</p>
+            <strong>{{ job.estimate_amount or 'N/A' }}</strong>
+        </div>
+        <div>
+            <p class="onsite-muted">Service Charges</p>
+            <strong>{{ '%.2f'|format(service_charges|float) }}</strong>
+        </div>
+        <div>
+            <p class="onsite-muted">Branch</p>
+            <strong>{{ job.branch_name }}</strong>
+        </div>
+    </div>
 </div>
 
 {% if job.accessories_received %}
