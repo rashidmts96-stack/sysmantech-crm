@@ -339,6 +339,80 @@ body.crm-theme .navbar-custom .navbar-profile-link {
 	justify-content: flex-end;
 }
 
+.toolbar-profile-area {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.toolbar-profile-link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	overflow: hidden;
+	border: 1px solid rgba(157, 177, 205, 0.65);
+	background: rgba(255, 255, 255, 0.95);
+	text-decoration: none;
+}
+
+.toolbar-profile-image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.toolbar-profile-fallback {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+	font-size: 0.88rem;
+	font-weight: 700;
+	color: var(--crm-blue-deep);
+	background: rgba(226, 238, 255, 0.95);
+}
+
+.dashboard-search-wrap {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	min-width: 120px;
+	max-width: 220px;
+}
+
+.dashboard-search-input {
+	flex: 1 1 auto;
+	min-width: 110px;
+	max-width: 170px;
+	padding: 0.42rem 0.65rem;
+	border-radius: 999px;
+	border: 1px solid rgba(157, 177, 205, 0.7);
+	background: rgba(255, 255, 255, 0.96);
+	color: var(--crm-ink);
+	font-size: 0.9rem;
+	height: 34px;
+}
+
+.dashboard-search-input:focus {
+	outline: none;
+	box-shadow: 0 0 0 0.2rem rgba(43, 111, 255, 0.14);
+	border-color: rgba(37, 99, 235, 0.75);
+}
+
+.toolbar-btn-search {
+	min-width: 38px;
+	width: 38px;
+	padding: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
 .toolbar-actions-wrap {
 	position: relative;
 	z-index: 1250;
@@ -2068,6 +2142,15 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 			<input type="hidden" name="filter_engineer" value="{{ filter_engineer or '' }}">
 
 			<div class="toolbar-left">
+				<div class="toolbar-profile-area">
+					<a href="/profile" class="toolbar-profile-link" title="My profile">
+						{% if dashboard_user and dashboard_user.profile_picture %}
+						<img src="{{ toolbar_profile_picture_url }}" alt="" class="toolbar-profile-image">
+						{% else %}
+						<span class="toolbar-profile-fallback">{{ (dashboard_user.initial if dashboard_user and dashboard_user.initial else toolbar_username[:1]) }}</span>
+						{% endif %}
+					</a>
+				</div>
 				<div class="toolbar-date-range">
 					<div class="toolbar-date-group" role="group" aria-label="Chart date range">
 						<input type="date" name="chart_from_date" value="{{ chart_from_date }}" aria-label="From date">
@@ -2085,6 +2168,12 @@ body.crm-theme .dashboard-toolbar .toolbar-btn-dropdown.show {
 			</div>
 
 			<div class="toolbar-right">
+				<div class="dashboard-search-wrap">
+					<input id="dashboardSearchInput" type="text" class="dashboard-search-input" placeholder="Search Name / Mobile / Alt No / Job No / Serial / Model" aria-label="Search all cases">
+					<button type="button" id="dashboardSearchButton" class="toolbar-btn toolbar-btn-primary toolbar-btn-search" title="Search all cases">
+						<i class="fas fa-search"></i>
+					</button>
+				</div>
 				<a href="/new-job" class="toolbar-btn toolbar-btn-primary toolbar-new-job">
 					<i class="fas fa-plus"></i> New Job
 				</a>
@@ -2731,7 +2820,32 @@ document.addEventListener("DOMContentLoaded", function () {
 		updateOnsiteNotificationButton();
 	}
 
-	function updateOnsiteNotificationButton() {
+	function bindDashboardSearch() {
+			var searchButton = document.getElementById('dashboardSearchButton');
+			var searchInput = document.getElementById('dashboardSearchInput');
+			if (!searchButton || !searchInput) {
+				return;
+			}
+
+			function executeDashboardSearch() {
+				var query = searchInput.value.trim();
+				var target = '/jobs?view=all';
+				if (query) {
+					target += '&search=' + encodeURIComponent(query);
+				}
+				window.location.href = target;
+			}
+
+			searchButton.addEventListener('click', executeDashboardSearch);
+			searchInput.addEventListener('keydown', function (event) {
+				if (event.key === 'Enter') {
+					event.preventDefault();
+					executeDashboardSearch();
+				}
+			});
+		}
+
+function updateOnsiteNotificationButton() {
 		if (!onsiteNotificationButtons.length) {
 			return;
 		}
@@ -3880,6 +3994,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	bindingDashboardBranchOptions = bindDashboardBranchOptions;
 	loadDashboardBranchOptions();
+
+	bindDashboardSearch();
 
 	initializeDashboardContent({
 		activeSectionId: activeSectionId,
