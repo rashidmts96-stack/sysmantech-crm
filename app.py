@@ -968,7 +968,7 @@ def _load_engineer_usernames(cursor):
         """
         SELECT username
         FROM users
-        WHERE role='engineer'
+        WHERE LOWER(TRIM(COALESCE(role, '')))='engineer'
           AND username IS NOT NULL
           AND TRIM(username) <> ''
         ORDER BY username
