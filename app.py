@@ -964,17 +964,40 @@ def _normalize_option_list(values, keep_all_first=False):
 
 
 def _load_engineer_usernames(cursor):
-    cursor.execute(
+    engineer_values = []
+    queries = [
         """
-        SELECT username
+        SELECT username AS engineer_name
         FROM users
         WHERE LOWER(TRIM(COALESCE(role, '')))='engineer'
           AND username IS NOT NULL
           AND TRIM(username) <> ''
-        ORDER BY username
+        """,
         """
-    )
-    return [row["username"] for row in cursor.fetchall()]
+        SELECT DISTINCT assigned_engineer AS engineer_name
+        FROM jobs
+        WHERE assigned_engineer IS NOT NULL
+          AND TRIM(assigned_engineer) <> ''
+        """,
+        """
+        SELECT DISTINCT staff_name AS engineer_name
+        FROM staff_directory
+        WHERE staff_name IS NOT NULL
+          AND TRIM(staff_name) <> ''
+          AND resigned_date IS NULL
+        """,
+    ]
+    for query in queries:
+        try:
+            cursor.execute(query)
+            engineer_values.extend(
+                str(row.get("engineer_name") or "").strip()
+                for row in cursor.fetchall()
+                if str(row.get("engineer_name") or "").strip()
+            )
+        except Error:
+            continue
+    return _normalize_option_list(engineer_values)
 
 
 def _validate_assigned_engineer_name(assigned_engineer, engineer_usernames):
