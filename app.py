@@ -11,7 +11,7 @@ import secrets
 import time
 from datetime import datetime, timedelta
 from threading import BoundedSemaphore, Lock
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, urlencode, urlparse
 from uuid import uuid4
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -3854,51 +3854,48 @@ def _get_jobs_view_definition(raw_view):
 def _build_jobs_listing_context(args, role, branch):
     current_view, filter_sql, view_title = _get_jobs_view_definition(args.get("view", "active"))
     search_query = (args.get("search") or "").strip()
-    job_number_filter = (args.get("job_number_filter") or "").strip()
-    customer_filter = (args.get("customer_filter") or "").strip()
-    mobile_filter = (args.get("mobile_filter") or "").strip()
-    serial_filter = (args.get("serial_filter") or "").strip()
-    model_filter = (args.get("model_filter") or "").strip()
-    complaint_filter = (args.get("complaint_filter") or "").strip()
-    status_filter = (args.get("status") or "").strip()
-    branch_filter = (args.get("branch_name") or "").strip()
-    transfer_filter = (args.get("transfer_filter") or "").strip().lower()
-    age_bucket_filter = (args.get("age_bucket") or "").strip()
-    call_type_filter = (args.get("call_type_filter") or "").strip()
-    device_filter = (args.get("device_filter") or "").strip()
-    priority_filter = (args.get("priority_filter") or "").strip()
-    complaint_type_filter = (args.get("complaint_type_filter") or "").strip()
-    engineer_filter = (args.get("engineer_filter") or "").strip()
-    closure_result = (args.get("closure_result") or "").strip().lower()
+    status_filters = _get_multi_values(args, "status")
+    branch_filters = _get_multi_values(args, "branch_name")
+    transfer_filters = [value.lower() for value in _get_multi_values(args, "transfer_filter")]
+    age_bucket_filters = _get_multi_values(args, "age_bucket")
+    call_type_filters = _get_multi_values(args, "call_type_filter")
+    device_filters = _get_multi_values(args, "device_filter")
+    priority_filters = _get_multi_values(args, "priority_filter")
+    complaint_type_filters = _get_multi_values(args, "complaint_type_filter")
+    engineer_filters = _get_multi_values(args, "engineer_filter")
+    closure_results = [value.lower() for value in _get_multi_values(args, "closure_result")]
     chart_from_date = _normalize_date_input(args.get("chart_from_date", ""))
     chart_to_date = _normalize_date_input(args.get("chart_to_date", ""))
     default_chart_mode = "closed" if current_view == "closed" else "created"
     chart_mode = (args.get("chart_mode", default_chart_mode) or default_chart_mode).strip().lower()
 
     valid_buckets = ["0-2", "3-5", "6-10", "11-15", "16-30", "31-90", "91-180", "181+"]
-    if age_bucket_filter not in valid_buckets:
-        age_bucket_filter = ""
+    age_bucket_filters = [value for value in age_bucket_filters if value in valid_buckets]
     if chart_mode not in ["created", "closed"]:
         chart_mode = default_chart_mode
-    if transfer_filter not in ["", "active"]:
-        transfer_filter = ""
+    transfer_filters = [value for value in transfer_filters if value == "active"]
+    closure_results = [value for value in closure_results if value in ["success", "failed"]]
 
     where_clauses = [filter_sql]
     params = []
 
     if role in ["super_admin", "admin"] and branch == "ALL":
-        if branch_filter:
+        branch_scope_clauses = []
+        for branch_filter in branch_filters:
             branch_sql, branch_params = _build_job_transfer_branch_scope_clause(branch_filter)
-            where_clauses.append(branch_sql)
-            params.extend(branch_params)
+            if branch_sql and branch_sql != "1=1":
+                branch_scope_clauses.append(f"({branch_sql})")
+                params.extend(branch_params)
+        if branch_scope_clauses:
+            where_clauses.append("(" + " OR ".join(branch_scope_clauses) + ")")
     else:
         branch_sql, branch_params = _build_job_transfer_branch_scope_clause(branch)
         where_clauses.append(branch_sql)
         params.extend(branch_params)
 
-    if status_filter:
-        where_clauses.append("status=%s")
-        params.append(status_filter)
+    if status_filters:
+        where_clauses.append("status IN (" + ", ".join(["%s"] * len(status_filters)) + ")")
+        params.extend(status_filters)
 
     if search_query:
         where_clauses.append(
@@ -3907,53 +3904,35 @@ def _build_jobs_listing_context(args, role, branch):
         like_term = f"%{search_query}%"
         params.extend([like_term, like_term, like_term, like_term, like_term])
 
-    text_filters = [
-        ("CAST(job_number AS CHAR)", job_number_filter),
-        ("customer_name", customer_filter),
-        ("serial_number", serial_filter),
-        ("model", model_filter),
-        ("complaint", complaint_filter),
+    exact_filters = [
+        ("TRIM(call_type)", call_type_filters),
+        ("device", device_filters),
+        ("priority", priority_filters),
+        ("complaint_type", complaint_type_filters),
     ]
-    for column, value in text_filters:
-        if value:
-            where_clauses.append(f"{column} LIKE %s")
-            params.append(f"%{value}%")
+    for column, values in exact_filters:
+        if values:
+            where_clauses.append(f"{column} IN (" + ", ".join(["%s"] * len(values)) + ")")
+            params.extend(values)
 
-    if mobile_filter:
-        where_clauses.append("(mobile LIKE %s OR alt_no LIKE %s)")
-        params.extend([f"%{mobile_filter}%", f"%{mobile_filter}%"])
-
-    if call_type_filter:
-        where_clauses.append("TRIM(call_type)=%s")
-        params.append(call_type_filter)
-
-    if device_filter:
-        where_clauses.append("device=%s")
-        params.append(device_filter)
-
-    if priority_filter:
-        where_clauses.append("priority=%s")
-        params.append(priority_filter)
-
-    if complaint_type_filter:
-        where_clauses.append("complaint_type=%s")
-        params.append(complaint_type_filter)
-
-    if engineer_filter:
-        engineer_sql, engineer_params = _build_job_transfer_engineer_filter_clause([engineer_filter], "jobs")
+    if engineer_filters:
+        engineer_sql, engineer_params = _build_job_transfer_engineer_filter_clause(engineer_filters, "jobs")
         if engineer_sql:
             where_clauses.append(engineer_sql)
             params.extend(engineer_params)
 
-    if transfer_filter == "active":
+    if "active" in transfer_filters:
         transfer_sql, transfer_params = _build_job_active_transfer_exists_clause("jobs")
         where_clauses.append(transfer_sql)
         params.extend(transfer_params)
 
-    if closure_result == "success":
-        where_clauses.append("LOWER(COALESCE(closure_status,'')) LIKE 'closed success%'")
-    elif closure_result == "failed":
-        where_clauses.append("LOWER(COALESCE(closure_status,'')) LIKE 'closed failed%'")
+    closure_clauses = []
+    if "success" in closure_results:
+        closure_clauses.append("LOWER(COALESCE(closure_status,'')) LIKE 'closed success%'")
+    if "failed" in closure_results:
+        closure_clauses.append("LOWER(COALESCE(closure_status,'')) LIKE 'closed failed%'")
+    if closure_clauses:
+        where_clauses.append("(" + " OR ".join(closure_clauses) + ")")
 
     if chart_from_date:
         date_col = "closure_date" if chart_mode == "closed" else "created_at"
@@ -3971,22 +3950,16 @@ def _build_jobs_listing_context(args, role, branch):
         "where_sql": " AND ".join(where_clauses),
         "params": tuple(params),
         "search_query": search_query,
-        "job_number_filter": job_number_filter,
-        "customer_filter": customer_filter,
-        "mobile_filter": mobile_filter,
-        "serial_filter": serial_filter,
-        "model_filter": model_filter,
-        "complaint_filter": complaint_filter,
-        "status_filter": status_filter,
-        "branch_filter": branch_filter,
-        "transfer_filter": transfer_filter,
-        "age_bucket_filter": age_bucket_filter,
-        "call_type_filter": call_type_filter,
-        "device_filter": device_filter,
-        "priority_filter": priority_filter,
-        "complaint_type_filter": complaint_type_filter,
-        "engineer_filter": engineer_filter,
-        "closure_result": closure_result,
+        "status_filters": status_filters,
+        "branch_filters": branch_filters,
+        "transfer_filters": transfer_filters,
+        "age_bucket_filters": age_bucket_filters,
+        "call_type_filters": call_type_filters,
+        "device_filters": device_filters,
+        "priority_filters": priority_filters,
+        "complaint_type_filters": complaint_type_filters,
+        "engineer_filters": engineer_filters,
+        "closure_results": closure_results,
         "chart_from_date": chart_from_date,
         "chart_to_date": chart_to_date,
         "chart_mode": chart_mode,
@@ -4137,8 +4110,8 @@ def jobs():
         jobs_list = cursor.fetchall()
         _annotate_job_rows(jobs_list)
 
-        if jobs_context["age_bucket_filter"]:
-            jobs_list = [job for job in jobs_list if job.get("age_group") == jobs_context["age_bucket_filter"]]
+        if jobs_context["age_bucket_filters"]:
+            jobs_list = [job for job in jobs_list if job.get("age_group") in jobs_context["age_bucket_filters"]]
 
         # Pagination (20 rows per page)
         try:
@@ -4153,71 +4126,68 @@ def jobs():
         _decorate_job_rows_with_transfer_summary(cursor, jobs_list)
 
         applied_filters = []
-        if jobs_context["branch_filter"] and role in ["super_admin", "admin"] and branch == "ALL":
-            applied_filters.append(f"Branch: {jobs_context['branch_filter']}")
-        if jobs_context["status_filter"]:
-            applied_filters.append(f"Status: {jobs_context['status_filter']}")
-        if jobs_context["transfer_filter"] == "active":
+        if jobs_context["branch_filters"] and role in ["super_admin", "admin"] and branch == "ALL":
+            applied_filters.append("Branch: " + ", ".join(jobs_context["branch_filters"]))
+        if jobs_context["status_filters"]:
+            applied_filters.append("Status: " + ", ".join(jobs_context["status_filters"]))
+        if "active" in jobs_context["transfer_filters"]:
             applied_filters.append("Transfer: Active")
-        if jobs_context["age_bucket_filter"]:
-            applied_filters.append(f"Age: {jobs_context['age_bucket_filter']} days")
-        if jobs_context["call_type_filter"]:
-            applied_filters.append(f"Call Type: {jobs_context['call_type_filter']}")
-        if jobs_context["device_filter"]:
-            applied_filters.append(f"Device: {jobs_context['device_filter']}")
-        if jobs_context["priority_filter"]:
-            applied_filters.append(f"Priority: {jobs_context['priority_filter']}")
-        if jobs_context["complaint_type_filter"]:
-            applied_filters.append(f"Complaint Type: {jobs_context['complaint_type_filter']}")
-        if jobs_context["engineer_filter"]:
-            applied_filters.append(f"Engineer: {jobs_context['engineer_filter']}")
-        if jobs_context["closure_result"] == "success":
+        if jobs_context["age_bucket_filters"]:
+            applied_filters.append("Age: " + ", ".join(f"{value} days" for value in jobs_context["age_bucket_filters"]))
+        if jobs_context["call_type_filters"]:
+            applied_filters.append("Call Type: " + ", ".join(jobs_context["call_type_filters"]))
+        if jobs_context["device_filters"]:
+            applied_filters.append("Device: " + ", ".join(jobs_context["device_filters"]))
+        if jobs_context["priority_filters"]:
+            applied_filters.append("Priority: " + ", ".join(jobs_context["priority_filters"]))
+        if jobs_context["complaint_type_filters"]:
+            applied_filters.append("Complaint Type: " + ", ".join(jobs_context["complaint_type_filters"]))
+        if jobs_context["engineer_filters"]:
+            applied_filters.append("Engineer: " + ", ".join(jobs_context["engineer_filters"]))
+        if "success" in jobs_context["closure_results"]:
             applied_filters.append("Closure: Closed Success")
-        elif jobs_context["closure_result"] == "failed":
+        if "failed" in jobs_context["closure_results"]:
             applied_filters.append("Closure: Closed Failed")
         if jobs_context["chart_from_date"] or jobs_context["chart_to_date"]:
             applied_filters.append(f"Date: {jobs_context['chart_from_date'] or '-'} to {jobs_context['chart_to_date'] or '-'}")
         if jobs_context["search_query"]:
             applied_filters.append(f"Search: {jobs_context['search_query']}")
-        for filter_label, filter_key in [
-            ("Job No", "job_number_filter"),
-            ("Customer", "customer_filter"),
-            ("Mobile", "mobile_filter"),
-            ("Serial", "serial_filter"),
-            ("Model", "model_filter"),
-            ("Complaint", "complaint_filter"),
-        ]:
-            if jobs_context[filter_key]:
-                applied_filters.append(f"{filter_label}: {jobs_context[filter_key]}")
 
         if applied_filters:
             jobs_context["view_title"] = f"{jobs_context['view_title']} | " + " | ".join(applied_filters)
 
         jobs_filter_options = _get_jobs_filter_options(cursor, role, branch)
+        def build_jobs_url(endpoint="jobs", **updates):
+            query_args = request.args.to_dict(flat=False)
+            query_args.pop("page", None)
+            for key, value in updates.items():
+                if value is None:
+                    query_args.pop(key, None)
+                elif isinstance(value, (list, tuple)):
+                    query_args[key] = [str(item) for item in value if str(item)]
+                else:
+                    query_args[key] = [str(value)]
+            query_string = urlencode(query_args, doseq=True)
+            return ("/export-jobs" if endpoint == "export_jobs" else "/jobs") + (f"?{query_string}" if query_string else "")
 
         return render_template(
             "jobs.html",
             jobs=jobs_list,
             branch=branch,
             jobs_filter_options=jobs_filter_options,
+            build_jobs_url=build_jobs_url,
             current_view=jobs_context["current_view"],
             view_title=jobs_context["view_title"],
-            job_number_filter=jobs_context["job_number_filter"],
-            customer_filter=jobs_context["customer_filter"],
-            mobile_filter=jobs_context["mobile_filter"],
-            serial_filter=jobs_context["serial_filter"],
-            model_filter=jobs_context["model_filter"],
-            complaint_filter=jobs_context["complaint_filter"],
-            status_filter=jobs_context["status_filter"],
-            branch_filter=jobs_context["branch_filter"],
-            transfer_filter=jobs_context["transfer_filter"],
-            age_bucket_filter=jobs_context["age_bucket_filter"],
-            call_type_filter=jobs_context["call_type_filter"],
-            device_filter=jobs_context["device_filter"],
-            priority_filter=jobs_context["priority_filter"],
-            complaint_type_filter=jobs_context["complaint_type_filter"],
-            engineer_filter=jobs_context["engineer_filter"],
-            closure_result=jobs_context["closure_result"],
+            status_filters=jobs_context["status_filters"],
+            branch_filters=jobs_context["branch_filters"],
+            transfer_filters=jobs_context["transfer_filters"],
+            age_bucket_filters=jobs_context["age_bucket_filters"],
+            call_type_filters=jobs_context["call_type_filters"],
+            device_filters=jobs_context["device_filters"],
+            priority_filters=jobs_context["priority_filters"],
+            complaint_type_filters=jobs_context["complaint_type_filters"],
+            engineer_filters=jobs_context["engineer_filters"],
+            closure_results=jobs_context["closure_results"],
             chart_from_date=jobs_context["chart_from_date"],
             chart_to_date=jobs_context["chart_to_date"],
             chart_mode=jobs_context["chart_mode"],
@@ -4309,8 +4279,8 @@ def export_jobs():
         rows = cursor.fetchall()
         _annotate_job_rows(rows)
 
-        if jobs_context["age_bucket_filter"]:
-            rows = [row for row in rows if row.get("age_group") == jobs_context["age_bucket_filter"]]
+        if jobs_context["age_bucket_filters"]:
+            rows = [row for row in rows if row.get("age_group") in jobs_context["age_bucket_filters"]]
 
         return _build_jobs_export_response(cursor, rows, f"{jobs_context['current_view']}_jobs")
 
