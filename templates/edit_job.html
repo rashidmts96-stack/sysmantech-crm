@@ -176,18 +176,15 @@
 
                             <div class="col-md-6">
                                 <label class="form-label required">Assigned Engineer</label>
-                                <input
-                                    type="text"
-                                    name="assigned_engineer"
-                                    id="assignedEngineerInput"
-                                    class="form-control"
-                                    list="assignedEngineerList"
-                                    value=""
-                                    autocomplete="off"
-                                    placeholder="Type engineer name"
-                                    required
-                                >
-                                <datalist id="assignedEngineerList"></datalist>
+                                <select name="assigned_engineer" id="assignedEngineerInput" class="form-select" required>
+                                    <option value="">— Select Engineer —</option>
+                                    {% for name in engineer_users %}
+                                        <option value="{{ name }}" {% if name == job.assigned_engineer %}selected{% endif %}>{{ name }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% if job.assigned_engineer and job.assigned_engineer not in engineer_users %}
+                                <div class="form-text text-danger">Current saved engineer is not in the engineers list. Select a valid engineer before saving.</div>
+                                {% endif %}
                             </div>
 
                             <div class="col-md-6">
@@ -464,7 +461,7 @@
     });
 })();
 
-// User name suggestions for Received By / Assigned Engineer.
+// User name suggestions for Received By.
 (function () {
     const usersDataEl = document.getElementById("usersData");
     const allUsers = usersDataEl ? JSON.parse(usersDataEl.textContent || "[]") : [];
@@ -500,7 +497,6 @@
     }
 
     wireTypeahead("receivedByInput", "receivedByList");
-    wireTypeahead("assignedEngineerInput", "assignedEngineerList");
 })();
 </script>
 </body>

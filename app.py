@@ -963,6 +963,30 @@ def _normalize_option_list(values, keep_all_first=False):
     return cleaned
 
 
+def _load_engineer_usernames(cursor):
+    cursor.execute(
+        """
+        SELECT username
+        FROM users
+        WHERE LOWER(COALESCE(role, ''))='engineer'
+          AND username IS NOT NULL
+          AND TRIM(username) <> ''
+        ORDER BY username
+        """
+    )
+    return [row["username"] for row in cursor.fetchall()]
+
+
+def _validate_assigned_engineer_name(assigned_engineer, engineer_usernames):
+    normalized = str(assigned_engineer or "").strip()
+    allowed_lookup = {
+        str(name or "").strip().casefold(): str(name or "").strip()
+        for name in engineer_usernames
+        if str(name or "").strip()
+    }
+    return allowed_lookup.get(normalized.casefold(), "")
+
+
 def _resolve_upload_headers(headers, required_groups):
     normalized_map = {}
     for idx, header in enumerate(headers):
@@ -6792,6 +6816,7 @@ def new_job():
     # Load users for Received By and Assigned Engineer
     cursor.execute("SELECT username FROM users ORDER BY username")
     users = [row["username"] for row in cursor.fetchall()]
+    engineer_users = _load_engineer_usernames(cursor)
 
     # Load allowed branches for the current user (for the branch select list)
     role = session.get("role")
@@ -6866,6 +6891,13 @@ def new_job():
             cursor.close()
             db.close()
             return redirect("/new-job")
+        valid_assigned_engineer = _validate_assigned_engineer_name(assigned_engineer, engineer_users)
+        if not valid_assigned_engineer:
+            flash("Select Assigned Engineer from the engineers list", "danger")
+            cursor.close()
+            db.close()
+            return redirect("/new-job")
+        assigned_engineer = valid_assigned_engineer
 
         # -------- CONCURRENCY-SAFE JOB NUMBER -------- #
         saved_photo_filenames = []
@@ -6976,6 +7008,7 @@ def new_job():
         dropdowns=dropdowns,
         branches=branches,
         users=users,
+        engineer_users=engineer_users,
         used_spares=[],
         branch=session.get("branch", "Unknown"),
         role=session.get("role"),
@@ -7033,6 +7066,7 @@ def edit_job(job_id):
 
         cursor.execute("SELECT username FROM users ORDER BY username")
         users = [r["username"] for r in cursor.fetchall()]
+        engineer_users = _load_engineer_usernames(cursor)
 
         if _user_has_all_branch_scope(role, session_branch):
             branches = _load_known_branches(cursor)
@@ -7086,6 +7120,11 @@ def edit_job(job_id):
             if not assigned_engineer:
                 flash("Assigned Engineer is required", "danger")
                 return redirect(f"/edit-job/{job_id}")
+            valid_assigned_engineer = _validate_assigned_engineer_name(assigned_engineer, engineer_users)
+            if not valid_assigned_engineer:
+                flash("Select Assigned Engineer from the engineers list", "danger")
+                return redirect(f"/edit-job/{job_id}")
+            assigned_engineer = valid_assigned_engineer
 
             try:
                 branch = _resolve_branch_input(role, session_branch, request.form.get("branch"))
@@ -7219,6 +7258,7 @@ def edit_job(job_id):
             dropdowns=dropdowns,
             branches=branches,
             users=users,
+            engineer_users=engineer_users,
             branch=session.get("branch", "Unknown"),
             role=session.get("role"),
         )

@@ -190,18 +190,12 @@
 
                             <div class="col-md-6">
                                 <label class="form-label required">Assigned Engineer</label>
-                                <input
-                                    type="text"
-                                    name="assigned_engineer"
-                                    id="assignedEngineerInput"
-                                    class="form-control"
-                                    list="assignedEngineerList"
-                                    value=""
-                                    autocomplete="off"
-                                    placeholder="Type engineer name"
-                                    required
-                                >
-                                <datalist id="assignedEngineerList"></datalist>
+                                <select name="assigned_engineer" id="assignedEngineerInput" class="form-select" required>
+                                    <option value="">— Select Engineer —</option>
+                                    {% for name in engineer_users %}
+                                        <option value="{{ name }}">{{ name }}</option>
+                                    {% endfor %}
+                                </select>
                             </div>
 
                             <!-- Estimate + Photo -->
@@ -539,7 +533,7 @@ document.getElementById("mobile").addEventListener("input", function () {
     });
 })();
 
-// User name suggestions for Received By / Assigned Engineer.
+// User name suggestions for Received By.
 (function () {
     const usersDataEl = document.getElementById("usersData");
     const allUsers = usersDataEl ? JSON.parse(usersDataEl.textContent || "[]") : [];
@@ -575,7 +569,6 @@ document.getElementById("mobile").addEventListener("input", function () {
     }
 
     wireTypeahead("receivedByInput", "receivedByList");
-    wireTypeahead("assignedEngineerInput", "assignedEngineerList");
 })();
 </script>
 
