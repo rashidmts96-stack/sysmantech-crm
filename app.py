@@ -3854,12 +3854,21 @@ def _get_jobs_view_definition(raw_view):
 def _build_jobs_listing_context(args, role, branch):
     current_view, filter_sql, view_title = _get_jobs_view_definition(args.get("view", "active"))
     search_query = (args.get("search") or "").strip()
+    job_number_filter = (args.get("job_number_filter") or "").strip()
+    customer_filter = (args.get("customer_filter") or "").strip()
+    mobile_filter = (args.get("mobile_filter") or "").strip()
+    serial_filter = (args.get("serial_filter") or "").strip()
+    model_filter = (args.get("model_filter") or "").strip()
+    complaint_filter = (args.get("complaint_filter") or "").strip()
     status_filter = (args.get("status") or "").strip()
     branch_filter = (args.get("branch_name") or "").strip()
     transfer_filter = (args.get("transfer_filter") or "").strip().lower()
     age_bucket_filter = (args.get("age_bucket") or "").strip()
     call_type_filter = (args.get("call_type_filter") or "").strip()
     device_filter = (args.get("device_filter") or "").strip()
+    priority_filter = (args.get("priority_filter") or "").strip()
+    complaint_type_filter = (args.get("complaint_type_filter") or "").strip()
+    engineer_filter = (args.get("engineer_filter") or "").strip()
     closure_result = (args.get("closure_result") or "").strip().lower()
     chart_from_date = _normalize_date_input(args.get("chart_from_date", ""))
     chart_to_date = _normalize_date_input(args.get("chart_to_date", ""))
@@ -3898,6 +3907,22 @@ def _build_jobs_listing_context(args, role, branch):
         like_term = f"%{search_query}%"
         params.extend([like_term, like_term, like_term, like_term, like_term])
 
+    text_filters = [
+        ("CAST(job_number AS CHAR)", job_number_filter),
+        ("customer_name", customer_filter),
+        ("serial_number", serial_filter),
+        ("model", model_filter),
+        ("complaint", complaint_filter),
+    ]
+    for column, value in text_filters:
+        if value:
+            where_clauses.append(f"{column} LIKE %s")
+            params.append(f"%{value}%")
+
+    if mobile_filter:
+        where_clauses.append("(mobile LIKE %s OR alt_no LIKE %s)")
+        params.extend([f"%{mobile_filter}%", f"%{mobile_filter}%"])
+
     if call_type_filter:
         where_clauses.append("TRIM(call_type)=%s")
         params.append(call_type_filter)
@@ -3905,6 +3930,20 @@ def _build_jobs_listing_context(args, role, branch):
     if device_filter:
         where_clauses.append("device=%s")
         params.append(device_filter)
+
+    if priority_filter:
+        where_clauses.append("priority=%s")
+        params.append(priority_filter)
+
+    if complaint_type_filter:
+        where_clauses.append("complaint_type=%s")
+        params.append(complaint_type_filter)
+
+    if engineer_filter:
+        engineer_sql, engineer_params = _build_job_transfer_engineer_filter_clause([engineer_filter], "jobs")
+        if engineer_sql:
+            where_clauses.append(engineer_sql)
+            params.extend(engineer_params)
 
     if transfer_filter == "active":
         transfer_sql, transfer_params = _build_job_active_transfer_exists_clause("jobs")
@@ -3932,17 +3971,76 @@ def _build_jobs_listing_context(args, role, branch):
         "where_sql": " AND ".join(where_clauses),
         "params": tuple(params),
         "search_query": search_query,
+        "job_number_filter": job_number_filter,
+        "customer_filter": customer_filter,
+        "mobile_filter": mobile_filter,
+        "serial_filter": serial_filter,
+        "model_filter": model_filter,
+        "complaint_filter": complaint_filter,
         "status_filter": status_filter,
         "branch_filter": branch_filter,
         "transfer_filter": transfer_filter,
         "age_bucket_filter": age_bucket_filter,
         "call_type_filter": call_type_filter,
         "device_filter": device_filter,
+        "priority_filter": priority_filter,
+        "complaint_type_filter": complaint_type_filter,
+        "engineer_filter": engineer_filter,
         "closure_result": closure_result,
         "chart_from_date": chart_from_date,
         "chart_to_date": chart_to_date,
         "chart_mode": chart_mode,
     }
+
+
+def _get_jobs_filter_options(cursor, role, branch):
+    scope_sql, scope_params = ("1=1", ())
+    if not (role in ["super_admin", "admin"] and branch == "ALL"):
+        scope_sql, scope_params = _build_job_transfer_branch_scope_clause(branch, "jobs")
+
+    option_columns = {
+        "status": "status",
+        "branch": "branch_name",
+        "device": "device",
+        "priority": "priority",
+        "call_type": "call_type",
+        "complaint_type": "complaint_type",
+        "engineer": "assigned_engineer",
+    }
+    options = {}
+    for key, column in option_columns.items():
+        cursor.execute(
+            f"""
+            SELECT DISTINCT TRIM(jobs.{column}) AS value
+            FROM jobs
+            WHERE {scope_sql}
+              AND jobs.{column} IS NOT NULL
+              AND TRIM(jobs.{column}) <> ''
+            ORDER BY value
+            """,
+            scope_params,
+        )
+        options[key] = [row["value"] for row in cursor.fetchall() if row.get("value")]
+
+    try:
+        cursor.execute(
+            f"""
+            SELECT DISTINCT TRIM(transfer.specialist_engineer) AS value
+            FROM job_service_transfers transfer
+            JOIN jobs ON jobs.id=transfer.job_id
+            WHERE {scope_sql}
+              AND transfer.specialist_engineer IS NOT NULL
+              AND TRIM(transfer.specialist_engineer) <> ''
+            ORDER BY value
+            """,
+            scope_params,
+        )
+        specialist_engineers = [row["value"] for row in cursor.fetchall() if row.get("value")]
+        options["engineer"] = sorted(set(options.get("engineer", []) + specialist_engineers), key=str.lower)
+    except Exception:
+        pass
+
+    return options
 
 
 def _annotate_job_rows(rows):
@@ -4067,6 +4165,12 @@ def jobs():
             applied_filters.append(f"Call Type: {jobs_context['call_type_filter']}")
         if jobs_context["device_filter"]:
             applied_filters.append(f"Device: {jobs_context['device_filter']}")
+        if jobs_context["priority_filter"]:
+            applied_filters.append(f"Priority: {jobs_context['priority_filter']}")
+        if jobs_context["complaint_type_filter"]:
+            applied_filters.append(f"Complaint Type: {jobs_context['complaint_type_filter']}")
+        if jobs_context["engineer_filter"]:
+            applied_filters.append(f"Engineer: {jobs_context['engineer_filter']}")
         if jobs_context["closure_result"] == "success":
             applied_filters.append("Closure: Closed Success")
         elif jobs_context["closure_result"] == "failed":
@@ -4075,22 +4179,44 @@ def jobs():
             applied_filters.append(f"Date: {jobs_context['chart_from_date'] or '-'} to {jobs_context['chart_to_date'] or '-'}")
         if jobs_context["search_query"]:
             applied_filters.append(f"Search: {jobs_context['search_query']}")
+        for filter_label, filter_key in [
+            ("Job No", "job_number_filter"),
+            ("Customer", "customer_filter"),
+            ("Mobile", "mobile_filter"),
+            ("Serial", "serial_filter"),
+            ("Model", "model_filter"),
+            ("Complaint", "complaint_filter"),
+        ]:
+            if jobs_context[filter_key]:
+                applied_filters.append(f"{filter_label}: {jobs_context[filter_key]}")
 
         if applied_filters:
             jobs_context["view_title"] = f"{jobs_context['view_title']} | " + " | ".join(applied_filters)
+
+        jobs_filter_options = _get_jobs_filter_options(cursor, role, branch)
 
         return render_template(
             "jobs.html",
             jobs=jobs_list,
             branch=branch,
+            jobs_filter_options=jobs_filter_options,
             current_view=jobs_context["current_view"],
             view_title=jobs_context["view_title"],
+            job_number_filter=jobs_context["job_number_filter"],
+            customer_filter=jobs_context["customer_filter"],
+            mobile_filter=jobs_context["mobile_filter"],
+            serial_filter=jobs_context["serial_filter"],
+            model_filter=jobs_context["model_filter"],
+            complaint_filter=jobs_context["complaint_filter"],
             status_filter=jobs_context["status_filter"],
             branch_filter=jobs_context["branch_filter"],
             transfer_filter=jobs_context["transfer_filter"],
             age_bucket_filter=jobs_context["age_bucket_filter"],
             call_type_filter=jobs_context["call_type_filter"],
             device_filter=jobs_context["device_filter"],
+            priority_filter=jobs_context["priority_filter"],
+            complaint_type_filter=jobs_context["complaint_type_filter"],
+            engineer_filter=jobs_context["engineer_filter"],
             closure_result=jobs_context["closure_result"],
             chart_from_date=jobs_context["chart_from_date"],
             chart_to_date=jobs_context["chart_to_date"],

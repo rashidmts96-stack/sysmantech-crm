@@ -48,6 +48,20 @@
     box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
 }
 
+.jobs-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.75rem;
+}
+
+.jobs-filter-actions {
+    display: flex;
+    align-items: end;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
 .jobs-action-cell {
     min-width: 120px;
 }
@@ -87,6 +101,15 @@ placeholder="Search Name / Mobile / Alt No / Job No / Serial / Model">
 <input type="hidden" name="call_type_filter" value="{{ call_type_filter or '' }}">
 <input type="hidden" name="device_filter" value="{{ device_filter or '' }}">
 <input type="hidden" name="closure_result" value="{{ closure_result or '' }}">
+<input type="hidden" name="job_number_filter" value="{{ job_number_filter or '' }}">
+<input type="hidden" name="customer_filter" value="{{ customer_filter or '' }}">
+<input type="hidden" name="mobile_filter" value="{{ mobile_filter or '' }}">
+<input type="hidden" name="serial_filter" value="{{ serial_filter or '' }}">
+<input type="hidden" name="model_filter" value="{{ model_filter or '' }}">
+<input type="hidden" name="complaint_filter" value="{{ complaint_filter or '' }}">
+<input type="hidden" name="priority_filter" value="{{ priority_filter or '' }}">
+<input type="hidden" name="complaint_type_filter" value="{{ complaint_type_filter or '' }}">
+<input type="hidden" name="engineer_filter" value="{{ engineer_filter or '' }}">
 <input type="hidden" name="chart_from_date" value="{{ chart_from_date or '' }}">
 <input type="hidden" name="chart_to_date" value="{{ chart_to_date or '' }}">
 <input type="hidden" name="chart_mode" value="{{ chart_mode or 'created' }}">
@@ -116,35 +139,145 @@ placeholder="Search Name / Mobile / Alt No / Job No / Serial / Model">
 
 <div class="card jobs-filter-card mb-3">
     <div class="card-body">
-        <form method="GET" action="/jobs" class="row g-2 align-items-end">
+        <form method="GET" action="/jobs">
             <input type="hidden" name="view" value="{{ current_view or 'active' }}">
             <input type="hidden" name="search" value="{{ search_query or '' }}">
-            <input type="hidden" name="status" value="{{ status_filter or '' }}">
-            <input type="hidden" name="branch_name" value="{{ branch_filter or '' }}">
-            <input type="hidden" name="transfer_filter" value="{{ transfer_filter or '' }}">
-            <input type="hidden" name="age_bucket" value="{{ age_bucket_filter or '' }}">
-            <input type="hidden" name="call_type_filter" value="{{ call_type_filter or '' }}">
-            <input type="hidden" name="device_filter" value="{{ device_filter or '' }}">
-            <input type="hidden" name="closure_result" value="{{ closure_result or '' }}">
-            <div class="col-md-3 col-lg-2">
+            <div class="jobs-filter-grid">
+            <div>
                 <label class="form-label mb-1">From Date</label>
                 <input type="date" name="chart_from_date" class="form-control form-control-sm" value="{{ chart_from_date or '' }}">
             </div>
-            <div class="col-md-3 col-lg-2">
+            <div>
                 <label class="form-label mb-1">To Date</label>
                 <input type="date" name="chart_to_date" class="form-control form-control-sm" value="{{ chart_to_date or '' }}">
             </div>
-            <div class="col-md-3 col-lg-2">
+            <div>
                 <label class="form-label mb-1">Date Type</label>
                 <select name="chart_mode" class="form-select form-select-sm">
                     <option value="created" {% if (chart_mode or 'created') == 'created' %}selected{% endif %}>Created Date</option>
                     <option value="closed" {% if chart_mode == 'closed' %}selected{% endif %}>Closed Date</option>
                 </select>
             </div>
-            <div class="col-md-3 col-lg-6 d-flex gap-2 flex-wrap justify-content-lg-end">
+            <div>
+                <label class="form-label mb-1">Job No</label>
+                <input type="text" name="job_number_filter" class="form-control form-control-sm" value="{{ job_number_filter or '' }}">
+            </div>
+            <div>
+                <label class="form-label mb-1">Customer</label>
+                <input type="text" name="customer_filter" class="form-control form-control-sm" value="{{ customer_filter or '' }}">
+            </div>
+            <div>
+                <label class="form-label mb-1">Mobile / Alt</label>
+                <input type="text" name="mobile_filter" class="form-control form-control-sm" value="{{ mobile_filter or '' }}">
+            </div>
+            <div>
+                <label class="form-label mb-1">Serial</label>
+                <input type="text" name="serial_filter" class="form-control form-control-sm" value="{{ serial_filter or '' }}">
+            </div>
+            <div>
+                <label class="form-label mb-1">Model</label>
+                <input type="text" name="model_filter" class="form-control form-control-sm" value="{{ model_filter or '' }}">
+            </div>
+            <div>
+                <label class="form-label mb-1">Complaint</label>
+                <input type="text" name="complaint_filter" class="form-control form-control-sm" value="{{ complaint_filter or '' }}">
+            </div>
+            <div>
+                <label class="form-label mb-1">Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    {% for option in jobs_filter_options.status or [] %}
+                    <option value="{{ option }}" {% if status_filter == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if session.role in ['super_admin', 'admin'] and branch == 'ALL' %}
+            <div>
+                <label class="form-label mb-1">Branch</label>
+                <select name="branch_name" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    {% for option in jobs_filter_options.branch or [] %}
+                    <option value="{{ option }}" {% if branch_filter == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% else %}
+            <input type="hidden" name="branch_name" value="{{ branch_filter or '' }}">
+            {% endif %}
+            <div>
+                <label class="form-label mb-1">Device</label>
+                <select name="device_filter" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    {% for option in jobs_filter_options.device or [] %}
+                    <option value="{{ option }}" {% if device_filter == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label mb-1">Priority</label>
+                <select name="priority_filter" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    {% for option in jobs_filter_options.priority or [] %}
+                    <option value="{{ option }}" {% if priority_filter == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label mb-1">Call Type</label>
+                <select name="call_type_filter" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    {% for option in jobs_filter_options.call_type or [] %}
+                    <option value="{{ option }}" {% if call_type_filter == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label mb-1">Complaint Type</label>
+                <select name="complaint_type_filter" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    {% for option in jobs_filter_options.complaint_type or [] %}
+                    <option value="{{ option }}" {% if complaint_type_filter == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label mb-1">Assigned Engineer</label>
+                <select name="engineer_filter" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    {% for option in jobs_filter_options.engineer or [] %}
+                    <option value="{{ option }}" {% if engineer_filter == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label mb-1">Closure</label>
+                <select name="closure_result" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="success" {% if closure_result == 'success' %}selected{% endif %}>Closed Success</option>
+                    <option value="failed" {% if closure_result == 'failed' %}selected{% endif %}>Closed Failed</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label mb-1">Age</label>
+                <select name="age_bucket" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    {% for option in ['0-2', '3-5', '6-10', '11-15', '16-30', '31-90', '91-180', '181+'] %}
+                    <option value="{{ option }}" {% if age_bucket_filter == option %}selected{% endif %}>{{ option }} days</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label mb-1">Transfer</label>
+                <select name="transfer_filter" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="active" {% if transfer_filter == 'active' %}selected{% endif %}>Active Transfer</option>
+                </select>
+            </div>
+            <div class="jobs-filter-actions">
                 <button type="submit" class="btn btn-primary btn-sm">Apply</button>
-                <a class="btn btn-outline-success btn-sm" href="{{ url_for('export_jobs', view=current_view or 'active', search=search_query or '', status=status_filter or '', branch_name=branch_filter or '', transfer_filter=transfer_filter or '', age_bucket=age_bucket_filter or '', call_type_filter=call_type_filter or '', device_filter=device_filter or '', closure_result=closure_result or '', chart_from_date=chart_from_date or '', chart_to_date=chart_to_date or '', chart_mode=chart_mode or 'created') }}">Export CSV</a>
+                <a class="btn btn-outline-success btn-sm" href="{{ url_for('export_jobs', view=current_view or 'active', search=search_query or '', job_number_filter=job_number_filter or '', customer_filter=customer_filter or '', mobile_filter=mobile_filter or '', serial_filter=serial_filter or '', model_filter=model_filter or '', complaint_filter=complaint_filter or '', status=status_filter or '', branch_name=branch_filter or '', transfer_filter=transfer_filter or '', age_bucket=age_bucket_filter or '', call_type_filter=call_type_filter or '', device_filter=device_filter or '', priority_filter=priority_filter or '', complaint_type_filter=complaint_type_filter or '', engineer_filter=engineer_filter or '', closure_result=closure_result or '', chart_from_date=chart_from_date or '', chart_to_date=chart_to_date or '', chart_mode=chart_mode or 'created') }}">Export CSV</a>
                 <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('jobs', view=current_view or 'active') }}">Clear</a>
+            </div>
             </div>
         </form>
     </div>
@@ -325,25 +458,25 @@ Specialist: {{ job.specialist_transfer_branch_name }}{% if job.specialist_transf
     <nav>
         <ul class="pagination pagination-sm mb-0">
             <li class="page-item {% if page <= 1 %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for('jobs', view=current_view, page=page - 1, search=search_query or '', status=status_filter or '', branch_name=branch_filter or '', transfer_filter=transfer_filter or '', age_bucket=age_bucket_filter or '', call_type_filter=call_type_filter or '', device_filter=device_filter or '', closure_result=closure_result or '', chart_from_date=chart_from_date or '', chart_to_date=chart_to_date or '', chart_mode=chart_mode or 'created') }}">&#8249; Prev</a>
+                <a class="page-link" href="{{ url_for('jobs', view=current_view, page=page - 1, search=search_query or '', job_number_filter=job_number_filter or '', customer_filter=customer_filter or '', mobile_filter=mobile_filter or '', serial_filter=serial_filter or '', model_filter=model_filter or '', complaint_filter=complaint_filter or '', status=status_filter or '', branch_name=branch_filter or '', transfer_filter=transfer_filter or '', age_bucket=age_bucket_filter or '', call_type_filter=call_type_filter or '', device_filter=device_filter or '', priority_filter=priority_filter or '', complaint_type_filter=complaint_type_filter or '', engineer_filter=engineer_filter or '', closure_result=closure_result or '', chart_from_date=chart_from_date or '', chart_to_date=chart_to_date or '', chart_mode=chart_mode or 'created') }}">&#8249; Prev</a>
             </li>
             {% set start_p = [1, page - 2] | max %}
             {% set end_p = [total_pages, page + 2] | min %}
             {% if start_p > 1 %}
-                <li class="page-item"><a class="page-link" href="{{ url_for('jobs', view=current_view, page=1, search=search_query or '', status=status_filter or '', branch_name=branch_filter or '', transfer_filter=transfer_filter or '', age_bucket=age_bucket_filter or '', call_type_filter=call_type_filter or '', device_filter=device_filter or '', closure_result=closure_result or '', chart_from_date=chart_from_date or '', chart_to_date=chart_to_date or '', chart_mode=chart_mode or 'created') }}">1</a></li>
+                <li class="page-item"><a class="page-link" href="{{ url_for('jobs', view=current_view, page=1, search=search_query or '', job_number_filter=job_number_filter or '', customer_filter=customer_filter or '', mobile_filter=mobile_filter or '', serial_filter=serial_filter or '', model_filter=model_filter or '', complaint_filter=complaint_filter or '', status=status_filter or '', branch_name=branch_filter or '', transfer_filter=transfer_filter or '', age_bucket=age_bucket_filter or '', call_type_filter=call_type_filter or '', device_filter=device_filter or '', priority_filter=priority_filter or '', complaint_type_filter=complaint_type_filter or '', engineer_filter=engineer_filter or '', closure_result=closure_result or '', chart_from_date=chart_from_date or '', chart_to_date=chart_to_date or '', chart_mode=chart_mode or 'created') }}">1</a></li>
                 {% if start_p > 2 %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
             {% endif %}
             {% for p in range(start_p, end_p + 1) %}
             <li class="page-item {% if p == page %}active{% endif %}">
-                <a class="page-link" href="{{ url_for('jobs', view=current_view, page=p, search=search_query or '', status=status_filter or '', branch_name=branch_filter or '', transfer_filter=transfer_filter or '', age_bucket=age_bucket_filter or '', call_type_filter=call_type_filter or '', device_filter=device_filter or '', closure_result=closure_result or '', chart_from_date=chart_from_date or '', chart_to_date=chart_to_date or '', chart_mode=chart_mode or 'created') }}">{{ p }}</a>
+                <a class="page-link" href="{{ url_for('jobs', view=current_view, page=p, search=search_query or '', job_number_filter=job_number_filter or '', customer_filter=customer_filter or '', mobile_filter=mobile_filter or '', serial_filter=serial_filter or '', model_filter=model_filter or '', complaint_filter=complaint_filter or '', status=status_filter or '', branch_name=branch_filter or '', transfer_filter=transfer_filter or '', age_bucket=age_bucket_filter or '', call_type_filter=call_type_filter or '', device_filter=device_filter or '', priority_filter=priority_filter or '', complaint_type_filter=complaint_type_filter or '', engineer_filter=engineer_filter or '', closure_result=closure_result or '', chart_from_date=chart_from_date or '', chart_to_date=chart_to_date or '', chart_mode=chart_mode or 'created') }}">{{ p }}</a>
             </li>
             {% endfor %}
             {% if end_p < total_pages %}
                 {% if end_p < total_pages - 1 %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
-                <li class="page-item"><a class="page-link" href="{{ url_for('jobs', view=current_view, page=total_pages, search=search_query or '', status=status_filter or '', branch_name=branch_filter or '', transfer_filter=transfer_filter or '', age_bucket=age_bucket_filter or '', call_type_filter=call_type_filter or '', device_filter=device_filter or '', closure_result=closure_result or '', chart_from_date=chart_from_date or '', chart_to_date=chart_to_date or '', chart_mode=chart_mode or 'created') }}">{{ total_pages }}</a></li>
+                <li class="page-item"><a class="page-link" href="{{ url_for('jobs', view=current_view, page=total_pages, search=search_query or '', job_number_filter=job_number_filter or '', customer_filter=customer_filter or '', mobile_filter=mobile_filter or '', serial_filter=serial_filter or '', model_filter=model_filter or '', complaint_filter=complaint_filter or '', status=status_filter or '', branch_name=branch_filter or '', transfer_filter=transfer_filter or '', age_bucket=age_bucket_filter or '', call_type_filter=call_type_filter or '', device_filter=device_filter or '', priority_filter=priority_filter or '', complaint_type_filter=complaint_type_filter or '', engineer_filter=engineer_filter or '', closure_result=closure_result or '', chart_from_date=chart_from_date or '', chart_to_date=chart_to_date or '', chart_mode=chart_mode or 'created') }}">{{ total_pages }}</a></li>
             {% endif %}
             <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for('jobs', view=current_view, page=page + 1, search=search_query or '', status=status_filter or '', branch_name=branch_filter or '', transfer_filter=transfer_filter or '', age_bucket=age_bucket_filter or '', call_type_filter=call_type_filter or '', device_filter=device_filter or '', closure_result=closure_result or '', chart_from_date=chart_from_date or '', chart_to_date=chart_to_date or '', chart_mode=chart_mode or 'created') }}">Next &#8250;</a>
+                <a class="page-link" href="{{ url_for('jobs', view=current_view, page=page + 1, search=search_query or '', job_number_filter=job_number_filter or '', customer_filter=customer_filter or '', mobile_filter=mobile_filter or '', serial_filter=serial_filter or '', model_filter=model_filter or '', complaint_filter=complaint_filter or '', status=status_filter or '', branch_name=branch_filter or '', transfer_filter=transfer_filter or '', age_bucket=age_bucket_filter or '', call_type_filter=call_type_filter or '', device_filter=device_filter or '', priority_filter=priority_filter or '', complaint_type_filter=complaint_type_filter or '', engineer_filter=engineer_filter or '', closure_result=closure_result or '', chart_from_date=chart_from_date or '', chart_to_date=chart_to_date or '', chart_mode=chart_mode or 'created') }}">Next &#8250;</a>
             </li>
         </ul>
     </nav>
