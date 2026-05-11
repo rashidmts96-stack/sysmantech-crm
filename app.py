@@ -7118,7 +7118,7 @@ def edit_job(job_id):
             complaint_type = request.form.get("complaint_type")
             warranty_status = request.form.get("warranty_status")
             backup_required = request.form.get("backup_required")
-            received_by = (request.form.get("received_by") or session.get("username") or "").strip()
+            received_by = (request.form.get("received_by") or "").strip()
             assigned_engineer = (request.form.get("assigned_engineer") or "").strip()
             estimate_amount = request.form.get("estimate_amount")
             if not estimate_amount or str(estimate_amount).strip() == "":
