@@ -182,12 +182,15 @@
                                     id="assignedEngineerInput"
                                     class="form-control"
                                     list="assignedEngineerList"
-                                    value="{{ job.assigned_engineer or '' }}"
+                                    value=""
                                     autocomplete="off"
-                                    placeholder="Type engineer name"
+                                    placeholder="Confirm engineer name"
                                     required
                                 >
                                 <datalist id="assignedEngineerList"></datalist>
+                                {% if job.assigned_engineer %}
+                                <div class="form-text">Current saved engineer: {{ job.assigned_engineer }}. Select/enter the engineer again before saving.</div>
+                                {% endif %}
                                 {% if job.assigned_engineer and job.assigned_engineer not in engineer_users %}
                                 <div class="form-text text-danger">Current saved engineer is not in the engineers list. Select a valid engineer before saving.</div>
                                 {% endif %}
