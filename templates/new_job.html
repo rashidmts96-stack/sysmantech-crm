@@ -17,6 +17,34 @@
         #customerInfo {
             min-height: 100px;
         }
+        .engineer-typeahead-wrap {
+            position: relative;
+        }
+        .engineer-suggestion-list {
+            position: absolute;
+            z-index: 1050;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            max-height: 260px;
+            overflow-y: auto;
+            border: 1px solid #b6c5db;
+            border-radius: 0.5rem;
+            background: #fff;
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
+        }
+        .engineer-suggestion-item {
+            width: 100%;
+            border: 0;
+            background: transparent;
+            padding: 0.55rem 0.75rem;
+            text-align: left;
+        }
+        .engineer-suggestion-item:hover,
+        .engineer-suggestion-item:focus {
+            background: #eaf1ff;
+            outline: none;
+        }
     </style>
 </head>
 <body class="crm-theme">
@@ -190,6 +218,7 @@
 
                             <div class="col-md-6">
                                 <label class="form-label required">Assigned Engineer</label>
+                                <div class="engineer-typeahead-wrap">
                                 <input
                                     type="text"
                                     name="assigned_engineer"
@@ -202,6 +231,8 @@
                                     required
                                 >
                                 <datalist id="assignedEngineerList"></datalist>
+                                <div id="assignedEngineerSuggestions" class="engineer-suggestion-list" hidden></div>
+                                </div>
                             </div>
 
                             <!-- Estimate + Photo -->
