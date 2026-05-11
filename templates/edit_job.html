@@ -176,12 +176,18 @@
 
                             <div class="col-md-6">
                                 <label class="form-label required">Assigned Engineer</label>
-                                <select name="assigned_engineer" id="assignedEngineerInput" class="form-select" required>
-                                    <option value="">— Select Engineer —</option>
-                                    {% for name in engineer_users %}
-                                        <option value="{{ name }}" {% if name == job.assigned_engineer %}selected{% endif %}>{{ name }}</option>
-                                    {% endfor %}
-                                </select>
+                                <input
+                                    type="text"
+                                    name="assigned_engineer"
+                                    id="assignedEngineerInput"
+                                    class="form-control"
+                                    list="assignedEngineerList"
+                                    value="{{ job.assigned_engineer or '' }}"
+                                    autocomplete="off"
+                                    placeholder="Type engineer name"
+                                    required
+                                >
+                                <datalist id="assignedEngineerList"></datalist>
                                 {% if job.assigned_engineer and job.assigned_engineer not in engineer_users %}
                                 <div class="form-text text-danger">Current saved engineer is not in the engineers list. Select a valid engineer before saving.</div>
                                 {% endif %}
@@ -411,6 +417,7 @@
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
         crossorigin="anonymous"></script>
 <script id="usersData" type="application/json">{{ users|tojson }}</script>
+<script id="engineerUsersData" type="application/json">{{ engineer_users|tojson }}</script>
 <script>
 (function () {
     const container = document.getElementById("usedSparesContainer");
@@ -461,12 +468,14 @@
     });
 })();
 
-// User name suggestions for Received By.
+// User name suggestions for Received By / Assigned Engineer.
 (function () {
     const usersDataEl = document.getElementById("usersData");
+    const engineersDataEl = document.getElementById("engineerUsersData");
     const allUsers = usersDataEl ? JSON.parse(usersDataEl.textContent || "[]") : [];
+    const engineerUsers = engineersDataEl ? JSON.parse(engineersDataEl.textContent || "[]") : [];
 
-    function wireTypeahead(inputId, listId) {
+    function wireTypeahead(inputId, listId, source) {
         const input = document.getElementById(inputId);
         const datalist = document.getElementById(listId);
         if (!input || !datalist) return;
@@ -476,7 +485,7 @@
             datalist.innerHTML = "";
             if (!q) return;
 
-            const matches = allUsers
+            const matches = source
                 .filter((u) => (u || "").toLowerCase().includes(q))
                 .slice(0, 8);
 
@@ -496,7 +505,8 @@
         });
     }
 
-    wireTypeahead("receivedByInput", "receivedByList");
+    wireTypeahead("receivedByInput", "receivedByList", allUsers);
+    wireTypeahead("assignedEngineerInput", "assignedEngineerList", engineerUsers);
 })();
 </script>
 </body>

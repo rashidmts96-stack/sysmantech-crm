@@ -190,12 +190,18 @@
 
                             <div class="col-md-6">
                                 <label class="form-label required">Assigned Engineer</label>
-                                <select name="assigned_engineer" id="assignedEngineerInput" class="form-select" required>
-                                    <option value="">— Select Engineer —</option>
-                                    {% for name in engineer_users %}
-                                        <option value="{{ name }}">{{ name }}</option>
-                                    {% endfor %}
-                                </select>
+                                <input
+                                    type="text"
+                                    name="assigned_engineer"
+                                    id="assignedEngineerInput"
+                                    class="form-control"
+                                    list="assignedEngineerList"
+                                    value=""
+                                    autocomplete="off"
+                                    placeholder="Type engineer name"
+                                    required
+                                >
+                                <datalist id="assignedEngineerList"></datalist>
                             </div>
 
                             <!-- Estimate + Photo -->
@@ -363,6 +369,7 @@
 </div>
 
 <script id="usersData" type="application/json">{{ users|tojson }}</script>
+<script id="engineerUsersData" type="application/json">{{ engineer_users|tojson }}</script>
 <script>
 // Show/hide and require Backup Required only for Laptop, Desktop, Mobile, All-In-One-PC
 const deviceSelect = document.getElementById('deviceCategorySelect');
@@ -533,12 +540,14 @@ document.getElementById("mobile").addEventListener("input", function () {
     });
 })();
 
-// User name suggestions for Received By.
+// User name suggestions for Received By / Assigned Engineer.
 (function () {
     const usersDataEl = document.getElementById("usersData");
+    const engineersDataEl = document.getElementById("engineerUsersData");
     const allUsers = usersDataEl ? JSON.parse(usersDataEl.textContent || "[]") : [];
+    const engineerUsers = engineersDataEl ? JSON.parse(engineersDataEl.textContent || "[]") : [];
 
-    function wireTypeahead(inputId, listId) {
+    function wireTypeahead(inputId, listId, source) {
         const input = document.getElementById(inputId);
         const datalist = document.getElementById(listId);
         if (!input || !datalist) return;
@@ -548,7 +557,7 @@ document.getElementById("mobile").addEventListener("input", function () {
             datalist.innerHTML = "";
             if (!q) return;
 
-            const matches = allUsers
+            const matches = source
                 .filter((u) => (u || "").toLowerCase().includes(q))
                 .slice(0, 8);
 
@@ -568,7 +577,8 @@ document.getElementById("mobile").addEventListener("input", function () {
         });
     }
 
-    wireTypeahead("receivedByInput", "receivedByList");
+    wireTypeahead("receivedByInput", "receivedByList", allUsers);
+    wireTypeahead("assignedEngineerInput", "assignedEngineerList", engineerUsers);
 })();
 </script>
 
