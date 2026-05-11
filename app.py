@@ -4060,6 +4060,8 @@ def _get_jobs_filter_options(cursor, role, branch):
     except Exception:
         pass
 
+    options["engineer"] = _normalize_option_list(options.get("engineer", []) + _load_engineer_usernames(cursor))
+
     return options
 
 

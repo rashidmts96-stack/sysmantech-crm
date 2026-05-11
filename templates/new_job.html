@@ -561,7 +561,7 @@ document.getElementById("mobile").addEventListener("input", function () {
 
             const matches = (options.showAllOnAsterisk && rawQuery === "*")
                 ? source
-                : source.filter((u) => (u || "").toLowerCase().includes(q)).slice(0, 8);
+                : source.filter((u) => (u || "").toLowerCase().includes(q));
 
             matches.forEach((name) => {
                 const option = document.createElement("option");
