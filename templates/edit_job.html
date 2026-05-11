@@ -475,19 +475,21 @@
     const allUsers = usersDataEl ? JSON.parse(usersDataEl.textContent || "[]") : [];
     const engineerUsers = engineersDataEl ? JSON.parse(engineersDataEl.textContent || "[]") : [];
 
-    function wireTypeahead(inputId, listId, source) {
+    function wireTypeahead(inputId, listId, source, options) {
         const input = document.getElementById(inputId);
         const datalist = document.getElementById(listId);
         if (!input || !datalist) return;
+        options = options || {};
 
         function render() {
-            const q = input.value.trim().toLowerCase();
+            const rawQuery = input.value.trim();
+            const q = rawQuery.toLowerCase();
             datalist.innerHTML = "";
             if (!q) return;
 
-            const matches = source
-                .filter((u) => (u || "").toLowerCase().includes(q))
-                .slice(0, 8);
+            const matches = (options.showAllOnAsterisk && rawQuery === "*")
+                ? source
+                : source.filter((u) => (u || "").toLowerCase().includes(q)).slice(0, 8);
 
             matches.forEach((name) => {
                 const option = document.createElement("option");
@@ -506,7 +508,7 @@
     }
 
     wireTypeahead("receivedByInput", "receivedByList", allUsers);
-    wireTypeahead("assignedEngineerInput", "assignedEngineerList", engineerUsers);
+    wireTypeahead("assignedEngineerInput", "assignedEngineerList", engineerUsers, { showAllOnAsterisk: true });
 })();
 </script>
 </body>
