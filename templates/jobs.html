@@ -48,6 +48,14 @@
     box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
 }
 
+.jobs-list-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
 .jobs-filter-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -159,7 +167,15 @@ placeholder="Search Name / Mobile / Alt No / Job No / Serial / Model">
 
 <div class="container-fluid mt-4">
 
-<h5 class="mb-3">{{ view_title or 'Cases' }}</h5>
+{% set filter_count = (status_filters|length) + (branch_filters|length) + (transfer_filters|length) + (age_bucket_filters|length) + (call_type_filters|length) + (device_filters|length) + (priority_filters|length) + (complaint_type_filters|length) + (engineer_filters|length) + (closure_results|length) %}
+{% set filters_open = filter_count > 0 or chart_from_date or chart_to_date or (chart_mode and chart_mode != 'created') %}
+
+<div class="jobs-list-heading mb-3">
+    <h5 class="mb-0">{{ view_title or 'Cases' }}</h5>
+    <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#jobsFilterPanel" aria-expanded="{{ 'true' if filters_open else 'false' }}" aria-controls="jobsFilterPanel">
+        Filters{% if filter_count %} ({{ filter_count }}){% endif %}
+    </button>
+</div>
 
 {% macro checkbox_filter(name, label, options, selected_values) %}
 <div>
@@ -185,6 +201,7 @@ placeholder="Search Name / Mobile / Alt No / Job No / Serial / Model">
 </div>
 {% endmacro %}
 
+<div class="collapse{% if filters_open %} show{% endif %}" id="jobsFilterPanel">
 <div class="card jobs-filter-card mb-3">
     <div class="card-body">
         <form method="GET" action="/jobs">
@@ -228,6 +245,7 @@ placeholder="Search Name / Mobile / Alt No / Job No / Serial / Model">
             </div>
         </form>
     </div>
+</div>
 </div>
 
 <div class="table-responsive">
