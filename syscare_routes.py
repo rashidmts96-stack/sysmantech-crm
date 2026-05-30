@@ -283,6 +283,9 @@ def register_syscare_routes(app, deps):
             "contact_number": ["contactnumber", "contact", "mobile", "phonenumber"],
             "branch_name": ["branch", "branchname"],
             "incharge": ["incharge", "engineer", "staff"],
+            "product_model": ["productmodel", "model", "devicemodel"],
+            "serial_number": ["serialnumber", "serialno", "serial", "sn"],
+            "model_serial": ["modelserial", "modelserialnumber"],
             "amount": ["amount", "planamount", "value"],
             "expiry_date": ["expirydate", "expiry", "validtill", "servicevalidtill"],
         }
@@ -294,6 +297,9 @@ def register_syscare_routes(app, deps):
             idx_contact_number = _pick_index(header_map, aliases["contact_number"])
             idx_branch_name = _pick_index(header_map, aliases["branch_name"])
             idx_incharge = _pick_index(header_map, aliases["incharge"])
+            idx_product_model = _pick_index(header_map, aliases["product_model"])
+            idx_serial_number = _pick_index(header_map, aliases["serial_number"])
+            idx_model_serial = _pick_index(header_map, aliases["model_serial"])
             idx_amount = _pick_index(header_map, aliases["amount"])
             idx_expiry_date = _pick_index(header_map, aliases["expiry_date"])
 
@@ -306,6 +312,16 @@ def register_syscare_routes(app, deps):
                 row = list(row) if not isinstance(row, list) else row
                 record_date = _parse_date_any(_get_cell(row, idx_date))
                 syscare_id = str(_get_cell(row, idx_syscare_id) or "").strip()
+                product_model = str(_get_cell(row, idx_product_model) or "").strip()
+                serial_number = str(_get_cell(row, idx_serial_number) or "").strip()
+                model_serial = str(_get_cell(row, idx_model_serial) or "").strip()
+                if (not product_model or not serial_number) and model_serial:
+                    legacy_model, legacy_serial = _split_model_serial(model_serial)
+                    if not product_model:
+                        product_model = legacy_model
+                    if not serial_number:
+                        serial_number = legacy_serial
+                model_serial = f"{product_model} / {serial_number}".strip(" /")
 
                 if not record_date or not syscare_id:
                     yield row_number, None
@@ -318,6 +334,9 @@ def register_syscare_routes(app, deps):
                     "contact_number": str(_get_cell(row, idx_contact_number) or "").strip(),
                     "branch_name": str(_get_cell(row, idx_branch_name) or "").strip(),
                     "incharge": str(_get_cell(row, idx_incharge) or "").strip(),
+                    "model_serial": model_serial,
+                    "product_model": product_model,
+                    "serial_number": serial_number,
                     "amount": round(max(_parse_money(_get_cell(row, idx_amount)), 0), 2),
                     "expiry_date": (_parse_date_any(_get_cell(row, idx_expiry_date)) or None),
                 }
@@ -877,6 +896,9 @@ def register_syscare_routes(app, deps):
                     payload["contact_number"] or None,
                     payload["branch_name"] or None,
                     payload["incharge"] or None,
+                    payload["model_serial"] or None,
+                    payload["product_model"] or None,
+                    payload["serial_number"] or None,
                     payload["amount"],
                     payload["expiry_date"].strftime("%Y-%m-%d") if payload["expiry_date"] else None,
                     session.get("username"),
@@ -896,14 +918,17 @@ def register_syscare_routes(app, deps):
                 """
                 INSERT INTO syscare_memberships
                     (record_date, syscare_id, customer_name, contact_number, branch_name,
-                     incharge, amount, expiry_date, uploaded_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     incharge, model_serial, product_model, serial_number, amount, expiry_date, uploaded_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON DUPLICATE KEY UPDATE
                     record_date=VALUES(record_date),
                     customer_name=VALUES(customer_name),
                     contact_number=VALUES(contact_number),
                     branch_name=VALUES(branch_name),
                     incharge=VALUES(incharge),
+                    model_serial=VALUES(model_serial),
+                    product_model=VALUES(product_model),
+                    serial_number=VALUES(serial_number),
                     amount=VALUES(amount),
                     expiry_date=VALUES(expiry_date),
                     uploaded_by=VALUES(uploaded_by),
