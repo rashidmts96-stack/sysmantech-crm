@@ -178,6 +178,176 @@
         </div>
     {% endif %}
 
+    <h4 class="mb-4 mt-5">Branch Management</h4>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <button
+                class="type-toggle"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#branch-profiles-panel"
+                aria-expanded="true"
+                aria-controls="branch-profiles-panel">
+                <span class="text-uppercase">Branch Print Profiles</span>
+                <span class="type-meta ms-2">({{ branch_print_profiles|length if branch_print_profiles is defined else 0 }} branches)</span>
+            </button>
+        </div>
+        <div id="branch-profiles-panel" class="collapse show">
+            <div class="card-body border-bottom">
+                <form method="POST" action="/save-branch-print-profile">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label">Branch Name</label>
+                            <input type="text" name="branch_name" class="form-control" placeholder="Example: EDAPPALLY" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Company Name</label>
+                            <input type="text" name="company_name" class="form-control" value="SYSMANTECH" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">GST No</label>
+                            <input type="text" name="gst_no" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Mobile 1</label>
+                            <input type="text" name="mobile1" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Address Line 1</label>
+                            <input type="text" name="address_line1" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Address Line 2</label>
+                            <input type="text" name="address_line2" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Mobile 2</label>
+                            <input type="text" name="mobile2" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Mobile 3</label>
+                            <input type="text" name="mobile3" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Job Print Terms</label>
+                            <textarea name="terms_text" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Quotation Terms</label>
+                            <textarea name="quotation_terms" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="col-12 col-md-2 ms-auto">
+                            <button type="submit" class="btn btn-success w-100">Save Branch</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 80px;">ID</th>
+                            <th>Branch</th>
+                            <th>Company</th>
+                            <th>Address</th>
+                            <th>Mobiles</th>
+                            <th style="width: 160px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if branch_print_profiles %}
+                            {% for profile in branch_print_profiles %}
+                            <tr>
+                                <td>{{ profile.id }}</td>
+                                <td>{{ profile.branch_name }}</td>
+                                <td>{{ profile.company_name }}</td>
+                                <td>
+                                    {{ profile.address_line1 or '-' }}
+                                    {% if profile.address_line2 %}<br>{{ profile.address_line2 }}{% endif %}
+                                    {% if profile.gst_no %}<br><span class="text-muted">GST: {{ profile.gst_no }}</span>{% endif %}
+                                </td>
+                                <td>
+                                    {{ profile.mobile1 or '-' }}
+                                    {% if profile.mobile2 %}<br>{{ profile.mobile2 }}{% endif %}
+                                    {% if profile.mobile3 %}<br>{{ profile.mobile3 }}{% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <button
+                                            class="btn btn-warning btn-sm"
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#edit-branch-profile-{{ profile.id }}"
+                                            aria-expanded="false"
+                                            aria-controls="edit-branch-profile-{{ profile.id }}">
+                                            Edit
+                                        </button>
+                                        <form method="POST" action="/delete-branch-print-profile/{{ profile.id }}" class="d-inline">
+                                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete branch {{ profile.branch_name | e }} from settings?');">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="collapse" id="edit-branch-profile-{{ profile.id }}">
+                                <td colspan="6" class="bg-light">
+                                    <form method="POST" action="/save-branch-print-profile" class="row g-2 align-items-end">
+                                        <div class="col-md-3">
+                                            <label class="form-label mb-1">Branch Name</label>
+                                            <input type="text" name="branch_name" class="form-control form-control-sm" value="{{ profile.branch_name }}" required>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label mb-1">Company Name</label>
+                                            <input type="text" name="company_name" class="form-control form-control-sm" value="{{ profile.company_name }}" required>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label mb-1">GST No</label>
+                                            <input type="text" name="gst_no" class="form-control form-control-sm" value="{{ profile.gst_no or '' }}">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label mb-1">Mobile 1</label>
+                                            <input type="text" name="mobile1" class="form-control form-control-sm" value="{{ profile.mobile1 or '' }}">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label mb-1">Address Line 1</label>
+                                            <input type="text" name="address_line1" class="form-control form-control-sm" value="{{ profile.address_line1 or '' }}">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label mb-1">Address Line 2</label>
+                                            <input type="text" name="address_line2" class="form-control form-control-sm" value="{{ profile.address_line2 or '' }}">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label mb-1">Mobile 2</label>
+                                            <input type="text" name="mobile2" class="form-control form-control-sm" value="{{ profile.mobile2 or '' }}">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label mb-1">Mobile 3</label>
+                                            <input type="text" name="mobile3" class="form-control form-control-sm" value="{{ profile.mobile3 or '' }}">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label mb-1">Job Print Terms</label>
+                                            <textarea name="terms_text" class="form-control form-control-sm" rows="2">{{ profile.terms_text or '' }}</textarea>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label mb-1">Quotation Terms</label>
+                                            <textarea name="quotation_terms" class="form-control form-control-sm" rows="2">{{ profile.quotation_terms or '' }}</textarea>
+                                        </div>
+                                        <div class="col-md-2 ms-auto">
+                                            <button type="submit" class="btn btn-success btn-sm w-100">Save</button>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="6" class="text-center text-muted">No branch profiles found</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <h4 class="mb-4 mt-5">User Management</h4>
 
     <div class="card shadow-sm mb-4">

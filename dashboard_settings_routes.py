@@ -1214,6 +1214,17 @@ def register_dashboard_settings_routes(app, deps):
         cursor.execute("SELECT id, username, branch_name FROM user_branches ORDER BY id ASC")
         user_branches = cursor.fetchall()
 
+        cursor.execute(
+            """
+            SELECT id, branch_name, company_name, address_line1, address_line2,
+                   gst_no, mobile1, mobile2, mobile3, terms_text, quotation_terms, updated_at
+            FROM branch_print_profiles
+            WHERE UPPER(branch_name) <> 'ALL'
+            ORDER BY branch_name ASC
+            """
+        )
+        branch_print_profiles = cursor.fetchall()
+
         cursor.execute("SELECT * FROM branch_revenue_targets ORDER BY branch_name ASC")
         revenue_targets = cursor.fetchall()
 
@@ -1222,6 +1233,8 @@ def register_dashboard_settings_routes(app, deps):
             if base_total is None:
                 base_total = float(row.get("sales_target") or 0) + float(row.get("service_target") or 0)
             row["effective_target"] = float(base_total or 0)
+
+        branch_list = load_known_branches(cursor)
 
         cursor.close()
         db.close()
@@ -1232,6 +1245,7 @@ def register_dashboard_settings_routes(app, deps):
             users=users,
             legacy_password_users=legacy_password_users,
             user_branches=user_branches,
-            branch_list=default_branches,
+            branch_list=branch_list,
+            branch_print_profiles=branch_print_profiles,
             revenue_targets=revenue_targets,
         )

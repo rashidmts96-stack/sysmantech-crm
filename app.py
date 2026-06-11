@@ -2243,6 +2243,23 @@ def get_branch_print_profile(cursor, branch_name):
     return profile
 
 
+def _extract_branch_print_profile_payload(form):
+    branch_name = re.sub(r"\s+", " ", str(form.get("branch_name") or "").strip()).upper()
+    company_name = re.sub(r"\s+", " ", str(form.get("company_name") or "").strip()) or "SYSMANTECH"
+    return {
+        "branch_name": branch_name,
+        "company_name": company_name,
+        "address_line1": str(form.get("address_line1") or "").strip(),
+        "address_line2": str(form.get("address_line2") or "").strip(),
+        "gst_no": str(form.get("gst_no") or "").strip(),
+        "mobile1": str(form.get("mobile1") or "").strip(),
+        "mobile2": str(form.get("mobile2") or "").strip(),
+        "mobile3": str(form.get("mobile3") or "").strip(),
+        "terms_text": str(form.get("terms_text") or "").strip(),
+        "quotation_terms": str(form.get("quotation_terms") or "").strip(),
+    }
+
+
 def get_branch_revenue_target(cursor, branch_name):
     """Get branch revenue target; fallback to ALL target; fallback to 0 values."""
     target = None
@@ -3578,27 +3595,7 @@ def _fetch_scoped_job(cursor, job_id, role, session_branch):
 
 def _quotation_branch_options(cursor, role, session_branch):
     if _user_has_all_branch_scope(role, session_branch):
-        options = []
-        cursor.execute("SELECT DISTINCT branch_name FROM jobs WHERE branch_name IS NOT NULL ORDER BY branch_name")
-        options.extend([r.get("branch_name") for r in cursor.fetchall() if r.get("branch_name")])
-
-        cursor.execute("SELECT DISTINCT branch_name FROM branch_print_profiles WHERE branch_name IS NOT NULL ORDER BY branch_name")
-        options.extend([r.get("branch_name") for r in cursor.fetchall() if r.get("branch_name") and r.get("branch_name") != "ALL"])
-
-        for b in DEFAULT_BRANCHES:
-            if b and b != "ALL":
-                options.append(b)
-
-        deduped = []
-        seen = set()
-        for v in options:
-            key = str(v).strip().upper()
-            if not key or key in seen:
-                continue
-            seen.add(key)
-            deduped.append(str(v).strip())
-
-        return sorted(deduped, key=lambda x: x.upper())
+        return _load_known_branches(cursor)
 
     return [(session_branch or "").strip()]
 
@@ -3863,7 +3860,18 @@ def login():
         finally:
             _safe_close(cursor, db)
 
-    return render_template("login.html", branches=DEFAULT_BRANCHES)
+    db = None
+    cursor = None
+    try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        branches = ["ALL"] + _load_known_branches(cursor)
+    except Error:
+        branches = DEFAULT_BRANCHES
+    finally:
+        _safe_close(cursor, db)
+
+    return render_template("login.html", branches=branches)
 
 
 # ---------------- LOGOUT ---------------- #
@@ -4863,7 +4871,7 @@ def _get_revenue_view_context(args, can_manage_revenue, session_branch, include_
                 "SELECT DISTINCT branch_name FROM branch_revenue_entries WHERE branch_name IS NOT NULL ORDER BY branch_name"
             )
             branch_options = [r.get("branch_name") for r in cursor.fetchall() if r.get("branch_name")]
-            for b in DEFAULT_BRANCHES:
+            for b in _load_known_branches(cursor):
                 if b and b != "ALL" and b not in branch_options:
                     branch_options.append(b)
             branch_options = sorted(set(branch_options), key=lambda x: x.upper())
@@ -6158,15 +6166,9 @@ def upload_revenue_entry():
     saved = skipped = 0
     error_samples = []
     try:
-        valid_branch_map = {b.upper(): b for b in DEFAULT_BRANCHES if b and b != "ALL"}
-
         db2 = get_db()
         c2 = db2.cursor(dictionary=True)
-        c2.execute("SELECT value FROM dropdown_options WHERE type='branch'")
-        for r in c2.fetchall():
-            v = str(r.get("value") or "").strip()
-            if v:
-                valid_branch_map[v.upper()] = v
+        valid_branch_map = {b.upper(): b for b in _load_known_branches(c2)}
         c2.close()
         db2.close()
 
@@ -8213,6 +8215,124 @@ def delete_option(option_id):
     return redirect("/settings")
 
 
+@app.route("/save-branch-print-profile", methods=["POST"])
+def save_branch_print_profile():
+
+    if "username" not in session:
+        return redirect("/login")
+
+    if session.get("role") != "super_admin":
+        return "Access Denied"
+
+    payload = _extract_branch_print_profile_payload(request.form)
+
+    if not payload["branch_name"]:
+        flash("Branch name is required", "danger")
+        return redirect("/settings")
+
+    if payload["branch_name"] == "ALL":
+        flash("Use a real branch name, not ALL", "danger")
+        return redirect("/settings")
+
+    db = None
+    cursor = None
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute(
+            """
+            INSERT INTO branch_print_profiles (
+                branch_name, company_name, address_line1, address_line2, gst_no,
+                mobile1, mobile2, mobile3, terms_text, quotation_terms
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                company_name=VALUES(company_name),
+                address_line1=VALUES(address_line1),
+                address_line2=VALUES(address_line2),
+                gst_no=VALUES(gst_no),
+                mobile1=VALUES(mobile1),
+                mobile2=VALUES(mobile2),
+                mobile3=VALUES(mobile3),
+                terms_text=VALUES(terms_text),
+                quotation_terms=VALUES(quotation_terms)
+            """,
+            (
+                payload["branch_name"],
+                payload["company_name"],
+                payload["address_line1"],
+                payload["address_line2"],
+                payload["gst_no"],
+                payload["mobile1"],
+                payload["mobile2"],
+                payload["mobile3"],
+                payload["terms_text"],
+                payload["quotation_terms"],
+            ),
+        )
+
+        cursor.execute(
+            "SELECT id FROM dropdown_options WHERE type=%s AND UPPER(value)=UPPER(%s) LIMIT 1",
+            ("branch", payload["branch_name"]),
+        )
+        if not cursor.fetchone():
+            cursor.execute("SELECT MAX(`order`) FROM dropdown_options WHERE type=%s", ("branch",))
+            max_order = cursor.fetchone()[0] or 0
+            cursor.execute(
+                "INSERT INTO dropdown_options (type, value, `order`) VALUES (%s, %s, %s)",
+                ("branch", payload["branch_name"], max_order + 1),
+            )
+
+        db.commit()
+        flash("Branch saved successfully", "success")
+    except Error as e:
+        if db:
+            db.rollback()
+        _flash_internal_error("Failed to save branch", e)
+    finally:
+        _safe_close(cursor, db)
+
+    return redirect("/settings")
+
+
+@app.route("/delete-branch-print-profile/<int:profile_id>", methods=["POST"])
+def delete_branch_print_profile(profile_id):
+
+    if "username" not in session:
+        return redirect("/login")
+
+    if session.get("role") != "super_admin":
+        return "Access Denied"
+
+    db = None
+    cursor = None
+    try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT branch_name FROM branch_print_profiles WHERE id=%s", (profile_id,))
+        profile = cursor.fetchone()
+        if not profile:
+            flash("Branch not found", "warning")
+            return redirect("/settings")
+
+        branch_name = str(profile.get("branch_name") or "").strip()
+        cursor.execute("DELETE FROM branch_print_profiles WHERE id=%s", (profile_id,))
+        cursor.execute(
+            "DELETE FROM dropdown_options WHERE type=%s AND UPPER(value)=UPPER(%s)",
+            ("branch", branch_name),
+        )
+        db.commit()
+        flash("Branch deleted from settings", "success")
+    except Error as e:
+        if db:
+            db.rollback()
+        _flash_internal_error("Failed to delete branch", e)
+    finally:
+        _safe_close(cursor, db)
+
+    return redirect("/settings")
+
+
 @app.route("/add-user", methods=["POST"])
 def add_user():
 
@@ -8467,7 +8587,7 @@ def bulk_upload_user_branches():
             for row in cursor.fetchall()
         }
 
-        valid_branch_map = {branch.upper(): branch for branch in DEFAULT_BRANCHES}
+        valid_branch_map = {branch.upper(): branch for branch in ["ALL", *_load_known_branches(cursor)]}
 
         rows_to_insert = []
         added_count = 0
@@ -8650,7 +8770,7 @@ def bulk_upload_revenue_targets():
     try:
         db = get_db()
         cursor = db.cursor(dictionary=True)
-        valid_branch_map = {branch.upper(): branch for branch in DEFAULT_BRANCHES}
+        valid_branch_map = {branch.upper(): branch for branch in ["ALL", *_load_known_branches(cursor)]}
         cursor.execute("SELECT branch_name FROM branch_revenue_targets")
         existing_branches = {str(row.get("branch_name") or "").strip().upper() for row in cursor.fetchall()}
         rows_to_insert = []
