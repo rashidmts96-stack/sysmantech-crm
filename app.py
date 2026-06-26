@@ -3334,6 +3334,7 @@ def _get_staff_management_context(args):
         deduction_total = 0.0
 
         for row in staff_rows:
+            row["room_rent"] = _compute_staff_room_rent(row)
             row["total_payable"] = _compute_staff_total_payable(row)
             staff_count += 1
             payable_total += row["total_payable"]
@@ -3341,11 +3342,11 @@ def _get_staff_management_context(args):
             deduction_total += (
                 float(row.get("esi") or 0)
                 + float(row.get("pf") or 0)
-                + float(row.get("room") or 0)
-                + float(row.get("rent") or 0)
+                + row["room_rent"]
             )
 
         for row in resigned_staff_rows:
+            row["room_rent"] = _compute_staff_room_rent(row)
             row["total_payable"] = _compute_staff_total_payable(row)
 
         return {
@@ -3369,10 +3370,13 @@ def _compute_staff_total_payable(staff_row):
         float(staff_row.get("salary") or 0)
         + float(staff_row.get("esi") or 0)
         + float(staff_row.get("pf") or 0)
-        + float(staff_row.get("room") or 0)
-        + float(staff_row.get("rent") or 0),
+        + _compute_staff_room_rent(staff_row),
         2,
     )
+
+
+def _compute_staff_room_rent(staff_row):
+    return round(float(staff_row.get("room") or 0) + float(staff_row.get("rent") or 0), 2)
 
 
 def _extract_staff_member_payload(cursor, form):
@@ -3381,6 +3385,10 @@ def _extract_staff_member_payload(cursor, form):
     branch_name = (form.get("branch_name") or "").strip()
     joined_date = _normalize_date_input(form.get("joined_date", ""))
     resigned_date = _normalize_date_input(form.get("resigned_date", "")) or None
+    if "room_rent" in form:
+        room_rent = max(_parse_money(form.get("room_rent")), 0)
+    else:
+        room_rent = max(_parse_money(form.get("room")), 0) + max(_parse_money(form.get("rent")), 0)
 
     payload = {
         "staff_name": staff_name,
@@ -3389,8 +3397,8 @@ def _extract_staff_member_payload(cursor, form):
         "salary": max(_parse_money(form.get("salary")), 0),
         "esi": max(_parse_money(form.get("esi")), 0),
         "pf": max(_parse_money(form.get("pf")), 0),
-        "room": max(_parse_money(form.get("room")), 0),
-        "rent": max(_parse_money(form.get("rent")), 0),
+        "room": room_rent,
+        "rent": 0,
         "joined_date": joined_date,
         "resigned_date": resigned_date,
     }
@@ -5642,8 +5650,7 @@ def staff_management_export_page(export_view):
             "Salary",
             "ESI",
             "PF",
-            "Room",
-            "Rent",
+            "Room Rent",
             "Joined Date",
             "Resigned Date",
             "Total Payable",
@@ -5662,8 +5669,7 @@ def staff_management_export_page(export_view):
                     row.get("salary", 0),
                     row.get("esi", 0),
                     row.get("pf", 0),
-                    row.get("room", 0),
-                    row.get("rent", 0),
+                    row.get("room_rent", 0),
                     joined_date.strftime("%Y-%m-%d") if joined_date else "",
                     resigned_date.strftime("%Y-%m-%d") if resigned_date else "",
                     row.get("total_payable", 0),

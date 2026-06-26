@@ -159,19 +159,15 @@ body { background: #f6f8fb; }
             <input type="number" step="0.01" min="0" name="pf" class="form-control form-control-sm" value="0">
           </div>
           <div class="col-md-1">
-            <label class="form-label mb-1">Room</label>
-            <input type="number" step="0.01" min="0" name="room" class="form-control form-control-sm" value="0">
-          </div>
-          <div class="col-md-1">
-            <label class="form-label mb-1">Rent</label>
-            <input type="number" step="0.01" min="0" name="rent" class="form-control form-control-sm" value="0">
+            <label class="form-label mb-1">Room Rent</label>
+            <input type="number" step="0.01" min="0" name="room_rent" class="form-control form-control-sm" value="0">
           </div>
           <div class="col-md-2">
             <button type="submit" class="btn btn-success btn-sm w-100">Add Staff</button>
           </div>
         </div>
       </form>
-      <div class="small text-muted mt-2">Total payable is calculated as Salary + ESI + PF + Room + Rent.</div>
+      <div class="small text-muted mt-2">Total payable is calculated as Salary + ESI + PF + Room Rent.</div>
     </div>
   </div>
 
@@ -189,8 +185,7 @@ body { background: #f6f8fb; }
               <th>Salary</th>
               <th>ESI</th>
               <th>PF</th>
-              <th>Room</th>
-              <th>Rent</th>
+              <th>Room Rent</th>
               <th>Joined Date</th>
               <th>Total Payable</th>
               <th>Action</th>
@@ -207,8 +202,7 @@ body { background: #f6f8fb; }
                 <td>{{ '%.2f'|format((row.salary or 0)|float) }}</td>
                 <td>{{ '%.2f'|format((row.esi or 0)|float) }}</td>
                 <td>{{ '%.2f'|format((row.pf or 0)|float) }}</td>
-                <td>{{ '%.2f'|format((row.room or 0)|float) }}</td>
-                <td>{{ '%.2f'|format((row.rent or 0)|float) }}</td>
+                <td>{{ '%.2f'|format((row.room_rent or 0)|float) }}</td>
                 <td>{{ row.joined_date.strftime('%Y-%m-%d') if row.joined_date else '' }}</td>
                 <td>{{ '%.2f'|format(row.total_payable|float) }}</td>
                 <td>
@@ -222,6 +216,115 @@ body { background: #f6f8fb; }
                 </td>
               </tr>
               <tr class="collapse" id="edit-staff-{{ row.id }}">
+                <td colspan="11" class="bg-light">
+                  <form method="POST" action="/staff-management/edit/{{ row.id }}" class="row g-2 align-items-end">
+                    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+                    <div class="col-md-3">
+                      <label class="form-label mb-1">Name</label>
+                      <input type="text" name="staff_name" class="form-control form-control-sm" value="{{ row.staff_name }}" required>
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label mb-1">Contact Number</label>
+                      <input type="text" name="contact_number" class="form-control form-control-sm" value="{{ row.contact_number }}" required>
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label mb-1">Branch</label>
+                      <select name="branch_name" class="form-select form-select-sm" required>
+                        {% for branch_name in branch_options %}
+                        <option value="{{ branch_name }}" {% if row.branch_name == branch_name %}selected{% endif %}>{{ branch_name }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label mb-1">Joined Date</label>
+                      <input type="date" name="joined_date" class="form-control form-control-sm" value="{{ row.joined_date.strftime('%Y-%m-%d') if row.joined_date else '' }}" required>
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label mb-1">Resigned Date</label>
+                      <input type="date" name="resigned_date" class="form-control form-control-sm" value="{{ row.resigned_date.strftime('%Y-%m-%d') if row.resigned_date else '' }}">
+                    </div>
+                    <div class="col-md-1">
+                      <label class="form-label mb-1">Salary</label>
+                      <input type="number" step="0.01" min="0" name="salary" class="form-control form-control-sm" value="{{ '%.2f'|format((row.salary or 0)|float) }}">
+                    </div>
+                    <div class="col-md-1">
+                      <label class="form-label mb-1">ESI</label>
+                      <input type="number" step="0.01" min="0" name="esi" class="form-control form-control-sm" value="{{ '%.2f'|format((row.esi or 0)|float) }}">
+                    </div>
+                    <div class="col-md-1">
+                      <label class="form-label mb-1">PF</label>
+                      <input type="number" step="0.01" min="0" name="pf" class="form-control form-control-sm" value="{{ '%.2f'|format((row.pf or 0)|float) }}">
+                    </div>
+                    <div class="col-md-1">
+                      <label class="form-label mb-1">Room Rent</label>
+                      <input type="number" step="0.01" min="0" name="room_rent" class="form-control form-control-sm" value="{{ '%.2f'|format((row.room_rent or 0)|float) }}">
+                    </div>
+                    <div class="col-md-2">
+                      <button type="submit" class="btn btn-success btn-sm w-100">Save</button>
+                    </div>
+                    <div class="col-12">
+                      <small class="text-muted">Set resigned date and save to move this staff member to the resigned list.</small>
+                    </div>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="11" class="text-center text-muted py-4">No staff records found</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mt-3">
+    <div class="card-header fw-semibold">Resigned Staff List</div>
+    <div class="card-body p-0">
+      <div class="table-wrap">
+        <table class="table table-sm table-bordered table-hover mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th>No</th>
+              <th>Name</th>
+              <th>Contact</th>
+              <th>Branch</th>
+              <th>Salary</th>
+              <th>ESI</th>
+              <th>PF</th>
+              <th>Room Rent</th>
+              <th>Joined Date</th>
+              <th>Resigned Date</th>
+              <th>Total Payable</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if resigned_staff_rows %}
+              {% for row in resigned_staff_rows %}
+              <tr>
+                <td>{{ row.id }}</td>
+                <td>{{ row.staff_name }}</td>
+                <td>{{ row.contact_number }}</td>
+                <td>{{ row.branch_name }}</td>
+                <td>{{ '%.2f'|format((row.salary or 0)|float) }}</td>
+                <td>{{ '%.2f'|format((row.esi or 0)|float) }}</td>
+                <td>{{ '%.2f'|format((row.pf or 0)|float) }}</td>
+                <td>{{ '%.2f'|format((row.room_rent or 0)|float) }}</td>
+                <td>{{ row.joined_date.strftime('%Y-%m-%d') if row.joined_date else '' }}</td>
+                <td>{{ row.resigned_date.strftime('%Y-%m-%d') if row.resigned_date else '' }}</td>
+                <td>{{ '%.2f'|format(row.total_payable|float) }}</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <button class="btn btn-warning btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#edit-resigned-staff-{{ row.id }}" aria-expanded="false" aria-controls="edit-resigned-staff-{{ row.id }}">Edit</button>
+                    <form method="POST" action="/staff-management/delete/{{ row.id }}" class="d-inline">
+                      <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete staff member {{ row.staff_name|e }}?');">Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              <tr class="collapse" id="edit-resigned-staff-{{ row.id }}">
                 <td colspan="12" class="bg-light">
                   <form method="POST" action="/staff-management/edit/{{ row.id }}" class="row g-2 align-items-end">
                     <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
@@ -262,127 +365,8 @@ body { background: #f6f8fb; }
                       <input type="number" step="0.01" min="0" name="pf" class="form-control form-control-sm" value="{{ '%.2f'|format((row.pf or 0)|float) }}">
                     </div>
                     <div class="col-md-1">
-                      <label class="form-label mb-1">Room</label>
-                      <input type="number" step="0.01" min="0" name="room" class="form-control form-control-sm" value="{{ '%.2f'|format((row.room or 0)|float) }}">
-                    </div>
-                    <div class="col-md-1">
-                      <label class="form-label mb-1">Rent</label>
-                      <input type="number" step="0.01" min="0" name="rent" class="form-control form-control-sm" value="{{ '%.2f'|format((row.rent or 0)|float) }}">
-                    </div>
-                    <div class="col-md-2">
-                      <button type="submit" class="btn btn-success btn-sm w-100">Save</button>
-                    </div>
-                    <div class="col-12">
-                      <small class="text-muted">Set resigned date and save to move this staff member to the resigned list.</small>
-                    </div>
-                  </form>
-                </td>
-              </tr>
-              {% endfor %}
-            {% else %}
-              <tr><td colspan="12" class="text-center text-muted py-4">No staff records found</td></tr>
-            {% endif %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div class="card shadow-sm mt-3">
-    <div class="card-header fw-semibold">Resigned Staff List</div>
-    <div class="card-body p-0">
-      <div class="table-wrap">
-        <table class="table table-sm table-bordered table-hover mb-0">
-          <thead class="table-dark">
-            <tr>
-              <th>No</th>
-              <th>Name</th>
-              <th>Contact</th>
-              <th>Branch</th>
-              <th>Salary</th>
-              <th>ESI</th>
-              <th>PF</th>
-              <th>Room</th>
-              <th>Rent</th>
-              <th>Joined Date</th>
-              <th>Resigned Date</th>
-              <th>Total Payable</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% if resigned_staff_rows %}
-              {% for row in resigned_staff_rows %}
-              <tr>
-                <td>{{ row.id }}</td>
-                <td>{{ row.staff_name }}</td>
-                <td>{{ row.contact_number }}</td>
-                <td>{{ row.branch_name }}</td>
-                <td>{{ '%.2f'|format((row.salary or 0)|float) }}</td>
-                <td>{{ '%.2f'|format((row.esi or 0)|float) }}</td>
-                <td>{{ '%.2f'|format((row.pf or 0)|float) }}</td>
-                <td>{{ '%.2f'|format((row.room or 0)|float) }}</td>
-                <td>{{ '%.2f'|format((row.rent or 0)|float) }}</td>
-                <td>{{ row.joined_date.strftime('%Y-%m-%d') if row.joined_date else '' }}</td>
-                <td>{{ row.resigned_date.strftime('%Y-%m-%d') if row.resigned_date else '' }}</td>
-                <td>{{ '%.2f'|format(row.total_payable|float) }}</td>
-                <td>
-                  <div class="d-flex gap-1">
-                    <button class="btn btn-warning btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#edit-resigned-staff-{{ row.id }}" aria-expanded="false" aria-controls="edit-resigned-staff-{{ row.id }}">Edit</button>
-                    <form method="POST" action="/staff-management/delete/{{ row.id }}" class="d-inline">
-                      <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
-                      <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete staff member {{ row.staff_name|e }}?');">Delete</button>
-                    </form>
-                  </div>
-                </td>
-              </tr>
-              <tr class="collapse" id="edit-resigned-staff-{{ row.id }}">
-                <td colspan="13" class="bg-light">
-                  <form method="POST" action="/staff-management/edit/{{ row.id }}" class="row g-2 align-items-end">
-                    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token() }}">
-                    <div class="col-md-3">
-                      <label class="form-label mb-1">Name</label>
-                      <input type="text" name="staff_name" class="form-control form-control-sm" value="{{ row.staff_name }}" required>
-                    </div>
-                    <div class="col-md-2">
-                      <label class="form-label mb-1">Contact Number</label>
-                      <input type="text" name="contact_number" class="form-control form-control-sm" value="{{ row.contact_number }}" required>
-                    </div>
-                    <div class="col-md-2">
-                      <label class="form-label mb-1">Branch</label>
-                      <select name="branch_name" class="form-select form-select-sm" required>
-                        {% for branch_name in branch_options %}
-                        <option value="{{ branch_name }}" {% if row.branch_name == branch_name %}selected{% endif %}>{{ branch_name }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-                    <div class="col-md-2">
-                      <label class="form-label mb-1">Joined Date</label>
-                      <input type="date" name="joined_date" class="form-control form-control-sm" value="{{ row.joined_date.strftime('%Y-%m-%d') if row.joined_date else '' }}" required>
-                    </div>
-                    <div class="col-md-2">
-                      <label class="form-label mb-1">Resigned Date</label>
-                      <input type="date" name="resigned_date" class="form-control form-control-sm" value="{{ row.resigned_date.strftime('%Y-%m-%d') if row.resigned_date else '' }}">
-                    </div>
-                    <div class="col-md-1">
-                      <label class="form-label mb-1">Salary</label>
-                      <input type="number" step="0.01" min="0" name="salary" class="form-control form-control-sm" value="{{ '%.2f'|format((row.salary or 0)|float) }}">
-                    </div>
-                    <div class="col-md-1">
-                      <label class="form-label mb-1">ESI</label>
-                      <input type="number" step="0.01" min="0" name="esi" class="form-control form-control-sm" value="{{ '%.2f'|format((row.esi or 0)|float) }}">
-                    </div>
-                    <div class="col-md-1">
-                      <label class="form-label mb-1">PF</label>
-                      <input type="number" step="0.01" min="0" name="pf" class="form-control form-control-sm" value="{{ '%.2f'|format((row.pf or 0)|float) }}">
-                    </div>
-                    <div class="col-md-1">
-                      <label class="form-label mb-1">Room</label>
-                      <input type="number" step="0.01" min="0" name="room" class="form-control form-control-sm" value="{{ '%.2f'|format((row.room or 0)|float) }}">
-                    </div>
-                    <div class="col-md-1">
-                      <label class="form-label mb-1">Rent</label>
-                      <input type="number" step="0.01" min="0" name="rent" class="form-control form-control-sm" value="{{ '%.2f'|format((row.rent or 0)|float) }}">
+                      <label class="form-label mb-1">Room Rent</label>
+                      <input type="number" step="0.01" min="0" name="room_rent" class="form-control form-control-sm" value="{{ '%.2f'|format((row.room_rent or 0)|float) }}">
                     </div>
                     <div class="col-md-2">
                       <button type="submit" class="btn btn-success btn-sm w-100">Save</button>
@@ -395,7 +379,7 @@ body { background: #f6f8fb; }
               </tr>
               {% endfor %}
             {% else %}
-              <tr><td colspan="13" class="text-center text-muted py-4">No resigned staff records found</td></tr>
+              <tr><td colspan="12" class="text-center text-muted py-4">No resigned staff records found</td></tr>
             {% endif %}
           </tbody>
         </table>
