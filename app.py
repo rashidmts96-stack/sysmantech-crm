@@ -2187,10 +2187,24 @@ def ensure_staff_directory_table():
             """
         )
 
-        cursor.execute("SHOW COLUMNS FROM staff_directory LIKE 'resigned_date'")
-        has_resigned_date = bool(cursor.fetchone())
-        if not has_resigned_date:
-            cursor.execute("ALTER TABLE staff_directory ADD COLUMN resigned_date DATE NULL AFTER joined_date")
+        staff_columns = {
+            "staff_name": "ADD COLUMN staff_name VARCHAR(255) NOT NULL DEFAULT '' AFTER id",
+            "contact_number": "ADD COLUMN contact_number VARCHAR(50) NOT NULL DEFAULT '' AFTER staff_name",
+            "branch_name": "ADD COLUMN branch_name VARCHAR(255) NOT NULL DEFAULT '' AFTER contact_number",
+            "salary": "ADD COLUMN salary DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER branch_name",
+            "esi": "ADD COLUMN esi DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER salary",
+            "pf": "ADD COLUMN pf DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER esi",
+            "room": "ADD COLUMN room DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER pf",
+            "rent": "ADD COLUMN rent DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER room",
+            "joined_date": "ADD COLUMN joined_date DATE NULL AFTER rent",
+            "resigned_date": "ADD COLUMN resigned_date DATE NULL AFTER joined_date",
+            "created_at": "ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP AFTER resigned_date",
+            "updated_at": "ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at",
+        }
+        for column_name, alter_clause in staff_columns.items():
+            cursor.execute("SHOW COLUMNS FROM staff_directory LIKE %s", (column_name,))
+            if not cursor.fetchone():
+                cursor.execute(f"ALTER TABLE staff_directory {alter_clause}")
 
         db.commit()
     except Error:
@@ -3251,6 +3265,7 @@ def _get_staff_management_context(args):
     cursor = None
 
     try:
+        ensure_staff_directory_table()
         db = get_db()
         cursor = db.cursor(dictionary=True)
 
@@ -5573,6 +5588,7 @@ def staff_management_export_page(export_view):
     if session.get("role") != "super_admin":
         return "Access Denied"
 
+    ensure_staff_directory_table()
     normalized_export_view = (export_view or "").strip().lower()
     if normalized_export_view not in {"active", "resigned", "all"}:
         flash("Invalid staff export option", "warning")
@@ -5649,6 +5665,7 @@ def add_staff_member():
     db = None
     cursor = None
     try:
+        ensure_staff_directory_table()
         db = get_db()
         cursor = db.cursor(dictionary=True)
         payload, errors = _extract_staff_member_payload(cursor, request.form)
@@ -5700,6 +5717,7 @@ def edit_staff_member(staff_id):
     db = None
     cursor = None
     try:
+        ensure_staff_directory_table()
         db = get_db()
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT id, resigned_date FROM staff_directory WHERE id=%s", (staff_id,))
@@ -5773,6 +5791,7 @@ def delete_staff_member(staff_id):
     db = None
     cursor = None
     try:
+        ensure_staff_directory_table()
         db = get_db()
         cursor = db.cursor(dictionary=True)
         cursor.execute("DELETE FROM staff_directory WHERE id=%s", (staff_id,))
