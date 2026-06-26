@@ -2206,6 +2206,24 @@ def ensure_staff_directory_table():
             if not cursor.fetchone():
                 cursor.execute(f"ALTER TABLE staff_directory {alter_clause}")
 
+        staff_column_modifications = {
+            "staff_name": "MODIFY COLUMN staff_name VARCHAR(255) NOT NULL DEFAULT ''",
+            "contact_number": "MODIFY COLUMN contact_number VARCHAR(50) NOT NULL DEFAULT ''",
+            "branch_name": "MODIFY COLUMN branch_name VARCHAR(255) NOT NULL DEFAULT ''",
+            "salary": "MODIFY COLUMN salary DECIMAL(12,2) NOT NULL DEFAULT 0",
+            "esi": "MODIFY COLUMN esi DECIMAL(12,2) NOT NULL DEFAULT 0",
+            "pf": "MODIFY COLUMN pf DECIMAL(12,2) NOT NULL DEFAULT 0",
+            "room": "MODIFY COLUMN room DECIMAL(12,2) NOT NULL DEFAULT 0",
+            "rent": "MODIFY COLUMN rent DECIMAL(12,2) NOT NULL DEFAULT 0",
+            "joined_date": "MODIFY COLUMN joined_date DATE NULL",
+            "resigned_date": "MODIFY COLUMN resigned_date DATE NULL",
+        }
+        for alter_clause in staff_column_modifications.values():
+            try:
+                cursor.execute(f"ALTER TABLE staff_directory {alter_clause}")
+            except Error:
+                continue
+
         db.commit()
     except Error:
         pass
@@ -2842,7 +2860,11 @@ def _load_known_branches(cursor):
     for query in queries:
         try:
             cursor.execute(query)
-            branch_values.extend([str(row.get("branch_name") or "").strip() for row in cursor.fetchall()])
+            for row in cursor.fetchall():
+                if isinstance(row, dict):
+                    branch_values.append(str(row.get("branch_name") or "").strip())
+                else:
+                    branch_values.append(str((row[0] if row else "") or "").strip())
         except Error:
             continue
 
@@ -2855,6 +2877,12 @@ def _load_known_branches(cursor):
         seen.add(key)
         deduped.append(branch_name)
     return sorted(deduped, key=lambda value: value.upper())
+
+
+def _flash_staff_database_error(action_label, exc):
+    app.logger.exception("%s failed", action_label)
+    error_text = str(exc).strip() or exc.__class__.__name__
+    flash(f"{action_label}: {error_text}", "danger")
 
 
 def _resolve_known_branch(cursor, branch_name):
@@ -5699,7 +5727,7 @@ def add_staff_member():
     except Error as e:
         if db:
             db.rollback()
-        _flash_internal_error("Failed to add staff member", e)
+        _flash_staff_database_error("Failed to add staff member", e)
     finally:
         _safe_close(cursor, db)
 
@@ -5773,7 +5801,7 @@ def edit_staff_member(staff_id):
     except Error as e:
         if db:
             db.rollback()
-        _flash_internal_error("Failed to update staff member", e)
+        _flash_staff_database_error("Failed to update staff member", e)
     finally:
         _safe_close(cursor, db)
 
@@ -5800,7 +5828,7 @@ def delete_staff_member(staff_id):
     except Error as e:
         if db:
             db.rollback()
-        _flash_internal_error("Failed to delete staff member", e)
+        _flash_staff_database_error("Failed to delete staff member", e)
     finally:
         _safe_close(cursor, db)
 
