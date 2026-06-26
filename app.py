@@ -3380,7 +3380,7 @@ def _extract_staff_member_payload(cursor, form):
     contact_number = (form.get("contact_number") or "").strip()
     branch_name = (form.get("branch_name") or "").strip()
     joined_date = _normalize_date_input(form.get("joined_date", ""))
-    resigned_date = _normalize_date_input(form.get("resigned_date", ""))
+    resigned_date = _normalize_date_input(form.get("resigned_date", "")) or None
 
     payload = {
         "staff_name": staff_name,
