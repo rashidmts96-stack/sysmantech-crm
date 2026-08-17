@@ -2787,6 +2787,107 @@ def _iter_revenue_entry_excel_rows(uploaded_file):
     raise ValueError("Please upload .xlsx or .csv")
 
 
+def _iter_engineer_revenue_excel_rows(uploaded_file):
+    """Parse .xlsx/.csv for engineer revenue bulk upload.
+    Columns: Engineer, Branch, Sales Revenue, Service Charges, Total Revenue (optional), Employee Code (optional)
+    """
+    filename = secure_filename(uploaded_file.filename or "")
+    ext = os.path.splitext(filename)[1].lower()
+
+    engineer_aliases = ["engineer", "engineer_name", "engineername", "staff", "name"]
+    branch_aliases = ["branch", "branchname"]
+    sales_aliases = ["salesrevenue", "sales_revenue", "sales", "sales_profit"]
+    service_aliases = ["servicecharges", "service_charges", "service", "servicecharge"]
+    total_aliases = ["totalrevenue", "total_revenue", "total", "total_profit"]
+    employee_code_aliases = ["employeecode", "employee_code", "code", "empcode"]
+
+    def _hkey(s):
+        return re.sub(r'[^a-z0-9]+', '', str(s or '').strip().lower())
+
+    def _build_map(headers):
+        m = {}
+        for i, h in enumerate(headers or []):
+            k = _hkey(h)
+            if k and k not in m:
+                m[k] = i
+        return m
+
+    def _pick(m, aliases):
+        for a in aliases:
+            if a in m:
+                return m[a]
+        return None
+
+    def _cell(row, idx):
+        if idx is None or idx >= len(row):
+            return ""
+        return row[idx] if row[idx] is not None else ""
+
+    def _process_rows(rows_iter, header_map):
+        idx_engineer = _pick(header_map, engineer_aliases)
+        idx_branch = _pick(header_map, branch_aliases)
+        idx_sales = _pick(header_map, sales_aliases)
+        idx_service = _pick(header_map, service_aliases)
+        idx_total = _pick(header_map, total_aliases)
+        idx_employee_code = _pick(header_map, employee_code_aliases)
+
+        if idx_engineer is None:
+            raise ValueError("Missing required column: Engineer")
+        if idx_branch is None:
+            raise ValueError("Missing required column: Branch")
+        if idx_sales is None and idx_service is None and idx_total is None:
+            raise ValueError("Missing amount columns. Need: Sales Revenue, Service Charges, or Total Revenue")
+
+        for row_number, row in rows_iter:
+            row = list(row) if not isinstance(row, list) else row
+            engineer = str(_cell(row, idx_engineer) or "").strip()
+            branch = str(_cell(row, idx_branch) or "").strip()
+            if not engineer or not branch:
+                continue
+            first = engineer.lower().replace(" ", "")
+            if first in ["engineer", "engineername", "staff", "name"]:
+                continue  # skip header row if included in data
+            sales = _parse_money(_cell(row, idx_sales)) if idx_sales is not None else 0.0
+            service = _parse_money(_cell(row, idx_service)) if idx_service is not None else 0.0
+            total = _parse_money(_cell(row, idx_total)) if idx_total is not None else 0.0
+            if total <= 0:
+                total = sales + service
+            employee_code = str(_cell(row, idx_employee_code) or "").strip() if idx_employee_code is not None else ""
+            yield row_number, engineer, branch, max(sales, 0), max(service, 0), max(total, 0), employee_code
+
+    if ext == ".csv":
+        raw_bytes = uploaded_file.stream.read()
+        try:
+            text = raw_bytes.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            text = raw_bytes.decode("utf-8", errors="ignore")
+        reader = csv.reader(io.StringIO(text))
+        headers = next(reader, None)
+        if not headers:
+            raise ValueError("The file is empty")
+        header_map = _build_map(headers)
+        yield from _process_rows(enumerate(reader, start=2), header_map)
+        return
+
+    if ext == ".xlsx":
+        if load_workbook is None:
+            raise ValueError("openpyxl not installed. Use CSV or install openpyxl.")
+        workbook = load_workbook(uploaded_file, read_only=True, data_only=True)
+        try:
+            sheet = workbook.active
+            rows_iter = sheet.iter_rows(values_only=True)
+            headers = next(rows_iter, None)
+            if not headers:
+                raise ValueError("The file is empty")
+            header_map = _build_map(headers)
+            yield from _process_rows(enumerate(rows_iter, start=2), header_map)
+        finally:
+            workbook.close()
+        return
+
+    raise ValueError("Please upload .xlsx or .csv")
+
+
 def _extract_used_spares_from_form(form):
     """Parse repeated spare rows and return clean [{'spare_name','amount'}]."""
     spare_names = form.getlist("used_spare_name[]")
@@ -6494,6 +6595,105 @@ def upload_revenue_entry():
         _safe_close(cursor, db)
 
     return redirect(f"/revenue-reports?from_date={from_date}&to_date={to_date}")
+
+
+@app.route("/upload-engineer-revenue", methods=["POST"])
+def upload_engineer_revenue():
+    if "username" not in session:
+        return redirect("/login")
+    if session.get("role") not in ["super_admin", "admin"]:
+        return "Access Denied"
+
+    session_branch = (session.get("branch") or "").strip()
+    has_global_scope = session_branch.upper() == "ALL"
+
+    entry_date = _normalize_date_input(request.form.get("upload_date", ""))
+    if not entry_date:
+        flash("Entry date is required", "danger")
+        return redirect("/revenue-entry")
+
+    upload = request.files.get("engineer_revenue_file")
+    if not upload or not (upload.filename or "").strip():
+        flash("Choose an Excel or CSV file", "danger")
+        return redirect("/revenue-entry")
+
+    # Check if date is locked
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        cursor.execute(
+            "SELECT COUNT(*) FROM revenue_entry_period_locks WHERE from_date <= %s AND to_date >= %s",
+            (entry_date, entry_date),
+        )
+        if cursor.fetchone()[0] > 0:
+            flash(f"Date {entry_date} is within a locked period. Unlock it first.", "danger")
+            return redirect("/revenue-entry")
+    finally:
+        _safe_close(cursor, db)
+
+    try:
+        parsed_rows = list(_iter_engineer_revenue_excel_rows(upload))
+    except ValueError as e:
+        _flash_internal_error("Could not read engineer revenue file", e)
+        return redirect("/revenue-entry")
+    except Exception as e:
+        _flash_internal_error("Could not read engineer revenue file", e)
+        return redirect("/revenue-entry")
+
+    if not parsed_rows:
+        flash("No valid data rows found in file", "warning")
+        return redirect("/revenue-entry")
+
+    db = get_db()
+    cursor = db.cursor()
+    saved = skipped = 0
+    error_samples = []
+    try:
+        db2 = get_db()
+        c2 = db2.cursor(dictionary=True)
+        valid_branch_map = {b.upper(): b for b in _load_known_branches(c2)}
+        c2.close()
+        db2.close()
+
+        for row_number, engineer, branch, sales, service, total, employee_code in parsed_rows:
+            normalized_branch = valid_branch_map.get(branch.strip().upper())
+            if not normalized_branch:
+                skipped += 1
+                if len(error_samples) < 5:
+                    error_samples.append(f"Row {row_number}: unknown branch '{branch}'")
+                continue
+            if not has_global_scope and normalized_branch != session_branch:
+                skipped += 1
+                if len(error_samples) < 5:
+                    error_samples.append(f"Row {row_number}: branch '{branch}' is outside your scope")
+                continue
+
+            cursor.execute(
+                """
+                INSERT INTO engineer_revenue_entries
+                    (entry_date, engineer_name, employee_code, branch_name, sales_revenue, service_charges, total_revenue, source_type, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 'manual', %s)
+                ON DUPLICATE KEY UPDATE
+                    sales_revenue=VALUES(sales_revenue),
+                    service_charges=VALUES(service_charges),
+                    total_revenue=VALUES(total_revenue),
+                    created_by=VALUES(created_by)
+                """,
+                (entry_date, engineer.strip(), employee_code, normalized_branch, 
+                 round(sales, 2), round(service, 2), round(total, 2), session.get("username")),
+            )
+            saved += 1
+
+        db.commit()
+        flash(f"Engineer revenue upload complete: {saved} saved, {skipped} skipped", "success")
+        for msg in error_samples:
+            flash(msg, "warning")
+    except Error as e:
+        _flash_internal_error("Engineer revenue upload failed", e)
+    finally:
+        _safe_close(cursor, db)
+
+    return redirect(f"/revenue-entry?from_date={entry_date}&to_date={entry_date}")
 
 
 @app.route("/lock-revenue-entry-period", methods=["POST"])

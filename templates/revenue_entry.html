@@ -107,6 +107,31 @@ body { background: #f6f8fb; }
     {% endfor %}
   </datalist>
 
+  <div class="card mb-3">
+    <div class="card-header bg-info">
+      <strong>Upload Engineer Revenue (Excel/CSV)</strong>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="/upload-engineer-revenue" enctype="multipart/form-data">
+        <div class="row g-2 mb-3">
+          <div class="col-md-4">
+            <label class="form-label">Entry Date</label>
+            <input type="date" name="upload_date" class="form-control" value="{{ default_entry_date }}" required>
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">Excel or CSV File</label>
+            <input type="file" name="engineer_revenue_file" class="form-control" accept=".xlsx,.xls,.csv" required>
+          </div>
+        </div>
+        <div class="alert alert-secondary small">
+          <strong>File Format Required:</strong> Columns should include Engineer, Branch, Sales Revenue, Service Charges
+          (Total Revenue and Employee Code are optional). First row must be headers.
+        </div>
+        <button type="submit" class="btn btn-info">Upload Engineer Revenue</button>
+      </form>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
       <span class="fw-semibold">Revenue Entries | Count: {{ (rows|length) if rows else 0 }}</span>
