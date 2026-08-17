@@ -3212,6 +3212,8 @@ def ensure_engineer_revenue_entries_table():
 
 def _fetch_staff_ranking_rows(cursor, job_where_sql, job_params, from_date, to_date):
     start_dt, end_dt = _build_report_datetime_bounds(from_date, to_date)
+    success_pattern = "%success%"
+    failed_pattern = "%failed%"
     cursor.execute(
         f"""
         SELECT
@@ -3219,8 +3221,8 @@ def _fetch_staff_ranking_rows(cursor, job_where_sql, job_params, from_date, to_d
             COALESCE(TRIM(branch_name), 'Unknown') AS branch_name,
             COUNT(*) AS total_calls,
             SUM(CASE WHEN (COALESCE(TRIM(status), '') <> 'Closed' AND (closure_status IS NULL OR TRIM(closure_status) = '')) THEN 1 ELSE 0 END) AS open_calls,
-            SUM(CASE WHEN (LOWER(COALESCE(closure_status, '')) LIKE '%success%' OR (LOWER(COALESCE(status, '')) = 'closed' AND LOWER(COALESCE(closure_status, '')) NOT LIKE '%failed%')) THEN 1 ELSE 0 END) AS closed_success,
-            SUM(CASE WHEN LOWER(COALESCE(closure_status, '')) LIKE '%failed%' THEN 1 ELSE 0 END) AS closed_failed
+            SUM(CASE WHEN (LOWER(COALESCE(closure_status, '')) LIKE %s OR (LOWER(COALESCE(status, '')) = 'closed' AND LOWER(COALESCE(closure_status, '')) NOT LIKE %s)) THEN 1 ELSE 0 END) AS closed_success,
+            SUM(CASE WHEN LOWER(COALESCE(closure_status, '')) LIKE %s THEN 1 ELSE 0 END) AS closed_failed
         FROM jobs
         WHERE {job_where_sql}
           AND created_at >= %s
@@ -3228,7 +3230,7 @@ def _fetch_staff_ranking_rows(cursor, job_where_sql, job_params, from_date, to_d
         GROUP BY COALESCE(TRIM(assigned_engineer), 'Unassigned'), COALESCE(TRIM(branch_name), 'Unknown')
         ORDER BY closed_success DESC, total_calls DESC, engineer_name ASC, branch_name ASC
         """,
-        (*job_params, start_dt, end_dt),
+        (success_pattern, failed_pattern, failed_pattern, *job_params, start_dt, end_dt),
     )
     rows = []
     for row in cursor.fetchall():
