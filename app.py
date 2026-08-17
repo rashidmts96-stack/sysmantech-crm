@@ -3177,6 +3177,162 @@ def _merge_report_summary_rows(job_rows, syscare_rows, key_name):
     return sorted(merged.values(), key=lambda item: str(item.get(key_name) or "").upper())
 
 
+def ensure_engineer_revenue_entries_table():
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS engineer_revenue_entries (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                entry_date DATE NOT NULL,
+                engineer_name VARCHAR(255) NOT NULL,
+                employee_code VARCHAR(255) DEFAULT '',
+                branch_name VARCHAR(255) NOT NULL,
+                sales_revenue DECIMAL(12,2) NOT NULL DEFAULT 0,
+                service_charges DECIMAL(12,2) NOT NULL DEFAULT 0,
+                total_revenue DECIMAL(12,2) NOT NULL DEFAULT 0,
+                source_type VARCHAR(64) DEFAULT 'manual',
+                created_by VARCHAR(255) DEFAULT '',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY idx_engineer_revenue_unique (entry_date, engineer_name, branch_name, employee_code),
+                INDEX idx_engineer_revenue_date (entry_date),
+                INDEX idx_engineer_revenue_engineer (engineer_name),
+                INDEX idx_engineer_revenue_branch (branch_name)
+            ) ENGINE=InnoDB
+            """
+        )
+        db.commit()
+    except Exception:
+        pass
+    finally:
+        _safe_close(cursor, db)
+
+
+def _fetch_staff_ranking_rows(cursor, job_where_sql, job_params, from_date, to_date):
+    start_dt, end_dt = _build_report_datetime_bounds(from_date, to_date)
+    cursor.execute(
+        f"""
+        SELECT
+            COALESCE(TRIM(assigned_engineer), 'Unassigned') AS engineer_name,
+            COALESCE(TRIM(branch_name), 'Unknown') AS branch_name,
+            COUNT(*) AS total_calls,
+            SUM(CASE WHEN (COALESCE(TRIM(status), '') <> 'Closed' AND (closure_status IS NULL OR TRIM(closure_status) = '')) THEN 1 ELSE 0 END) AS open_calls,
+            SUM(CASE WHEN (LOWER(COALESCE(closure_status, '')) LIKE '%success%' OR (LOWER(COALESCE(status, '')) = 'closed' AND LOWER(COALESCE(closure_status, '')) NOT LIKE '%failed%')) THEN 1 ELSE 0 END) AS closed_success,
+            SUM(CASE WHEN LOWER(COALESCE(closure_status, '')) LIKE '%failed%' THEN 1 ELSE 0 END) AS closed_failed
+        FROM jobs
+        WHERE {job_where_sql}
+          AND created_at >= %s
+          AND created_at <= %s
+        GROUP BY COALESCE(TRIM(assigned_engineer), 'Unassigned'), COALESCE(TRIM(branch_name), 'Unknown')
+        ORDER BY closed_success DESC, total_calls DESC, engineer_name ASC, branch_name ASC
+        """,
+        (*job_params, start_dt, end_dt),
+    )
+    rows = []
+    for row in cursor.fetchall():
+        rows.append(
+            {
+                "engineer_name": str(row.get("engineer_name") or "Unassigned").strip() or "Unassigned",
+                "employee_code": "",
+                "branch_name": str(row.get("branch_name") or "Unknown").strip() or "Unknown",
+                "total_calls": int(row.get("total_calls") or 0),
+                "open_calls": int(row.get("open_calls") or 0),
+                "closed_success": int(row.get("closed_success") or 0),
+                "closed_failed": int(row.get("closed_failed") or 0),
+                "sales_revenue": 0.0,
+                "service_charges": 0.0,
+                "total_revenue": 0.0,
+            }
+        )
+    return rows
+
+
+def _fetch_staff_revenue_rows(cursor, filter_branch, filter_engineer, from_date, to_date):
+    where_clauses = ["1=1"]
+    params = []
+
+    if filter_branch:
+        where_clauses.append("branch_name=%s")
+        params.append(filter_branch)
+    if filter_engineer:
+        where_clauses.append("engineer_name=%s")
+        params.append(filter_engineer)
+
+    where_clauses.append("entry_date >= %s")
+    params.append(from_date)
+    where_clauses.append("entry_date <= %s")
+    params.append(to_date)
+
+    cursor.execute(
+        f"""
+        SELECT
+            COALESCE(TRIM(engineer_name), 'Unassigned') AS engineer_name,
+            COALESCE(TRIM(branch_name), 'Unknown') AS branch_name,
+            COALESCE(SUM(COALESCE(sales_revenue, 0)), 0) AS sales_revenue,
+            COALESCE(SUM(COALESCE(service_charges, 0)), 0) AS service_charges,
+            COALESCE(SUM(COALESCE(total_revenue, 0)), 0) AS total_revenue
+        FROM engineer_revenue_entries
+        WHERE {' AND '.join(where_clauses)}
+        GROUP BY COALESCE(TRIM(engineer_name), 'Unassigned'), COALESCE(TRIM(branch_name), 'Unknown')
+        ORDER BY total_revenue DESC, engineer_name ASC, branch_name ASC
+        """,
+        tuple(params),
+    )
+    rows = []
+    for row in cursor.fetchall():
+        rows.append(
+            {
+                "engineer_name": str(row.get("engineer_name") or "Unassigned").strip() or "Unassigned",
+                "employee_code": "",
+                "branch_name": str(row.get("branch_name") or "Unknown").strip() or "Unknown",
+                "sales_revenue": round(float(row.get("sales_revenue") or 0), 2),
+                "service_charges": round(float(row.get("service_charges") or 0), 2),
+                "total_revenue": round(float(row.get("total_revenue") or 0), 2),
+            }
+        )
+    return rows
+
+
+def _merge_staff_rank_rows(call_rows, revenue_rows):
+    revenue_map = {}
+    for row in revenue_rows or []:
+        key = (str(row.get("engineer_name") or "Unassigned").strip() or "Unassigned", str(row.get("branch_name") or "Unknown").strip() or "Unknown")
+        revenue_map[key] = row
+
+    merged = []
+    for row in call_rows or []:
+        key = (row.get("engineer_name"), row.get("branch_name"))
+        revenue_row = revenue_map.get(key, {})
+        merged_row = dict(row)
+        merged_row["sales_revenue"] = round(float(revenue_row.get("sales_revenue") or 0), 2)
+        merged_row["service_charges"] = round(float(revenue_row.get("service_charges") or 0), 2)
+        merged_row["total_revenue"] = round(float(revenue_row.get("total_revenue") or 0), 2)
+        merged.append(merged_row)
+
+    for row in revenue_rows or []:
+        key = (str(row.get("engineer_name") or "Unassigned").strip() or "Unassigned", str(row.get("branch_name") or "Unknown").strip() or "Unknown")
+        if any(item.get("engineer_name") == key[0] and item.get("branch_name") == key[1] for item in merged):
+            continue
+        merged.append(
+            {
+                "engineer_name": key[0],
+                "employee_code": "",
+                "branch_name": key[1],
+                "total_calls": 0,
+                "open_calls": 0,
+                "closed_success": 0,
+                "closed_failed": 0,
+                "sales_revenue": round(float(row.get("sales_revenue") or 0), 2),
+                "service_charges": round(float(row.get("service_charges") or 0), 2),
+                "total_revenue": round(float(row.get("total_revenue") or 0), 2),
+            }
+        )
+
+    return merged
+
+
 def _get_admin_reports_context(args, role, session_branch):
     db = None
     cursor = None
@@ -3265,6 +3421,40 @@ def _get_admin_reports_context(args, role, session_branch):
             syscare_membership_columns,
         )
 
+        staff_call_rows = _fetch_staff_ranking_rows(
+            cursor,
+            scope["job_where_sql"],
+            scope["job_params"],
+            from_date,
+            to_date,
+        )
+        staff_revenue_rows = _fetch_staff_revenue_rows(
+            cursor,
+            filter_branch,
+            filter_engineer,
+            from_date,
+            to_date,
+        )
+        staff_rank_rows = _merge_staff_rank_rows(staff_call_rows, staff_revenue_rows)
+        staff_closed_rank_rows = sorted(
+            staff_rank_rows,
+            key=lambda row: (
+                -(int(row.get("closed_success") or 0)),
+                -(int(row.get("total_calls") or 0)),
+                str(row.get("engineer_name") or "").upper(),
+                str(row.get("branch_name") or "").upper(),
+            ),
+        )
+        staff_revenue_rank_rows = sorted(
+            staff_rank_rows,
+            key=lambda row: (
+                -(float(row.get("total_revenue") or 0)),
+                -(float(row.get("sales_revenue") or 0)),
+                str(row.get("engineer_name") or "").upper(),
+                str(row.get("branch_name") or "").upper(),
+            ),
+        )
+
         return {
             "from_date": from_date,
             "to_date": to_date,
@@ -3283,6 +3473,8 @@ def _get_admin_reports_context(args, role, session_branch):
             "selected_syscare": selected_syscare,
             "branch_summary_rows": _merge_report_summary_rows(branch_job_rows, branch_syscare_rows, "branch_name"),
             "engineer_summary_rows": _merge_report_summary_rows(engineer_job_rows, engineer_syscare_rows, "engineer_name"),
+            "staff_closed_rank_rows": staff_closed_rank_rows,
+            "staff_revenue_rank_rows": staff_revenue_rank_rows,
         }
     finally:
         _safe_close(cursor, db)
@@ -3772,6 +3964,7 @@ def bootstrap_schema_safely():
         ensure_quotations_tables()
         ensure_sequence_counters_table()
         ensure_staff_directory_table()
+        ensure_engineer_revenue_entries_table()
         ensure_performance_indexes()
         ensure_job_status_logs_table()
     except Exception as e:
@@ -5525,7 +5718,7 @@ def admin_reports_export_page(export_type):
         return redirect("/dashboard")
 
     normalized_export_type = (export_type or "").strip().lower()
-    if normalized_export_type not in {"snapshot", "branch", "engineer"}:
+    if normalized_export_type not in {"snapshot", "branch", "engineer", "staff-closed", "staff-revenue"}:
         flash("Invalid report export option", "warning")
         return redirect("/admin-reports")
 
@@ -5570,6 +5763,40 @@ def admin_reports_export_page(export_type):
                         row.get("syscare_count", 0),
                         row.get("syscare_amount", 0),
                         row.get("service_charge_total", 0),
+                    ]
+                )
+        elif normalized_export_type == "staff-closed":
+            writer.writerow(["Engineer", "Employee Code", "Branch", "Total", "Open", "Closed Success", "Closed Failed", "Sales Revenue", "Service Charges", "Total Revenue"])
+            for row in context.get("staff_closed_rank_rows", []):
+                writer.writerow(
+                    [
+                        row.get("engineer_name", ""),
+                        row.get("employee_code", ""),
+                        row.get("branch_name", ""),
+                        row.get("total_calls", 0),
+                        row.get("open_calls", 0),
+                        row.get("closed_success", 0),
+                        row.get("closed_failed", 0),
+                        row.get("sales_revenue", 0),
+                        row.get("service_charges", 0),
+                        row.get("total_revenue", 0),
+                    ]
+                )
+        elif normalized_export_type == "staff-revenue":
+            writer.writerow(["Engineer", "Employee Code", "Branch", "Total", "Open", "Closed Success", "Closed Failed", "Sales Revenue", "Service Charges", "Total Revenue"])
+            for row in context.get("staff_revenue_rank_rows", []):
+                writer.writerow(
+                    [
+                        row.get("engineer_name", ""),
+                        row.get("employee_code", ""),
+                        row.get("branch_name", ""),
+                        row.get("total_calls", 0),
+                        row.get("open_calls", 0),
+                        row.get("closed_success", 0),
+                        row.get("closed_failed", 0),
+                        row.get("sales_revenue", 0),
+                        row.get("service_charges", 0),
+                        row.get("total_revenue", 0),
                     ]
                 )
         else:

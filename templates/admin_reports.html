@@ -130,6 +130,8 @@ body { background: #f6f8fb; }
       <a class="btn btn-outline-success btn-sm" href="/admin-reports/export/snapshot?from_date={{ from_date|urlencode }}&to_date={{ to_date|urlencode }}&filter_branch={{ filter_branch|urlencode }}&filter_engineer={{ filter_engineer|urlencode }}">Export Snapshot CSV</a>
       <a class="btn btn-outline-success btn-sm" href="/admin-reports/export/branch?from_date={{ from_date|urlencode }}&to_date={{ to_date|urlencode }}&filter_branch={{ filter_branch|urlencode }}&filter_engineer={{ filter_engineer|urlencode }}">Export Branch CSV</a>
       <a class="btn btn-outline-success btn-sm" href="/admin-reports/export/engineer?from_date={{ from_date|urlencode }}&to_date={{ to_date|urlencode }}&filter_branch={{ filter_branch|urlencode }}&filter_engineer={{ filter_engineer|urlencode }}">Export Engineer CSV</a>
+      <a class="btn btn-outline-primary btn-sm" href="/admin-reports/export/staff-closed?from_date={{ from_date|urlencode }}&to_date={{ to_date|urlencode }}&filter_branch={{ filter_branch|urlencode }}&filter_engineer={{ filter_engineer|urlencode }}">Export Closed Rank CSV</a>
+      <a class="btn btn-outline-primary btn-sm" href="/admin-reports/export/staff-revenue?from_date={{ from_date|urlencode }}&to_date={{ to_date|urlencode }}&filter_branch={{ filter_branch|urlencode }}&filter_engineer={{ filter_engineer|urlencode }}">Export Revenue Rank CSV</a>
     </div>
     <div class="small text-muted mt-2">
       Selected range: {{ from_date }} to {{ to_date }} | Branch: {{ filter_branch or ('All Branches' if has_global_scope else (branch_options[0] if branch_options else 'Current Branch')) }} | Engineer: {{ filter_engineer or 'All Engineers' }}
@@ -193,6 +195,99 @@ body { background: #f6f8fb; }
         <div class="col-md-3"><strong>Closed Calls:</strong> {{ selected_jobs.closed_calls }}</div>
         <div class="col-md-3"><strong>SYSCARE:</strong> {{ selected_syscare.syscare_count }} | {{ '%.2f'|format(selected_syscare.syscare_amount|float) }}</div>
         <div class="col-md-3"><strong>Service Charges:</strong> {{ '%.2f'|format(selected_jobs.service_charge_total|float) }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-xl-6">
+      <div class="card h-100">
+        <div class="card-header fw-semibold">Staff Performance Ranking - Most Closed First</div>
+        <div class="card-body p-0">
+          <div class="table-wrap">
+            <table class="table table-sm table-bordered table-hover mb-0">
+              <thead class="table-dark">
+                <tr>
+                  <th>Engineer</th>
+                  <th>Employee Code</th>
+                  <th>Branch</th>
+                  <th>Total</th>
+                  <th>Open</th>
+                  <th>Closed Success</th>
+                  <th>Closed Failed</th>
+                  <th>Sales Revenue</th>
+                  <th>Service Charges</th>
+                  <th>Total Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if staff_closed_rank_rows %}
+                  {% for row in staff_closed_rank_rows %}
+                  <tr>
+                    <td>{{ row.engineer_name }}</td>
+                    <td>{{ row.employee_code or '' }}</td>
+                    <td>{{ row.branch_name }}</td>
+                    <td>{{ row.total_calls }}</td>
+                    <td>{{ row.open_calls }}</td>
+                    <td>{{ row.closed_success }}</td>
+                    <td>{{ row.closed_failed }}</td>
+                    <td>{{ '%.2f'|format(row.sales_revenue|float) }}</td>
+                    <td>{{ '%.2f'|format(row.service_charges|float) }}</td>
+                    <td>{{ '%.2f'|format(row.total_revenue|float) }}</td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr><td colspan="10" class="text-center text-muted">No staff ranking data for the selected filters</td></tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-6">
+      <div class="card h-100">
+        <div class="card-header fw-semibold">Staff Revenue Ranking - Highest Total Profit First</div>
+        <div class="card-body p-0">
+          <div class="table-wrap">
+            <table class="table table-sm table-bordered table-hover mb-0">
+              <thead class="table-dark">
+                <tr>
+                  <th>Engineer</th>
+                  <th>Employee Code</th>
+                  <th>Branch</th>
+                  <th>Total</th>
+                  <th>Open</th>
+                  <th>Closed Success</th>
+                  <th>Closed Failed</th>
+                  <th>Sales Revenue</th>
+                  <th>Service Charges</th>
+                  <th>Total Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if staff_revenue_rank_rows %}
+                  {% for row in staff_revenue_rank_rows %}
+                  <tr>
+                    <td>{{ row.engineer_name }}</td>
+                    <td>{{ row.employee_code or '' }}</td>
+                    <td>{{ row.branch_name }}</td>
+                    <td>{{ row.total_calls }}</td>
+                    <td>{{ row.open_calls }}</td>
+                    <td>{{ row.closed_success }}</td>
+                    <td>{{ row.closed_failed }}</td>
+                    <td>{{ '%.2f'|format(row.sales_revenue|float) }}</td>
+                    <td>{{ '%.2f'|format(row.service_charges|float) }}</td>
+                    <td>{{ '%.2f'|format(row.total_revenue|float) }}</td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr><td colspan="10" class="text-center text-muted">No staff revenue ranking data for the selected filters</td></tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </div>
