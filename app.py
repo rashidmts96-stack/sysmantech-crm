@@ -2789,17 +2789,20 @@ def _iter_revenue_entry_excel_rows(uploaded_file):
 
 def _iter_engineer_revenue_excel_rows(uploaded_file):
     """Parse .xlsx/.csv for engineer revenue bulk upload.
-    Columns: Engineer, Branch, Sales Revenue, Service Charges, Total Revenue (optional), Employee Code (optional)
+    Expected columns: Engineer, Employee Code, Branch, Sales Revenue, Service Charges, Total Revenue (optional)
+    Extra columns (Total, Open, Closed Success, Closed Failed) are ignored.
     """
     filename = secure_filename(uploaded_file.filename or "")
     ext = os.path.splitext(filename)[1].lower()
 
     engineer_aliases = ["engineer", "engineer_name", "engineername", "staff", "name"]
+    employee_code_aliases = ["employeecode", "employee_code", "code", "empcode"]
     branch_aliases = ["branch", "branchname"]
     sales_aliases = ["salesrevenue", "sales_revenue", "sales", "sales_profit"]
     service_aliases = ["servicecharges", "service_charges", "service", "servicecharge"]
     total_aliases = ["totalrevenue", "total_revenue", "total", "total_profit"]
-    employee_code_aliases = ["employeecode", "employee_code", "code", "empcode"]
+    # These columns are ignored (they come from job data, not revenue data)
+    ignored_aliases = ["total", "open", "closedsuccess", "closed_success", "closedfailed", "closed_failed"]
 
     def _hkey(s):
         return re.sub(r'[^a-z0-9]+', '', str(s or '').strip().lower())
@@ -2825,11 +2828,11 @@ def _iter_engineer_revenue_excel_rows(uploaded_file):
 
     def _process_rows(rows_iter, header_map):
         idx_engineer = _pick(header_map, engineer_aliases)
+        idx_employee_code = _pick(header_map, employee_code_aliases)
         idx_branch = _pick(header_map, branch_aliases)
         idx_sales = _pick(header_map, sales_aliases)
         idx_service = _pick(header_map, service_aliases)
         idx_total = _pick(header_map, total_aliases)
-        idx_employee_code = _pick(header_map, employee_code_aliases)
 
         if idx_engineer is None:
             raise ValueError("Missing required column: Engineer")

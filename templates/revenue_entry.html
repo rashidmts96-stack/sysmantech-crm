@@ -124,8 +124,10 @@ body { background: #f6f8fb; }
           </div>
         </div>
         <div class="alert alert-secondary small">
-          <strong>File Format Required:</strong> Columns should include Engineer, Branch, Sales Revenue, Service Charges
-          (Total Revenue and Employee Code are optional). First row must be headers.
+          <strong>Required Columns:</strong> Engineer, Branch, Sales Revenue, Service Charges<br>
+          <strong>Optional Columns:</strong> Employee Code, Total Revenue (auto-calculated if blank)<br>
+          <strong>Ignored Columns:</strong> Total, Open, Closed Success, Closed Failed (come from job data)<br>
+          <strong>Example:</strong> Engineer | Employee Code | Branch | Sales Revenue | Service Charges | Total Revenue
         </div>
         <button type="submit" class="btn btn-info">Upload Engineer Revenue</button>
       </form>
