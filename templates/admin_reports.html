@@ -199,6 +199,28 @@ body { background: #f6f8fb; }
     </div>
   </div>
 
+  <div class="card mb-4 bg-light">
+    <div class="card-header bg-info fw-semibold">Upload Engineer Revenue Data</div>
+    <div class="card-body">
+      <form method="POST" action="/upload-engineer-revenue" enctype="multipart/form-data" class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label mb-1">Entry Date</label>
+          <input type="date" name="upload_date" class="form-control form-control-sm" value="{{ from_date }}" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label mb-1">Excel or CSV File (Engineer | Employee Code | Branch | Sales Revenue | Service Charges)</label>
+          <input type="file" name="engineer_revenue_file" class="form-control form-control-sm" accept=".xlsx,.xls,.csv" required>
+        </div>
+        <div class="col-md-3">
+          <button type="submit" class="btn btn-info btn-sm w-100">Upload Revenue</button>
+        </div>
+      </form>
+      <div class="alert alert-secondary small mt-2 mb-0">
+        <strong>Quick Format:</strong> You can export the Closed Rank CSV above, fill in the Sales Revenue & Service Charges columns, and upload directly.
+      </div>
+    </div>
+  </div>
+
   <div class="row g-3 mb-4">
     <div class="col-xl-6">
       <div class="card h-100">
