@@ -855,6 +855,7 @@ def register_syscare_routes(app, deps):
             reminder_filter = (request.args.get("reminder") or "").strip()
             if reminder_filter not in ("six_month", "one_year"):
                 reminder_filter = ""
+            requested_tab = (request.args.get("tab") or "").strip()
 
             if reminder_filter:
                 records_where = "1=1"
@@ -1066,7 +1067,11 @@ def register_syscare_routes(app, deps):
                 branch_targets_map=branch_targets_map,
                 can_manage=can_manage,
                 can_create=can_create,
-                active_syscare_tab=reminder_filter if reminder_filter else ("records" if search_q or filter_branch_rec or filter_incharge_rec else "dashboard"),
+                active_syscare_tab=(
+                    reminder_filter
+                    or (requested_tab if requested_tab in ("records", "six_month", "one_year") else "")
+                    or ("records" if search_q or filter_branch_rec or filter_incharge_rec else "dashboard")
+                ),
                 **monthly_chart_context,
             )
 

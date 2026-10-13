@@ -428,13 +428,13 @@ body {
 <button class="nav-link" id="branch-targets-tab" data-bs-toggle="tab" data-bs-target="#branch-targets-pane" type="button" role="tab" aria-controls="branch-targets-pane" aria-selected="false">Branch Targets</button>
 </li>
 <li class="nav-item" role="presentation">
-<a class="nav-link {% if active_syscare_tab == 'records' %}active{% endif %}" id="records-tab" href="/syscare?month={{ selected_month }}" role="tab" aria-selected="{{ 'true' if active_syscare_tab == 'records' else 'false' }}">Records</a>
+<a class="nav-link {% if active_syscare_tab == 'records' %}active{% endif %}" id="records-tab" href="/syscare?month={{ selected_month }}&tab=records" role="tab" aria-selected="{{ 'true' if active_syscare_tab == 'records' else 'false' }}">Records</a>
 </li>
 <li class="nav-item" role="presentation">
-<a class="nav-link {% if active_syscare_tab == 'six_month' %}active{% endif %}" id="six-month-tab" href="/syscare?month={{ selected_month }}&reminder=six_month" role="tab" aria-selected="{{ 'true' if active_syscare_tab == 'six_month' else 'false' }}">6 Month Due <span class="badge text-bg-light ms-1">{{ six_month_pending_count }}</span></a>
+<a class="nav-link {% if active_syscare_tab == 'six_month' %}active{% endif %}" id="six-month-tab" href="/syscare?month={{ selected_month }}&reminder=six_month&tab=six_month" role="tab" aria-selected="{{ 'true' if active_syscare_tab == 'six_month' else 'false' }}">6 Month Due <span class="badge text-bg-light ms-1">{{ six_month_pending_count }}</span></a>
 </li>
 <li class="nav-item" role="presentation">
-<a class="nav-link {% if active_syscare_tab == 'one_year' %}active{% endif %}" id="one-year-tab" href="/syscare?month={{ selected_month }}&reminder=one_year" role="tab" aria-selected="{{ 'true' if active_syscare_tab == 'one_year' else 'false' }}">1 Year Due <span class="badge text-bg-light ms-1">{{ one_year_pending_count }}</span></a>
+<a class="nav-link {% if active_syscare_tab == 'one_year' %}active{% endif %}" id="one-year-tab" href="/syscare?month={{ selected_month }}&reminder=one_year&tab=one_year" role="tab" aria-selected="{{ 'true' if active_syscare_tab == 'one_year' else 'false' }}">1 Year Due <span class="badge text-bg-light ms-1">{{ one_year_pending_count }}</span></a>
 </li>
 <li class="nav-item" role="presentation">
 <button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload-pane" type="button" role="tab" aria-controls="upload-pane" aria-selected="false">Upload</button>
