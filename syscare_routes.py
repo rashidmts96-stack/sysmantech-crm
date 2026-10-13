@@ -67,12 +67,11 @@ def register_syscare_routes(app, deps):
                 records_params.append(filter_incharge_rec)
             if reminder_filter == "six_month":
                 records_where += " AND record_date <= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)"
-                if has_six_month_reminder:
-                    records_where += " AND six_month_reminded_at IS NULL"
+                records_where += " AND COALESCE(six_month_status, 'pending_contact') NOT IN ('service_completed', 'service_not_needed')"
             elif reminder_filter == "one_year":
                 records_where += " AND COALESCE(expiry_date, DATE_ADD(record_date, INTERVAL 1 YEAR)) <= CURDATE()"
-                if has_one_year_reminder:
-                    records_where += " AND one_year_reminded_at IS NULL"
+                records_where += " AND COALESCE(one_year_status, 'pending_contact') NOT IN ('renewed', 'not_renewed')"
+                records_where += " AND (renewal_followup_date IS NULL OR renewal_followup_date <= CURDATE())"
             if search_q:
                 search_fields = ["customer_name", "syscare_id", "contact_number"]
                 if "model_serial" in membership_cols:
@@ -144,6 +143,20 @@ def register_syscare_routes(app, deps):
         "ALTER TABLE syscare_memberships ADD COLUMN is_manual TINYINT(1) NOT NULL DEFAULT 0",
         "ALTER TABLE syscare_memberships ADD COLUMN six_month_reminded_at DATETIME NULL",
         "ALTER TABLE syscare_memberships ADD COLUMN one_year_reminded_at DATETIME NULL",
+        "ALTER TABLE syscare_memberships ADD COLUMN six_month_status VARCHAR(50) NULL",
+        "ALTER TABLE syscare_memberships ADD COLUMN six_month_booked_date DATE NULL",
+        "ALTER TABLE syscare_memberships ADD COLUMN six_month_completed_at DATETIME NULL",
+        "ALTER TABLE syscare_memberships ADD COLUMN six_month_note TEXT NULL",
+        "ALTER TABLE syscare_memberships ADD COLUMN one_year_status VARCHAR(50) NULL",
+        "ALTER TABLE syscare_memberships ADD COLUMN one_year_booked_date DATE NULL",
+        "ALTER TABLE syscare_memberships ADD COLUMN one_year_service_completed_at DATETIME NULL",
+        "ALTER TABLE syscare_memberships ADD COLUMN renewal_status VARCHAR(50) NULL",
+        "ALTER TABLE syscare_memberships ADD COLUMN renewal_amount DECIMAL(12,2) NULL",
+        "ALTER TABLE syscare_memberships ADD COLUMN renewal_followup_date DATE NULL",
+        "ALTER TABLE syscare_memberships ADD COLUMN renewal_note TEXT NULL",
+        "ALTER TABLE syscare_memberships ADD COLUMN renewal_new_membership_id INT NULL",
+        "ALTER TABLE syscare_memberships ADD COLUMN renewal_new_syscare_id VARCHAR(100) NULL",
+        "ALTER TABLE syscare_memberships ADD COLUMN source_renewal_membership_id INT NULL",
     )
     syscare_membership_columns_cache = None
 
@@ -315,6 +328,36 @@ def register_syscare_routes(app, deps):
             return "/syscare"
         from urllib.parse import urlencode
         return "/syscare?" + urlencode(params)
+
+    def _workflow_status_label(value):
+        labels = {
+            "pending_contact": "Pending Contact",
+            "service_booked": "Service Booked",
+            "service_completed": "Service Completed",
+            "service_not_needed": "Service Not Needed",
+            "renewal_discussed": "Renewal Discussed",
+            "followup_later": "Follow-up Later",
+            "renewed": "Renewed",
+            "not_renewed": "Not Renewed",
+        }
+        return labels.get(value or "", "Pending Contact")
+
+    def _parse_form_date(name):
+        return _parse_date_any(request.form.get(name))
+
+    def _generate_syscare_id(cursor):
+        return str(
+            next_sequence_value(
+                cursor,
+                "syscare_memberships",
+                """
+                SELECT COALESCE(MAX(CAST(syscare_id AS UNSIGNED)), 5000) AS seed_value
+                FROM syscare_memberships
+                WHERE syscare_id IS NOT NULL
+                  AND syscare_id REGEXP '^[0-9]+$'
+                """,
+            )
+        )
 
     def _format_display_date(value):
         parsed = _parse_date_any(value)
@@ -819,12 +862,11 @@ def register_syscare_routes(app, deps):
                 records_params.append(filter_incharge_rec)
             if reminder_filter == "six_month":
                 records_where += " AND record_date <= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)"
-                if has_six_month_reminder:
-                    records_where += " AND six_month_reminded_at IS NULL"
+                records_where += " AND COALESCE(six_month_status, 'pending_contact') NOT IN ('service_completed', 'service_not_needed')"
             elif reminder_filter == "one_year":
                 records_where += " AND COALESCE(expiry_date, DATE_ADD(record_date, INTERVAL 1 YEAR)) <= CURDATE()"
-                if has_one_year_reminder:
-                    records_where += " AND one_year_reminded_at IS NULL"
+                records_where += " AND COALESCE(one_year_status, 'pending_contact') NOT IN ('renewed', 'not_renewed')"
+                records_where += " AND (renewal_followup_date IS NULL OR renewal_followup_date <= CURDATE())"
             if search_q:
                 search_fields = ["customer_name", "syscare_id", "contact_number"]
                 if "model_serial" in membership_cols:
@@ -875,7 +917,7 @@ def register_syscare_routes(app, deps):
                 FROM syscare_memberships
                 WHERE {reminder_count_where}
                   AND record_date <= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-                  AND {"six_month_reminded_at IS NULL" if has_six_month_reminder else "1=1"}
+                  AND COALESCE(six_month_status, 'pending_contact') NOT IN ('service_completed', 'service_not_needed')
                 """,
                 tuple(reminder_count_params),
             )
@@ -886,11 +928,39 @@ def register_syscare_routes(app, deps):
                 FROM syscare_memberships
                 WHERE {reminder_count_where}
                   AND COALESCE(expiry_date, DATE_ADD(record_date, INTERVAL 1 YEAR)) <= CURDATE()
-                  AND {"one_year_reminded_at IS NULL" if has_one_year_reminder else "1=1"}
+                  AND COALESCE(one_year_status, 'pending_contact') NOT IN ('renewed', 'not_renewed')
+                  AND (renewal_followup_date IS NULL OR renewal_followup_date <= CURDATE())
                 """,
                 tuple(reminder_count_params),
             )
             one_year_pending_count = int((cursor.fetchone() or {}).get("c") or 0)
+
+            cursor.execute(
+                f"""
+                SELECT
+                  COUNT(*) AS due_count,
+                  SUM(CASE WHEN one_year_status IN ('service_completed', 'renewal_discussed', 'followup_later', 'renewed', 'not_renewed') THEN 1 ELSE 0 END) AS service_completed,
+                  SUM(CASE WHEN one_year_status IN ('renewal_discussed', 'followup_later', 'renewed', 'not_renewed') THEN 1 ELSE 0 END) AS renewal_discussed,
+                  SUM(CASE WHEN one_year_status = 'renewed' THEN 1 ELSE 0 END) AS renewed,
+                  SUM(CASE WHEN one_year_status = 'not_renewed' THEN 1 ELSE 0 END) AS not_renewed
+                FROM syscare_memberships
+                WHERE {reminder_count_where}
+                  AND COALESCE(expiry_date, DATE_ADD(record_date, INTERVAL 1 YEAR)) <= CURDATE()
+                """,
+                tuple(reminder_count_params),
+            )
+            renewal_summary = cursor.fetchone() or {}
+            renewal_due_count = int(renewal_summary.get("due_count") or 0)
+            renewal_renewed_count = int(renewal_summary.get("renewed") or 0)
+            renewal_conversion_pct = round((renewal_renewed_count / renewal_due_count * 100), 1) if renewal_due_count else 0.0
+            renewal_summary.update({
+                "due_count": renewal_due_count,
+                "service_completed": int(renewal_summary.get("service_completed") or 0),
+                "renewal_discussed": int(renewal_summary.get("renewal_discussed") or 0),
+                "renewed": renewal_renewed_count,
+                "not_renewed": int(renewal_summary.get("not_renewed") or 0),
+                "conversion_pct": renewal_conversion_pct,
+            })
 
             cursor.execute(
                 """
@@ -902,7 +972,20 @@ def register_syscare_routes(app, deps):
                       incharge, amount, expiry_date,
                       {is_manual_expr} AS is_manual,
                       {six_month_reminded_expr} AS six_month_reminded_at,
-                      {one_year_reminded_expr} AS one_year_reminded_at
+                      {one_year_reminded_expr} AS one_year_reminded_at,
+                      six_month_status,
+                      six_month_booked_date,
+                      six_month_completed_at,
+                      six_month_note,
+                      one_year_status,
+                      one_year_booked_date,
+                      one_year_service_completed_at,
+                      renewal_status,
+                      renewal_amount,
+                      renewal_followup_date,
+                      renewal_note,
+                      renewal_new_membership_id,
+                      renewal_new_syscare_id
                 FROM syscare_memberships
                 WHERE {records_where}
                 ORDER BY record_date DESC, id DESC
@@ -932,13 +1015,16 @@ def register_syscare_routes(app, deps):
                 record["six_month_pending"] = (
                     six_month_due_date is not None
                     and six_month_due_date <= date.today()
-                    and not record.get("six_month_reminded_at")
+                    and (record.get("six_month_status") or "pending_contact") not in ("service_completed", "service_not_needed")
                 )
                 record["one_year_pending"] = (
                     one_year_due_date is not None
                     and one_year_due_date <= date.today()
-                    and not record.get("one_year_reminded_at")
+                    and (record.get("one_year_status") or "pending_contact") not in ("renewed", "not_renewed")
+                    and (not record.get("renewal_followup_date") or _parse_date_any(record.get("renewal_followup_date")) <= date.today())
                 )
+                record["six_month_status_label"] = _workflow_status_label(record.get("six_month_status") or "pending_contact")
+                record["one_year_status_label"] = _workflow_status_label(record.get("one_year_status") or "pending_contact")
 
             return render_template(
                 "syscare_dashboard.html",
@@ -961,13 +1047,14 @@ def register_syscare_routes(app, deps):
                 reminder_filter=reminder_filter,
                 six_month_pending_count=six_month_pending_count,
                 one_year_pending_count=one_year_pending_count,
+                renewal_summary=renewal_summary,
                 distinct_branches=distinct_branches,
                 distinct_incharges=distinct_incharges,
                 branch_stats=branch_stats,
                 branch_targets_map=branch_targets_map,
                 can_manage=can_manage,
                 can_create=can_create,
-                active_syscare_tab="records" if reminder_filter or search_q or filter_branch_rec or filter_incharge_rec else "dashboard",
+                active_syscare_tab=reminder_filter if reminder_filter else ("records" if search_q or filter_branch_rec or filter_incharge_rec else "dashboard"),
                 **monthly_chart_context,
             )
 
@@ -990,6 +1077,17 @@ def register_syscare_routes(app, deps):
             flash("Invalid reminder action.", "danger")
             return redirect(_reminder_return_url())
 
+        six_month_statuses = {"pending_contact", "service_booked", "service_completed", "service_not_needed"}
+        one_year_statuses = {
+            "pending_contact", "service_booked", "service_completed", "renewal_discussed",
+            "followup_later", "renewed", "not_renewed",
+        }
+        selected_status = (request.form.get("status") or "").strip()
+        if reminder_type == "six_month" and selected_status not in six_month_statuses:
+            selected_status = "pending_contact"
+        if reminder_type == "one_year" and selected_status not in one_year_statuses:
+            selected_status = "pending_contact"
+
         role = session.get("role")
         session_branch = (session.get("branch") or "").strip()
         has_global_scope = role in ["super_admin", "admin"] and session_branch.upper() == "ALL"
@@ -1001,15 +1099,19 @@ def register_syscare_routes(app, deps):
             db = get_db()
             cursor = db.cursor(dictionary=True)
             membership_cols = _get_syscare_membership_columns(cursor)
-            target_col = "six_month_reminded_at" if reminder_type == "six_month" else "one_year_reminded_at"
-            if target_col not in membership_cols:
-                _refresh_syscare_membership_columns(cursor)
-                membership_cols = _get_syscare_membership_columns(cursor)
-            if target_col not in membership_cols:
-                flash("Reminder status field is not ready. Please refresh and try again.", "warning")
+            required_cols = {"six_month_status", "one_year_status", "renewal_new_membership_id", "renewal_new_syscare_id"}
+            if not required_cols.issubset(membership_cols):
+                ensure_syscare_memberships_table()
+                membership_cols = _refresh_syscare_membership_columns(cursor)
+            if not required_cols.issubset(membership_cols):
+                flash("Reminder workflow fields are not ready. Please refresh and try again.", "warning")
                 return redirect(_reminder_return_url())
 
-            select_sql = "SELECT syscare_id, customer_name FROM syscare_memberships WHERE id = %s"
+            select_sql = """
+                SELECT *
+                FROM syscare_memberships
+                WHERE id = %s
+            """
             select_params = [entry_id]
             if branch_scope:
                 select_sql += " AND branch_name = %s"
@@ -1020,16 +1122,117 @@ def register_syscare_routes(app, deps):
                 flash("SYSCARE record not found.", "warning")
                 return redirect(_reminder_return_url())
 
-            update_sql = f"UPDATE syscare_memberships SET {target_col} = NOW() WHERE id = %s"
-            update_params = [entry_id]
+            now_expr = "NOW()"
+            if reminder_type == "six_month":
+                booked_date = _parse_form_date("booked_date")
+                note = (request.form.get("note") or "").strip()
+                updates = [
+                    "six_month_status = %s",
+                    "six_month_booked_date = %s",
+                    "six_month_note = %s",
+                ]
+                update_params = [
+                    selected_status,
+                    booked_date.strftime("%Y-%m-%d") if booked_date else None,
+                    note or None,
+                ]
+                if selected_status in ("service_completed", "service_not_needed"):
+                    updates.append(f"six_month_completed_at = COALESCE(six_month_completed_at, {now_expr})")
+                    updates.append(f"six_month_reminded_at = COALESCE(six_month_reminded_at, {now_expr})")
+                update_sql = f"UPDATE syscare_memberships SET {', '.join(updates)} WHERE id = %s"
+                update_params.append(entry_id)
+                if branch_scope:
+                    update_sql += " AND branch_name = %s"
+                    update_params.append(branch_scope)
+                cursor.execute(update_sql, tuple(update_params))
+                db.commit()
+                flash(f"6 month service status saved for SYSCARE ID {row.get('syscare_id')}.", "success")
+                return redirect(_reminder_return_url())
+
+            booked_date = _parse_form_date("booked_date")
+            renewal_date = _parse_form_date("renewal_date") or date.today()
+            followup_date = _parse_form_date("followup_date")
+            note = (request.form.get("note") or "").strip()
+            renewal_amount = _parse_money(request.form.get("renewal_amount"))
+            new_membership_id = row.get("renewal_new_membership_id")
+            new_syscare_id = row.get("renewal_new_syscare_id")
+
+            if selected_status == "renewed" and not new_membership_id:
+                syscare_id = _generate_syscare_id(cursor)
+                expiry_date = renewal_date + timedelta(days=364)
+                insert_cols = [
+                    "record_date", "syscare_id", "customer_name", "contact_number",
+                    "branch_name", "incharge", "amount", "expiry_date", "uploaded_by",
+                ]
+                insert_vals = [
+                    renewal_date.strftime("%Y-%m-%d"),
+                    syscare_id,
+                    row.get("customer_name"),
+                    row.get("contact_number"),
+                    row.get("branch_name"),
+                    row.get("incharge"),
+                    renewal_amount if renewal_amount > 0 else (row.get("amount") or 0),
+                    expiry_date.strftime("%Y-%m-%d"),
+                    session.get("username"),
+                ]
+                copy_cols = [
+                    "address", "mail_id", "model_serial", "product_model", "serial_number",
+                    "assigned_engineer", "is_manual",
+                ]
+                for col in copy_cols:
+                    if col in membership_cols:
+                        insert_cols.append(col)
+                        insert_vals.append(row.get(col) if col != "is_manual" else 1)
+                if "source_renewal_membership_id" in membership_cols:
+                    insert_cols.append("source_renewal_membership_id")
+                    insert_vals.append(entry_id)
+                columns_sql = ", ".join(insert_cols)
+                placeholders_sql = ", ".join(["%s"] * len(insert_vals))
+                cursor.execute(
+                    f"INSERT INTO syscare_memberships ({columns_sql}) VALUES ({placeholders_sql})",
+                    tuple(insert_vals),
+                )
+                new_membership_id = cursor.lastrowid
+                new_syscare_id = syscare_id
+
+            updates = [
+                "one_year_status = %s",
+                "renewal_status = %s",
+                "one_year_booked_date = %s",
+                "renewal_amount = %s",
+                "renewal_followup_date = %s",
+                "renewal_note = %s",
+            ]
+            update_params = [
+                selected_status,
+                selected_status,
+                booked_date.strftime("%Y-%m-%d") if booked_date else None,
+                renewal_amount if renewal_amount > 0 else None,
+                followup_date.strftime("%Y-%m-%d") if followup_date else None,
+                note or None,
+            ]
+            if selected_status in ("service_completed", "renewal_discussed", "followup_later", "renewed", "not_renewed"):
+                updates.append(f"one_year_service_completed_at = COALESCE(one_year_service_completed_at, {now_expr})")
+            if selected_status in ("renewed", "not_renewed"):
+                updates.append(f"one_year_reminded_at = COALESCE(one_year_reminded_at, {now_expr})")
+            if selected_status == "renewed":
+                updates.extend([
+                    "renewal_new_membership_id = %s",
+                    "renewal_new_syscare_id = %s",
+                ])
+                update_params.extend([new_membership_id, new_syscare_id])
+            update_sql = f"UPDATE syscare_memberships SET {', '.join(updates)} WHERE id = %s"
+            update_params.append(entry_id)
             if branch_scope:
                 update_sql += " AND branch_name = %s"
                 update_params.append(branch_scope)
             cursor.execute(update_sql, tuple(update_params))
             db.commit()
 
-            label = "6 month service reminder" if reminder_type == "six_month" else "1 year renewal reminder"
-            flash(f"{label} marked done for SYSCARE ID {row.get('syscare_id')}.", "success")
+            if selected_status == "renewed" and new_syscare_id:
+                flash(f"Renewal saved. New SYSCARE certificate created: ID {new_syscare_id}.", "success")
+            else:
+                flash(f"1 year renewal status saved for SYSCARE ID {row.get('syscare_id')}.", "success")
             return redirect(_reminder_return_url())
         except db_error as e:
             if db:

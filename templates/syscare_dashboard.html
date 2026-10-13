@@ -244,16 +244,6 @@ body {
     background: rgba(247, 251, 255, 0.82);
 }
 
-.reminder-pills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
-
-.reminder-pills .btn {
-    font-weight: 700;
-}
-
 .reminder-badge {
     display: inline-flex;
     align-items: center;
@@ -277,6 +267,46 @@ body {
 .reminder-badge.done {
     color: #047857;
     background: rgba(16, 185, 129, 0.15);
+}
+
+.workflow-card {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #ffffff;
+    padding: 8px;
+    min-width: 260px;
+}
+
+.workflow-card .form-select,
+.workflow-card .form-control {
+    min-height: 30px;
+}
+
+.renewal-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.renewal-summary-card {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 0.55rem 0.7rem;
+    background: rgba(247, 251, 255, 0.8);
+}
+
+.renewal-summary-card .label {
+    color: #64748b;
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.renewal-summary-card .value {
+    color: #0f172a;
+    font-size: 1.2rem;
+    font-weight: 800;
 }
 
 .top-shell .form-label,
@@ -392,13 +422,19 @@ body {
 
 <ul class="nav nav-tabs syscare-tabs" id="syscareTabs" role="tablist">
 <li class="nav-item" role="presentation">
-<button class="nav-link {% if active_syscare_tab != 'records' %}active{% endif %}" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard-pane" type="button" role="tab" aria-controls="dashboard-pane" aria-selected="{{ 'false' if active_syscare_tab == 'records' else 'true' }}">Dashboard</button>
+<button class="nav-link {% if active_syscare_tab == 'dashboard' %}active{% endif %}" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard-pane" type="button" role="tab" aria-controls="dashboard-pane" aria-selected="{{ 'true' if active_syscare_tab == 'dashboard' else 'false' }}">Dashboard</button>
 </li>
 <li class="nav-item" role="presentation">
 <button class="nav-link" id="branch-targets-tab" data-bs-toggle="tab" data-bs-target="#branch-targets-pane" type="button" role="tab" aria-controls="branch-targets-pane" aria-selected="false">Branch Targets</button>
 </li>
 <li class="nav-item" role="presentation">
-<button class="nav-link {% if active_syscare_tab == 'records' %}active{% endif %}" id="records-tab" data-bs-toggle="tab" data-bs-target="#records-pane" type="button" role="tab" aria-controls="records-pane" aria-selected="{{ 'true' if active_syscare_tab == 'records' else 'false' }}">Records</button>
+<a class="nav-link {% if active_syscare_tab == 'records' %}active{% endif %}" id="records-tab" href="/syscare?month={{ selected_month }}" role="tab" aria-selected="{{ 'true' if active_syscare_tab == 'records' else 'false' }}">Records</a>
+</li>
+<li class="nav-item" role="presentation">
+<a class="nav-link {% if active_syscare_tab == 'six_month' %}active{% endif %}" id="six-month-tab" href="/syscare?month={{ selected_month }}&reminder=six_month" role="tab" aria-selected="{{ 'true' if active_syscare_tab == 'six_month' else 'false' }}">6 Month Due <span class="badge text-bg-light ms-1">{{ six_month_pending_count }}</span></a>
+</li>
+<li class="nav-item" role="presentation">
+<a class="nav-link {% if active_syscare_tab == 'one_year' %}active{% endif %}" id="one-year-tab" href="/syscare?month={{ selected_month }}&reminder=one_year" role="tab" aria-selected="{{ 'true' if active_syscare_tab == 'one_year' else 'false' }}">1 Year Due <span class="badge text-bg-light ms-1">{{ one_year_pending_count }}</span></a>
 </li>
 <li class="nav-item" role="presentation">
 <button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload-pane" type="button" role="tab" aria-controls="upload-pane" aria-selected="false">Upload</button>
@@ -406,7 +442,7 @@ body {
 </ul>
 
 <div class="tab-content tab-panel" id="syscareTabsContent">
-<div class="tab-pane fade {% if active_syscare_tab != 'records' %}show active{% endif %}" id="dashboard-pane" role="tabpanel" aria-labelledby="dashboard-tab" tabindex="0">
+<div class="tab-pane fade {% if active_syscare_tab == 'dashboard' %}show active{% endif %}" id="dashboard-pane" role="tabpanel" aria-labelledby="dashboard-tab" tabindex="0">
 <div class="row g-3">
 <div class="col-12">
 <div class="card syscare-chart-card">
@@ -539,19 +575,32 @@ body {
 {% endif %}
 </div>
 
-<div class="tab-pane fade {% if active_syscare_tab == 'records' %}show active{% endif %}" id="records-pane" role="tabpanel" aria-labelledby="records-tab" tabindex="0">
+<div class="tab-pane fade {% if active_syscare_tab in ['records', 'six_month', 'one_year'] %}show active{% endif %}" id="records-pane" role="tabpanel" aria-labelledby="records-tab" tabindex="0">
 <div class="records-filter-sticky">
 <div class="d-flex flex-column flex-lg-row justify-content-between gap-2 mb-2">
 <div>
-<div class="fw-semibold">Service and Renewal Follow-up</div>
-<div class="small text-muted">6 month cases are service reminder calls. 1 year cases are second-service / renewal follow-up calls.</div>
+{% if active_syscare_tab == 'six_month' %}
+<div class="fw-semibold">6 Month Service Due</div>
+<div class="small text-muted">Contact customer, book service, then close as completed or not needed.</div>
+{% elif active_syscare_tab == 'one_year' %}
+<div class="fw-semibold">1 Year Service and Renewal Due</div>
+<div class="small text-muted">Book first service, complete service, discuss renewal, then mark renewed or not renewed.</div>
+{% else %}
+<div class="fw-semibold">SYSCARE Records</div>
+<div class="small text-muted">Normal month-wise SYSCARE certificate list.</div>
+{% endif %}
 </div>
-<div class="reminder-pills">
-<a class="btn btn-sm {% if not reminder_filter %}btn-primary{% else %}btn-outline-primary{% endif %}" href="/syscare?month={{ selected_month }}">All Records</a>
-<a class="btn btn-sm {% if reminder_filter == 'six_month' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="/syscare?month={{ selected_month }}&reminder=six_month">6 Month Due <span class="badge text-bg-light ms-1">{{ six_month_pending_count }}</span></a>
-<a class="btn btn-sm {% if reminder_filter == 'one_year' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="/syscare?month={{ selected_month }}&reminder=one_year">1 Year Due <span class="badge text-bg-light ms-1">{{ one_year_pending_count }}</span></a>
 </div>
+{% if active_syscare_tab == 'one_year' %}
+<div class="renewal-summary-grid">
+<div class="renewal-summary-card"><div class="label">Due</div><div class="value">{{ renewal_summary.due_count }}</div></div>
+<div class="renewal-summary-card"><div class="label">Service Done</div><div class="value">{{ renewal_summary.service_completed }}</div></div>
+<div class="renewal-summary-card"><div class="label">Discussed</div><div class="value">{{ renewal_summary.renewal_discussed }}</div></div>
+<div class="renewal-summary-card"><div class="label">Renewed</div><div class="value">{{ renewal_summary.renewed }}</div></div>
+<div class="renewal-summary-card"><div class="label">Not Renewed</div><div class="value">{{ renewal_summary.not_renewed }}</div></div>
+<div class="renewal-summary-card"><div class="label">Conversion</div><div class="value">{{ renewal_summary.conversion_pct }}%</div></div>
 </div>
+{% endif %}
 <form method="GET" action="/syscare" class="row g-2 align-items-end">
 <input type="hidden" name="month" value="{{ selected_month }}">
 <input type="hidden" name="reminder" value="{{ reminder_filter }}">
@@ -612,8 +661,11 @@ body {
 <th>Amount</th>
 <th>Expiry Date</th>
 <th>Expire within</th>
+{% if active_syscare_tab in ['six_month', 'one_year'] %}
+<th>Workflow</th>
+{% else %}
 <th>Reminder Status</th>
-<th>Action</th>
+{% endif %}
 <th>Certificate</th>
 </tr>
 </thead>
@@ -651,6 +703,66 @@ body {
 <td>{{ r.expiry_date or '-' }}</td>
 <td>{{ r.expire_within_days if r.expire_within_days is not none else '-' }}</td>
 <td>
+{% if active_syscare_tab == 'six_month' %}
+<form method="POST" action="/syscare-reminder-action/{{ r.id }}" class="workflow-card">
+<input type="hidden" name="reminder_type" value="six_month">
+<input type="hidden" name="month" value="{{ selected_month }}">
+<input type="hidden" name="reminder" value="{{ reminder_filter }}">
+<input type="hidden" name="q" value="{{ search_q }}">
+<input type="hidden" name="branch" value="{{ filter_branch_rec }}">
+<input type="hidden" name="incharge" value="{{ filter_incharge_rec }}">
+<input type="hidden" name="page" value="{{ current_page }}">
+<div class="small fw-semibold mb-1">{{ r.six_month_status_label }}</div>
+<div class="row g-1">
+<div class="col-12">
+<select name="status" class="form-select form-select-sm">
+<option value="pending_contact" {% if (r.six_month_status or 'pending_contact') == 'pending_contact' %}selected{% endif %}>Pending Contact</option>
+<option value="service_booked" {% if r.six_month_status == 'service_booked' %}selected{% endif %}>Service Booked</option>
+<option value="service_completed" {% if r.six_month_status == 'service_completed' %}selected{% endif %}>Service Completed</option>
+<option value="service_not_needed" {% if r.six_month_status == 'service_not_needed' %}selected{% endif %}>Service Not Needed</option>
+</select>
+</div>
+<div class="col-6"><input type="date" name="booked_date" class="form-control form-control-sm" value="{{ r.six_month_booked_date or '' }}"></div>
+<div class="col-6"><button type="submit" class="btn btn-success btn-sm w-100">Save</button></div>
+<div class="col-12"><input type="text" name="note" class="form-control form-control-sm" placeholder="Note" value="{{ r.six_month_note or '' }}"></div>
+</div>
+</form>
+{% elif active_syscare_tab == 'one_year' %}
+<form method="POST" action="/syscare-reminder-action/{{ r.id }}" class="workflow-card">
+<input type="hidden" name="reminder_type" value="one_year">
+<input type="hidden" name="month" value="{{ selected_month }}">
+<input type="hidden" name="reminder" value="{{ reminder_filter }}">
+<input type="hidden" name="q" value="{{ search_q }}">
+<input type="hidden" name="branch" value="{{ filter_branch_rec }}">
+<input type="hidden" name="incharge" value="{{ filter_incharge_rec }}">
+<input type="hidden" name="page" value="{{ current_page }}">
+<div class="small fw-semibold mb-1">
+{{ r.one_year_status_label }}
+{% if r.renewal_new_syscare_id %}
+<span class="text-success">New ID {{ r.renewal_new_syscare_id }}</span>
+{% endif %}
+</div>
+<div class="row g-1">
+<div class="col-12">
+<select name="status" class="form-select form-select-sm">
+<option value="pending_contact" {% if (r.one_year_status or 'pending_contact') == 'pending_contact' %}selected{% endif %}>Pending Contact</option>
+<option value="service_booked" {% if r.one_year_status == 'service_booked' %}selected{% endif %}>Service Booked</option>
+<option value="service_completed" {% if r.one_year_status == 'service_completed' %}selected{% endif %}>Service Completed</option>
+<option value="renewal_discussed" {% if r.one_year_status == 'renewal_discussed' %}selected{% endif %}>Renewal Discussed</option>
+<option value="followup_later" {% if r.one_year_status == 'followup_later' %}selected{% endif %}>Follow-up Later</option>
+<option value="renewed" {% if r.one_year_status == 'renewed' %}selected{% endif %}>Renewed - Create New</option>
+<option value="not_renewed" {% if r.one_year_status == 'not_renewed' %}selected{% endif %}>Not Renewed</option>
+</select>
+</div>
+<div class="col-6"><input type="date" name="booked_date" class="form-control form-control-sm" title="Booked date" value="{{ r.one_year_booked_date or '' }}"></div>
+<div class="col-6"><input type="date" name="renewal_date" class="form-control form-control-sm" title="Renewal date"></div>
+<div class="col-6"><input type="number" step="0.01" name="renewal_amount" class="form-control form-control-sm" placeholder="Amount" value="{{ r.renewal_amount or '' }}"></div>
+<div class="col-6"><input type="date" name="followup_date" class="form-control form-control-sm" title="Follow-up date" value="{{ r.renewal_followup_date or '' }}"></div>
+<div class="col-12"><input type="text" name="note" class="form-control form-control-sm" placeholder="Note" value="{{ r.renewal_note or '' }}"></div>
+<div class="col-12"><button type="submit" class="btn btn-success btn-sm w-100">Save</button></div>
+</div>
+</form>
+{% else %}
 {% if r.six_month_pending %}
 <span class="reminder-badge service">6 month service due</span>
 {% elif r.six_month_reminded_at %}
@@ -666,34 +778,6 @@ body {
 {% else %}
 <span class="text-muted small">1 year: {{ r.one_year_due_date or '-' }}</span>
 {% endif %}
-</td>
-<td>
-{% if r.six_month_pending %}
-<form method="POST" action="/syscare-reminder-action/{{ r.id }}" style="display:inline">
-<input type="hidden" name="reminder_type" value="six_month">
-<input type="hidden" name="month" value="{{ selected_month }}">
-<input type="hidden" name="reminder" value="{{ reminder_filter }}">
-<input type="hidden" name="q" value="{{ search_q }}">
-<input type="hidden" name="branch" value="{{ filter_branch_rec }}">
-<input type="hidden" name="incharge" value="{{ filter_incharge_rec }}">
-<input type="hidden" name="page" value="{{ current_page }}">
-<button type="submit" class="btn btn-outline-success btn-sm py-0">6M Done</button>
-</form>
-{% endif %}
-{% if r.one_year_pending %}
-<form method="POST" action="/syscare-reminder-action/{{ r.id }}" style="display:inline">
-<input type="hidden" name="reminder_type" value="one_year">
-<input type="hidden" name="month" value="{{ selected_month }}">
-<input type="hidden" name="reminder" value="{{ reminder_filter }}">
-<input type="hidden" name="q" value="{{ search_q }}">
-<input type="hidden" name="branch" value="{{ filter_branch_rec }}">
-<input type="hidden" name="incharge" value="{{ filter_incharge_rec }}">
-<input type="hidden" name="page" value="{{ current_page }}">
-<button type="submit" class="btn btn-outline-warning btn-sm py-0 ms-1">1Y Done</button>
-</form>
-{% endif %}
-{% if not r.six_month_pending and not r.one_year_pending %}
-<span class="text-muted small">-</span>
 {% endif %}
 </td>
 <td>
@@ -709,7 +793,7 @@ body {
 </tr>
 {% endfor %}
 {% else %}
-<tr><td colspan="14" class="text-center text-muted">No records for selected filter</td></tr>
+<tr><td colspan="13" class="text-center text-muted">No records for selected filter</td></tr>
 {% endif %}
 </tbody>
 </table>
@@ -763,7 +847,7 @@ body {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const tabButtons = Array.from(document.querySelectorAll("#syscareTabs .nav-link"));
+    const tabButtons = Array.from(document.querySelectorAll("#syscareTabs .nav-link[data-bs-target]"));
     const tabPanes = Array.from(document.querySelectorAll("#syscareTabsContent .tab-pane"));
     const syscareTrendCanvas = document.getElementById("syscareTrendChart");
 
