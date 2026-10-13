@@ -3030,6 +3030,7 @@ def _load_admin_report_engineer_options(cursor, syscare_membership_columns):
     option_values = []
     queries = [
         "SELECT DISTINCT assigned_engineer AS engineer_name FROM jobs WHERE assigned_engineer IS NOT NULL AND assigned_engineer <> ''",
+        "SELECT DISTINCT specialist_engineer AS engineer_name FROM job_service_transfers WHERE specialist_engineer IS NOT NULL AND specialist_engineer <> ''",
         "SELECT DISTINCT username AS engineer_name FROM users WHERE role='engineer' AND username IS NOT NULL AND username <> ''",
     ]
 
@@ -3082,9 +3083,13 @@ def _build_admin_report_scope(role, session_branch, requested_branch, requested_
             syscare_where.append("branch_name=%s")
             syscare_params.append(effective_branch)
 
+    staff_job_where = list(job_where)
+    staff_job_params = list(job_params)
+
     if normalized_engineer:
-        job_where.append("assigned_engineer=%s")
-        job_params.append(normalized_engineer)
+        engineer_sql, engineer_params = _build_job_transfer_engineer_filter_clause([normalized_engineer])
+        job_where.append(engineer_sql or "assigned_engineer=%s")
+        job_params.extend(engineer_params or (normalized_engineer,))
         if syscare_membership_columns:
             engineer_clauses = []
             engineer_params = []
@@ -3106,6 +3111,8 @@ def _build_admin_report_scope(role, session_branch, requested_branch, requested_
         "effective_engineer": normalized_engineer,
         "job_where_sql": " AND ".join(job_where),
         "job_params": tuple(job_params),
+        "staff_job_where_sql": " AND ".join(staff_job_where),
+        "staff_job_params": tuple(staff_job_params),
         "syscare_where_sql": " AND ".join(syscare_where),
         "syscare_params": tuple(syscare_params),
     }
@@ -3314,27 +3321,74 @@ def ensure_engineer_revenue_entries_table():
         _safe_close(cursor, db)
 
 
-def _fetch_staff_ranking_rows(cursor, job_where_sql, job_params, from_date, to_date):
+def _fetch_staff_ranking_rows(cursor, job_where_sql, job_params, from_date, to_date, filter_engineer=""):
     start_dt, end_dt = _build_report_datetime_bounds(from_date, to_date)
-    success_pattern = "%success%"
-    failed_pattern = "%failed%"
+    normalized_engineer = str(filter_engineer or "").strip()
+    assigned_filter_sql = ""
+    transfer_filter_sql = ""
+    assigned_filter_params = []
+    transfer_filter_params = []
+
+    if normalized_engineer:
+        assigned_filter_sql = " AND COALESCE(NULLIF(TRIM(jobs.assigned_engineer), ''), 'Unassigned')=%s"
+        transfer_filter_sql = " AND TRIM(transfer.specialist_engineer)=%s"
+        assigned_filter_params.append(normalized_engineer)
+        transfer_filter_params.append(normalized_engineer)
+
     cursor.execute(
         f"""
         SELECT
-            COALESCE(TRIM(assigned_engineer), 'Unassigned') AS engineer_name,
-            COALESCE(TRIM(branch_name), 'Unknown') AS branch_name,
+            engineer_name,
+            branch_name,
             COUNT(*) AS total_calls,
-            SUM(CASE WHEN (COALESCE(TRIM(status), '') <> 'Closed' AND (closure_status IS NULL OR TRIM(closure_status) = '')) THEN 1 ELSE 0 END) AS open_calls,
-            SUM(CASE WHEN (LOWER(COALESCE(closure_status, '')) LIKE %s OR (LOWER(COALESCE(status, '')) = 'closed' AND LOWER(COALESCE(closure_status, '')) NOT LIKE %s)) THEN 1 ELSE 0 END) AS closed_success,
-            SUM(CASE WHEN LOWER(COALESCE(closure_status, '')) LIKE %s THEN 1 ELSE 0 END) AS closed_failed
-        FROM jobs
-        WHERE {job_where_sql}
-          AND created_at >= %s
-          AND created_at <= %s
-        GROUP BY COALESCE(TRIM(assigned_engineer), 'Unassigned'), COALESCE(TRIM(branch_name), 'Unknown')
+            SUM(open_call) AS open_calls,
+            SUM(closed_success_call) AS closed_success,
+            SUM(closed_failed_call) AS closed_failed
+        FROM (
+            SELECT
+                COALESCE(NULLIF(TRIM(jobs.assigned_engineer), ''), 'Unassigned') AS engineer_name,
+                COALESCE(NULLIF(TRIM(jobs.branch_name), ''), 'Unknown') AS branch_name,
+                CASE WHEN (COALESCE(TRIM(jobs.status), '') <> 'Closed' AND (jobs.closure_status IS NULL OR TRIM(jobs.closure_status) = '')) THEN 1 ELSE 0 END AS open_call,
+                CASE WHEN (LOWER(COALESCE(jobs.closure_status, '')) LIKE '%%success%%' OR (LOWER(COALESCE(jobs.status, '')) = 'closed' AND LOWER(COALESCE(jobs.closure_status, '')) NOT LIKE '%%failed%%')) THEN 1 ELSE 0 END AS closed_success_call,
+                CASE WHEN LOWER(COALESCE(jobs.closure_status, '')) LIKE '%%failed%%' THEN 1 ELSE 0 END AS closed_failed_call
+            FROM jobs
+            WHERE {job_where_sql}
+              AND jobs.created_at >= %s
+              AND jobs.created_at <= %s
+              {assigned_filter_sql}
+
+            UNION ALL
+
+            SELECT
+                COALESCE(NULLIF(TRIM(transfer.specialist_engineer), ''), 'Unassigned') AS engineer_name,
+                COALESCE(NULLIF(TRIM(transfer.to_branch_name), ''), COALESCE(NULLIF(TRIM(jobs.branch_name), ''), 'Unknown')) AS branch_name,
+                CASE WHEN (COALESCE(TRIM(jobs.status), '') <> 'Closed' AND (jobs.closure_status IS NULL OR TRIM(jobs.closure_status) = '')) THEN 1 ELSE 0 END AS open_call,
+                CASE WHEN (LOWER(COALESCE(jobs.closure_status, '')) LIKE '%%success%%' OR (LOWER(COALESCE(jobs.status, '')) = 'closed' AND LOWER(COALESCE(jobs.closure_status, '')) NOT LIKE '%%failed%%')) THEN 1 ELSE 0 END AS closed_success_call,
+                CASE WHEN LOWER(COALESCE(jobs.closure_status, '')) LIKE '%%failed%%' THEN 1 ELSE 0 END AS closed_failed_call
+            FROM jobs
+            JOIN job_service_transfers transfer ON transfer.job_id=jobs.id
+            WHERE {job_where_sql}
+              AND jobs.created_at >= %s
+              AND jobs.created_at <= %s
+              AND transfer.status='Returned'
+              AND transfer.specialist_engineer IS NOT NULL
+              AND TRIM(transfer.specialist_engineer) <> ''
+              AND TRIM(transfer.specialist_engineer) <> COALESCE(NULLIF(TRIM(jobs.assigned_engineer), ''), 'Unassigned')
+              {transfer_filter_sql}
+        ) attended_calls
+        GROUP BY engineer_name, branch_name
         ORDER BY closed_success DESC, total_calls DESC, engineer_name ASC, branch_name ASC
         """,
-        (success_pattern, failed_pattern, failed_pattern, *job_params, start_dt, end_dt),
+        (
+            *job_params,
+            start_dt,
+            end_dt,
+            *assigned_filter_params,
+            *job_params,
+            start_dt,
+            end_dt,
+            *transfer_filter_params,
+        ),
     )
     rows = []
     for row in cursor.fetchall():
@@ -3529,10 +3583,11 @@ def _get_admin_reports_context(args, role, session_branch):
 
         staff_call_rows = _fetch_staff_ranking_rows(
             cursor,
-            scope["job_where_sql"],
-            scope["job_params"],
+            scope["staff_job_where_sql"],
+            scope["staff_job_params"],
             from_date,
             to_date,
+            filter_engineer,
         )
         staff_revenue_rows = _fetch_staff_revenue_rows(
             cursor,
