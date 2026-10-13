@@ -494,35 +494,47 @@ def register_syscare_routes(app, deps):
         try:
             db = get_db()
             cursor = db.cursor()
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS syscare_memberships (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    record_date DATE NOT NULL,
-                    syscare_id VARCHAR(100) NOT NULL,
-                    customer_name VARCHAR(255) NULL,
-                    contact_number VARCHAR(50) NULL,
-                    branch_name VARCHAR(255) NULL,
-                    incharge VARCHAR(255) NULL,
-                    amount DECIMAL(12,2) NOT NULL DEFAULT 0,
-                    expiry_date DATE NULL,
-                    uploaded_by VARCHAR(255) NULL,
-                    uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    UNIQUE KEY uq_syscare_id (syscare_id),
-                    INDEX idx_syscare_record_date (record_date),
-                    INDEX idx_syscare_branch (branch_name)
+            cursor.execute("SHOW TABLES LIKE %s", ("syscare_memberships",))
+            if not cursor.fetchone():
+                cursor.execute(
+                    """
+                    CREATE TABLE syscare_memberships (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        record_date DATE NOT NULL,
+                        syscare_id VARCHAR(100) NOT NULL,
+                        customer_name VARCHAR(255) NULL,
+                        contact_number VARCHAR(50) NULL,
+                        branch_name VARCHAR(255) NULL,
+                        incharge VARCHAR(255) NULL,
+                        amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+                        expiry_date DATE NULL,
+                        uploaded_by VARCHAR(255) NULL,
+                        uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        UNIQUE KEY uq_syscare_id (syscare_id),
+                        INDEX idx_syscare_record_date (record_date),
+                        INDEX idx_syscare_branch (branch_name)
+                    )
+                    """
                 )
-                """
-            )
-            db.commit()
+                db.commit()
+            cursor.execute("SHOW COLUMNS FROM syscare_memberships")
+            existing_columns = {
+                str(row[0] if not isinstance(row, dict) else row.get("Field"))
+                for row in cursor.fetchall()
+                if (row[0] if not isinstance(row, dict) else row.get("Field"))
+            }
             for col_sql in syscare_optional_columns_sql:
+                column_name = col_sql.split("ADD COLUMN", 1)[1].strip().split(None, 1)[0].strip("` ")
+                if column_name in existing_columns:
+                    continue
                 try:
                     cursor.execute(col_sql)
                     db.commit()
+                    existing_columns.add(column_name)
                 except Exception:
-                    pass
+                    app.logger.exception("Could not add SYSCARE schema column %s", column_name)
         except db_error:
-            pass
+            app.logger.exception("Could not ensure SYSCARE memberships table")
         finally:
             if cursor:
                 cursor.close()
