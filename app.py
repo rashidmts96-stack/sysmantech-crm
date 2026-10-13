@@ -3349,8 +3349,8 @@ def _fetch_staff_ranking_rows(cursor, job_where_sql, job_params, from_date, to_d
                 COALESCE(NULLIF(TRIM(jobs.assigned_engineer), ''), 'Unassigned') AS engineer_name,
                 COALESCE(NULLIF(TRIM(jobs.branch_name), ''), 'Unknown') AS branch_name,
                 CASE WHEN (COALESCE(TRIM(jobs.status), '') <> 'Closed' AND (jobs.closure_status IS NULL OR TRIM(jobs.closure_status) = '')) THEN 1 ELSE 0 END AS open_call,
-                CASE WHEN (LOWER(COALESCE(jobs.closure_status, '')) LIKE '%%success%%' OR (LOWER(COALESCE(jobs.status, '')) = 'closed' AND LOWER(COALESCE(jobs.closure_status, '')) NOT LIKE '%%failed%%')) THEN 1 ELSE 0 END AS closed_success_call,
-                CASE WHEN LOWER(COALESCE(jobs.closure_status, '')) LIKE '%%failed%%' THEN 1 ELSE 0 END AS closed_failed_call
+                CASE WHEN (LOWER(COALESCE(jobs.closure_status, '')) LIKE CONCAT('%', 'success', '%') OR (LOWER(COALESCE(jobs.status, '')) = 'closed' AND LOWER(COALESCE(jobs.closure_status, '')) NOT LIKE CONCAT('%', 'failed', '%'))) THEN 1 ELSE 0 END AS closed_success_call,
+                CASE WHEN LOWER(COALESCE(jobs.closure_status, '')) LIKE CONCAT('%', 'failed', '%') THEN 1 ELSE 0 END AS closed_failed_call
             FROM jobs
             WHERE {job_where_sql}
               AND jobs.created_at >= %s
@@ -3363,8 +3363,8 @@ def _fetch_staff_ranking_rows(cursor, job_where_sql, job_params, from_date, to_d
                 COALESCE(NULLIF(TRIM(transfer.specialist_engineer), ''), 'Unassigned') AS engineer_name,
                 COALESCE(NULLIF(TRIM(transfer.to_branch_name), ''), COALESCE(NULLIF(TRIM(jobs.branch_name), ''), 'Unknown')) AS branch_name,
                 CASE WHEN (COALESCE(TRIM(jobs.status), '') <> 'Closed' AND (jobs.closure_status IS NULL OR TRIM(jobs.closure_status) = '')) THEN 1 ELSE 0 END AS open_call,
-                CASE WHEN (LOWER(COALESCE(jobs.closure_status, '')) LIKE '%%success%%' OR (LOWER(COALESCE(jobs.status, '')) = 'closed' AND LOWER(COALESCE(jobs.closure_status, '')) NOT LIKE '%%failed%%')) THEN 1 ELSE 0 END AS closed_success_call,
-                CASE WHEN LOWER(COALESCE(jobs.closure_status, '')) LIKE '%%failed%%' THEN 1 ELSE 0 END AS closed_failed_call
+                CASE WHEN (LOWER(COALESCE(jobs.closure_status, '')) LIKE CONCAT('%', 'success', '%') OR (LOWER(COALESCE(jobs.status, '')) = 'closed' AND LOWER(COALESCE(jobs.closure_status, '')) NOT LIKE CONCAT('%', 'failed', '%'))) THEN 1 ELSE 0 END AS closed_success_call,
+                CASE WHEN LOWER(COALESCE(jobs.closure_status, '')) LIKE CONCAT('%', 'failed', '%') THEN 1 ELSE 0 END AS closed_failed_call
             FROM jobs
             JOIN job_service_transfers transfer ON transfer.job_id=jobs.id
             WHERE {job_where_sql}
