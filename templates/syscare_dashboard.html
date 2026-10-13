@@ -850,6 +850,7 @@ body {
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const tabButtons = Array.from(document.querySelectorAll("#syscareTabs .nav-link[data-bs-target]"));
+    const tabLinks = Array.from(document.querySelectorAll("#syscareTabs .nav-link"));
     const tabPanes = Array.from(document.querySelectorAll("#syscareTabsContent .tab-pane"));
     const syscareTrendCanvas = document.getElementById("syscareTrendChart");
 
@@ -858,11 +859,22 @@ document.addEventListener("DOMContentLoaded", function () {
         bar.style.width = `${width}%`;
     });
 
+    function paneForLink(link) {
+        const target = link.getAttribute("data-bs-target");
+        if (target) {
+            return target;
+        }
+        if (["records-tab", "six-month-tab", "one-year-tab"].includes(link.id)) {
+            return "#records-pane";
+        }
+        return "";
+    }
+
     function showPane(targetSelector) {
-        tabButtons.forEach((button) => {
-            const isActive = button.getAttribute("data-bs-target") === targetSelector;
-            button.classList.toggle("active", isActive);
-            button.setAttribute("aria-selected", isActive ? "true" : "false");
+        tabLinks.forEach((link) => {
+            const isActive = paneForLink(link) === targetSelector;
+            link.classList.toggle("active", isActive);
+            link.setAttribute("aria-selected", isActive ? "true" : "false");
         });
 
         tabPanes.forEach((pane) => {
@@ -873,9 +885,11 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    const initialButton = tabButtons.find((button) => button.classList.contains("active")) || tabButtons[0];
-    if (initialButton) {
-        showPane(initialButton.getAttribute("data-bs-target"));
+    const activeLink = tabLinks.find((link) => link.classList.contains("active"));
+    const initialButton = tabButtons[0];
+    const initialTarget = activeLink ? paneForLink(activeLink) : (initialButton && paneForLink(initialButton));
+    if (initialTarget) {
+        showPane(initialTarget);
     }
 
     tabButtons.forEach((button) => {
