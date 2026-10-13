@@ -587,7 +587,7 @@ body {
 <div class="small text-muted">Book first service, complete service, discuss renewal, then mark renewed or not renewed.</div>
 {% else %}
 <div class="fw-semibold">SYSCARE Records</div>
-<div class="small text-muted">Normal month-wise SYSCARE certificate list.</div>
+<div class="small text-muted">All SYSCARE certificate records across months.</div>
 {% endif %}
 </div>
 </div>
@@ -604,6 +604,7 @@ body {
 <form method="GET" action="/syscare" class="row g-2 align-items-end">
 <input type="hidden" name="month" value="{{ selected_month }}">
 <input type="hidden" name="reminder" value="{{ reminder_filter }}">
+<input type="hidden" name="tab" value="{{ active_syscare_tab }}">
 <div class="col-12 col-md-4">
 <label class="form-label form-label-sm mb-1">Search</label>
 <input type="text" name="q" class="form-control form-control-sm" placeholder="Customer, Syscare ID, Contact, Model, Serial" value="{{ search_q }}">
@@ -628,12 +629,13 @@ body {
 </div>
 <div class="col-12 col-md-2 d-flex gap-2">
 <button type="submit" class="btn btn-primary btn-sm">Filter</button>
-<a href="/syscare?month={{ selected_month }}{% if reminder_filter %}&reminder={{ reminder_filter }}{% endif %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+<a href="/syscare?month={{ selected_month }}{% if reminder_filter %}&reminder={{ reminder_filter }}{% endif %}{% if active_syscare_tab == 'records' %}&tab=records{% endif %}" class="btn btn-outline-secondary btn-sm">Clear</a>
 </div>
 </form>
 <form method="GET" action="/syscare-export" class="mt-2">
     <input type="hidden" name="month" value="{{ selected_month }}">
     <input type="hidden" name="reminder" value="{{ reminder_filter }}">
+    <input type="hidden" name="tab" value="{{ active_syscare_tab }}">
     <input type="hidden" name="q" value="{{ search_q }}">
     <input type="hidden" name="branch" value="{{ filter_branch_rec }}">
     <input type="hidden" name="incharge" value="{{ filter_incharge_rec }}">
@@ -804,13 +806,13 @@ body {
 <nav aria-label="Records pagination">
 <ul class="pagination pagination-sm mb-0">
 {% if current_page > 1 %}
-<li class="page-item"><a class="page-link" href="/syscare?month={{ selected_month }}&page={{ current_page - 1 }}&reminder={{ reminder_filter }}&q={{ search_q }}&branch={{ filter_branch_rec }}&incharge={{ filter_incharge_rec }}">Prev</a></li>
+<li class="page-item"><a class="page-link" href="/syscare?month={{ selected_month }}&page={{ current_page - 1 }}&reminder={{ reminder_filter }}&tab={{ active_syscare_tab }}&q={{ search_q }}&branch={{ filter_branch_rec }}&incharge={{ filter_incharge_rec }}">Prev</a></li>
 {% else %}
 <li class="page-item disabled"><span class="page-link">Prev</span></li>
 {% endif %}
 <li class="page-item disabled"><span class="page-link">{{ current_page }} / {{ total_pages }}</span></li>
 {% if current_page < total_pages %}
-<li class="page-item"><a class="page-link" href="/syscare?month={{ selected_month }}&page={{ current_page + 1 }}&reminder={{ reminder_filter }}&q={{ search_q }}&branch={{ filter_branch_rec }}&incharge={{ filter_incharge_rec }}">Next</a></li>
+<li class="page-item"><a class="page-link" href="/syscare?month={{ selected_month }}&page={{ current_page + 1 }}&reminder={{ reminder_filter }}&tab={{ active_syscare_tab }}&q={{ search_q }}&branch={{ filter_branch_rec }}&incharge={{ filter_incharge_rec }}">Next</a></li>
 {% else %}
 <li class="page-item disabled"><span class="page-link">Next</span></li>
 {% endif %}

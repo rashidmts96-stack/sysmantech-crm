@@ -39,6 +39,7 @@ def register_syscare_routes(app, deps):
         reminder_filter = (request.args.get("reminder") or "").strip()
         if reminder_filter not in ("six_month", "one_year"):
             reminder_filter = ""
+        requested_tab = (request.args.get("tab") or "").strip()
 
         db = None
         cursor = None
@@ -50,7 +51,7 @@ def register_syscare_routes(app, deps):
             has_six_month_reminder = "six_month_reminded_at" in membership_cols
             has_one_year_reminder = "one_year_reminded_at" in membership_cols
 
-            if reminder_filter:
+            if reminder_filter or requested_tab == "records":
                 records_where = "1=1"
                 records_params = []
             else:
@@ -857,7 +858,7 @@ def register_syscare_routes(app, deps):
                 reminder_filter = ""
             requested_tab = (request.args.get("tab") or "").strip()
 
-            if reminder_filter:
+            if reminder_filter or requested_tab == "records":
                 records_where = "1=1"
                 records_params = []
             else:
