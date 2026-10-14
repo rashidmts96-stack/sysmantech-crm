@@ -167,6 +167,10 @@ body {
     margin-bottom: 0;
 }
 
+.records-list-wrap {
+    max-height: max(320px, calc(100vh - 250px));
+}
+
 .fixed-table-wrap thead th {
     position: sticky;
     top: 0;
@@ -648,7 +652,7 @@ body {
 <span>Page {{ current_page }} / {{ total_pages }}</span>
 </div>
 
-<div class="fixed-table-wrap">
+<div class="fixed-table-wrap records-list-wrap">
 <table class="table table-sm table-bordered table-hover mb-0">
 <thead class="table-dark">
 <tr>
