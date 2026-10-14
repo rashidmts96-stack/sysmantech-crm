@@ -902,6 +902,11 @@ def register_syscare_routes(app, deps):
             total_pages = max(1, (total_records + per_page - 1) // per_page)
             current_page = min(current_page, total_pages)
             offset = (current_page - 1) * per_page
+            records_order_sql = (
+                "COALESCE(expiry_date, DATE_ADD(record_date, INTERVAL 1 YEAR)) ASC, record_date ASC, id ASC"
+                if reminder_filter in ("six_month", "one_year")
+                else "record_date DESC, id DESC"
+            )
 
             # Distinct branches & incharges for filter dropdowns (scoped)
             scope_where = "1=1"
@@ -1002,7 +1007,7 @@ def register_syscare_routes(app, deps):
                       renewal_new_syscare_id
                 FROM syscare_memberships
                 WHERE {records_where}
-                ORDER BY record_date DESC, id DESC
+                ORDER BY {records_order_sql}
                 LIMIT {per_page} OFFSET {offset}
                 """.format(
                     product_model_expr=("product_model" if "product_model" in membership_cols else "NULL"),
@@ -1012,6 +1017,7 @@ def register_syscare_routes(app, deps):
                     six_month_reminded_expr=("six_month_reminded_at" if has_six_month_reminder else "NULL"),
                     one_year_reminded_expr=("one_year_reminded_at" if has_one_year_reminder else "NULL"),
                     records_where=records_where,
+                    records_order_sql=records_order_sql,
                     per_page=per_page,
                     offset=offset,
                 ),
