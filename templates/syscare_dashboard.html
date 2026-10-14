@@ -359,7 +359,7 @@ body {
 {% endif %}
 {% endwith %}
 
-<div class="top-shell p-3 mb-3">
+<div class="top-shell p-3 mb-3" id="dashboard-summary" {% if active_syscare_tab != 'dashboard' %}hidden{% endif %}>
 <div class="row g-3 align-items-stretch">
 <div class="col-xl-8">
 <form method="GET" action="/syscare" class="row g-2 align-items-end mb-3">
@@ -871,6 +871,11 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function showPane(targetSelector) {
+        const dashboardSummary = document.getElementById("dashboard-summary");
+        if (dashboardSummary) {
+            dashboardSummary.hidden = targetSelector !== "#dashboard-pane";
+        }
+
         tabLinks.forEach((link) => {
             const isActive = paneForLink(link) === targetSelector;
             link.classList.toggle("active", isActive);
