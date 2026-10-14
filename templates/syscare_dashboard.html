@@ -802,7 +802,7 @@ body {
 </div>
 
 <div class="d-flex justify-content-between align-items-center mt-2">
-<small class="text-muted">Showing {{ ((current_page - 1) * 25) + 1 if total_records > 0 else 0 }}-{{ [current_page * 25, total_records]|min }} of {{ total_records }}</small>
+<small class="text-muted">Showing {{ ((current_page - 1) * 100) + 1 if total_records > 0 else 0 }}-{{ [current_page * 100, total_records]|min }} of {{ total_records }}</small>
 <nav aria-label="Records pagination">
 <ul class="pagination pagination-sm mb-0">
 {% if current_page > 1 %}

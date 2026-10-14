@@ -845,7 +845,7 @@ def register_syscare_routes(app, deps):
             branch_stats.sort(key=lambda row: (-int(row.get("achieved") or 0), (row.get("branch_name") or "").lower()))
 
             # Server-side filter params
-            per_page = 25
+            per_page = 100
             try:
                 current_page = max(int(request.args.get("page") or 1), 1)
             except ValueError:
