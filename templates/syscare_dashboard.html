@@ -290,6 +290,19 @@ body {
 .workflow-card.status-renewal_discussed { border-color: #8b72cc; background: #f8f5ff; }
 .workflow-card.status-followup_later { border-color: #d18b32; background: #fff8ed; }
 
+.syscare-workflow-row.status-pending_contact > td { background-color: #fff8e9 !important; }
+.syscare-workflow-row.status-service_booked > td { background-color: #f0f7ff !important; }
+.syscare-workflow-row.status-service_completed,
+.syscare-workflow-row.status-renewed { --workflow-row-color: #effaf2; }
+.syscare-workflow-row.status-service_completed > td,
+.syscare-workflow-row.status-renewed > td { background-color: var(--workflow-row-color) !important; }
+.syscare-workflow-row.status-service_not_needed,
+.syscare-workflow-row.status-not_renewed { --workflow-row-color: #f3f5f8; }
+.syscare-workflow-row.status-service_not_needed > td,
+.syscare-workflow-row.status-not_renewed > td { background-color: var(--workflow-row-color) !important; }
+.syscare-workflow-row.status-renewal_discussed > td { background-color: #f7f3ff !important; }
+.syscare-workflow-row.status-followup_later > td { background-color: #fff7e9 !important; }
+
 .workflow-status {
     display: inline-flex;
     align-items: center;
@@ -724,7 +737,8 @@ body {
         {% if not row_serial and (row_parts|length) > 1 %}{% set row_serial = row_parts[1]|trim %}{% endif %}
     {% endif %}
 {% endif %}
-<tr>
+    {% set workflow_status = (r.six_month_status or 'pending_contact') if active_syscare_tab == 'six_month' else ((r.one_year_status or 'pending_contact') if active_syscare_tab == 'one_year' else '') %}
+    <tr class="{% if workflow_status %}syscare-workflow-row status-{{ workflow_status }}{% endif %}">
 <td>{{ r.record_date }}</td>
 <td><a href="/syscare-certificate/{{ r.id }}" target="_blank">{{ r.syscare_id }}</a></td>
 <td>{{ r.customer_name or '-' }}</td>
@@ -738,8 +752,7 @@ body {
 <td>{{ r.expire_within_days if r.expire_within_days is not none else '-' }}</td>
 <td>
 {% if active_syscare_tab == 'six_month' %}
-{% set six_status = r.six_month_status or 'pending_contact' %}
-<form method="POST" action="/syscare-reminder-action/{{ r.id }}" class="workflow-card status-{{ six_status }}">
+<form method="POST" action="/syscare-reminder-action/{{ r.id }}" class="workflow-card status-{{ workflow_status }}">
 <input type="hidden" name="reminder_type" value="six_month">
 <input type="hidden" name="month" value="{{ selected_month }}">
 <input type="hidden" name="reminder" value="{{ reminder_filter }}">
@@ -747,7 +760,7 @@ body {
 <input type="hidden" name="branch" value="{{ filter_branch_rec }}">
 <input type="hidden" name="incharge" value="{{ filter_incharge_rec }}">
 <input type="hidden" name="page" value="{{ current_page }}">
-<div class="mb-1"><span class="workflow-status status-{{ six_status }}">{{ r.six_month_status_label }}</span></div>
+<div class="mb-1"><span class="workflow-status status-{{ workflow_status }}">{{ r.six_month_status_label }}</span></div>
 <div class="row g-1">
 <div class="col-12">
 <select name="status" class="form-select form-select-sm">
@@ -763,8 +776,7 @@ body {
 </div>
 </form>
 {% elif active_syscare_tab == 'one_year' %}
-{% set one_year_status = r.one_year_status or 'pending_contact' %}
-<form method="POST" action="/syscare-reminder-action/{{ r.id }}" class="workflow-card status-{{ one_year_status }}">
+<form method="POST" action="/syscare-reminder-action/{{ r.id }}" class="workflow-card status-{{ workflow_status }}">
 <input type="hidden" name="reminder_type" value="one_year">
 <input type="hidden" name="month" value="{{ selected_month }}">
 <input type="hidden" name="reminder" value="{{ reminder_filter }}">
@@ -773,7 +785,7 @@ body {
 <input type="hidden" name="incharge" value="{{ filter_incharge_rec }}">
 <input type="hidden" name="page" value="{{ current_page }}">
 <div class="mb-1">
-<span class="workflow-status status-{{ one_year_status }}">{{ r.one_year_status_label }}</span>
+<span class="workflow-status status-{{ workflow_status }}">{{ r.one_year_status_label }}</span>
 {% if r.renewal_new_syscare_id %}
 <span class="text-success">New ID {{ r.renewal_new_syscare_id }}</span>
 {% endif %}
