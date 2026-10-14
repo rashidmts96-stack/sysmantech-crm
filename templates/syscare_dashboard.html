@@ -281,6 +281,34 @@ body {
     min-width: 260px;
 }
 
+.workflow-card.status-pending_contact { border-color: #e3a52f; background: #fffaf0; }
+.workflow-card.status-service_booked { border-color: #4b8de8; background: #f2f8ff; }
+.workflow-card.status-service_completed,
+.workflow-card.status-renewed { border-color: #38a169; background: #f0fbf4; }
+.workflow-card.status-service_not_needed,
+.workflow-card.status-not_renewed { border-color: #94a3b8; background: #f5f7fa; }
+.workflow-card.status-renewal_discussed { border-color: #8b72cc; background: #f8f5ff; }
+.workflow-card.status-followup_later { border-color: #d18b32; background: #fff8ed; }
+
+.workflow-status {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.workflow-status.status-pending_contact { color: #8a5200; background: #ffedc2; }
+.workflow-status.status-service_booked { color: #1554a5; background: #dcecff; }
+.workflow-status.status-service_completed,
+.workflow-status.status-renewed { color: #17643b; background: #d9f3e2; }
+.workflow-status.status-service_not_needed,
+.workflow-status.status-not_renewed { color: #475569; background: #e2e8f0; }
+.workflow-status.status-renewal_discussed { color: #6546a5; background: #ece4ff; }
+.workflow-status.status-followup_later { color: #89520c; background: #ffedcf; }
+
 .workflow-card .form-select,
 .workflow-card .form-control {
     min-height: 30px;
@@ -710,7 +738,8 @@ body {
 <td>{{ r.expire_within_days if r.expire_within_days is not none else '-' }}</td>
 <td>
 {% if active_syscare_tab == 'six_month' %}
-<form method="POST" action="/syscare-reminder-action/{{ r.id }}" class="workflow-card">
+{% set six_status = r.six_month_status or 'pending_contact' %}
+<form method="POST" action="/syscare-reminder-action/{{ r.id }}" class="workflow-card status-{{ six_status }}">
 <input type="hidden" name="reminder_type" value="six_month">
 <input type="hidden" name="month" value="{{ selected_month }}">
 <input type="hidden" name="reminder" value="{{ reminder_filter }}">
@@ -718,7 +747,7 @@ body {
 <input type="hidden" name="branch" value="{{ filter_branch_rec }}">
 <input type="hidden" name="incharge" value="{{ filter_incharge_rec }}">
 <input type="hidden" name="page" value="{{ current_page }}">
-<div class="small fw-semibold mb-1">{{ r.six_month_status_label }}</div>
+<div class="mb-1"><span class="workflow-status status-{{ six_status }}">{{ r.six_month_status_label }}</span></div>
 <div class="row g-1">
 <div class="col-12">
 <select name="status" class="form-select form-select-sm">
@@ -734,7 +763,8 @@ body {
 </div>
 </form>
 {% elif active_syscare_tab == 'one_year' %}
-<form method="POST" action="/syscare-reminder-action/{{ r.id }}" class="workflow-card">
+{% set one_year_status = r.one_year_status or 'pending_contact' %}
+<form method="POST" action="/syscare-reminder-action/{{ r.id }}" class="workflow-card status-{{ one_year_status }}">
 <input type="hidden" name="reminder_type" value="one_year">
 <input type="hidden" name="month" value="{{ selected_month }}">
 <input type="hidden" name="reminder" value="{{ reminder_filter }}">
@@ -742,8 +772,8 @@ body {
 <input type="hidden" name="branch" value="{{ filter_branch_rec }}">
 <input type="hidden" name="incharge" value="{{ filter_incharge_rec }}">
 <input type="hidden" name="page" value="{{ current_page }}">
-<div class="small fw-semibold mb-1">
-{{ r.one_year_status_label }}
+<div class="mb-1">
+<span class="workflow-status status-{{ one_year_status }}">{{ r.one_year_status_label }}</span>
 {% if r.renewal_new_syscare_id %}
 <span class="text-success">New ID {{ r.renewal_new_syscare_id }}</span>
 {% endif %}
