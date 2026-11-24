@@ -7665,7 +7665,10 @@ def edit_job(job_id):
             estimate_amount = request.form.get("estimate_amount")
             if not estimate_amount or str(estimate_amount).strip() == "":
                 estimate_amount = None
-            service_charges = _parse_money(request.form.get("service_charges"))
+            if role in ["super_admin", "admin"]:
+                service_charges = _parse_money(request.form.get("service_charges"))
+            else:
+                service_charges = float(job.get("service_charges") or 0)
 
             def digits_only(value):
                 return re.sub(r"\D", "", value or "")
@@ -7703,8 +7706,8 @@ def edit_job(job_id):
 
             updated_spares = _extract_used_spares_from_form(request.form)
             updated_spares_signature = _job_used_spares_signature(updated_spares)
-            if role not in ["super_admin", "admin"] and not _saved_used_spares_preserved(used_spares, updated_spares):
-                flash("Saved used spares can be removed only by admin or super admin.", "danger")
+            if role not in ["super_admin", "admin"] and updated_spares_signature != existing_spares_signature:
+                flash("Used spare entries can be added or changed only by admin or super admin.", "danger")
                 return redirect(f"/edit-job/{job_id}")
 
             photo_filename = job.get("photo")

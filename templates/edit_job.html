@@ -203,14 +203,14 @@
 
                             <div class="col-md-6">
                                 <label class="form-label">Service Charges (₹)</label>
-                                <input type="number" name="service_charges" class="form-control" step="0.01" min="0" placeholder="0.00" value="{{ job.service_charges or 0 }}">
+                                <input type="number" name="service_charges" class="form-control" step="0.01" min="0" placeholder="0.00" value="{{ job.service_charges or 0 }}" {% if role not in ['super_admin', 'admin'] %}readonly{% endif %}>
                             </div>
 
                             <div class="col-12">
                                 <label class="form-label">Used Spare (Name + Amount)</label>
-                                {% if used_spares and role not in ['super_admin', 'admin'] %}
+                                {% if role not in ['super_admin', 'admin'] %}
                                     <div class="alert alert-warning py-2 px-3 mb-2">
-                                        Saved used spare entries are locked. Only admin or super admin can remove them. You can still add new spare rows below.
+                                        Used spare entries are locked. Only admin or super admin can add or change them.
                                     </div>
                                 {% endif %}
                                 <div id="usedSparesContainer" class="border rounded p-2">
@@ -233,6 +233,7 @@
                                         </div>
                                         {% endfor %}
                                     {% endif %}
+                                    {% if role in ['super_admin', 'admin'] %}
                                     <div class="row g-2 used-spare-row mb-2">
                                         <div class="col-md-7">
                                             <input type="text" name="used_spare_name[]" class="form-control" placeholder="Spare Name">
@@ -244,8 +245,11 @@
                                             <button type="button" class="btn btn-outline-danger btn-sm remove-spare-row">X</button>
                                         </div>
                                     </div>
+                                    {% endif %}
                                 </div>
+                                {% if role in ['super_admin', 'admin'] %}
                                 <small class="text-muted">When spare name and amount are filled, a new row will be added automatically.</small>
+                                {% endif %}
                             </div>
 
                             <div class="col-md-6">
